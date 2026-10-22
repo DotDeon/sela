@@ -10,6 +10,8 @@ public enum ArcSnapshotError: Error, Equatable, Sendable {
     case arcIsRunning
     case insufficientSpace(needed: Int64, available: Int64)
     case destinationExists(URL)
+    /// A file or folder under the source that can't be read, as a path relative to the source.
+    case unreadable(String)
 }
 
 /// Copies Arc's data folder, minus caches, into a dated folder. Never writes inside the source.
@@ -45,7 +47,8 @@ public struct ArcSnapshotter: Sendable {
         guard fm.fileExists(atPath: source.path, isDirectory: &isDirectory), isDirectory.boolValue else {
             throw ArcSnapshotError.sourceMissing(source)
         }
-        guard allowWhileRunning || !isArcRunning() else { throw ArcSnapshotError.arcIsRunning }
+        let runningAtStart = isArcRunning()
+        guard allowWhileRunning || !runningAtStart else { throw ArcSnapshotError.arcIsRunning }
 
         let folderURL = destinationRoot.appending(path: "Arc-snapshot-\(Self.timestamp(now))")
         guard !fm.fileExists(atPath: folderURL.path) else { throw ArcSnapshotError.destinationExists(folderURL) }
@@ -60,13 +63,18 @@ public struct ArcSnapshotter: Sendable {
             try? fm.removeItem(at: partialURL)
             try copy(plan, to: partialURL)
 
+            // Arc may have been opened while the copy ran.
+            let runningAtEnd = isArcRunning()
+            guard allowWhileRunning || !runningAtEnd else { throw ArcSnapshotError.arcIsRunning }
+
             let manifest = SnapshotManifest(
                 createdAt: Date(timeIntervalSince1970: now.timeIntervalSince1970.rounded(.down)),
                 sourcePath: source.path,
                 arcVersion: arcVersion,
                 fileCount: plan.files.count,
                 totalBytes: plan.totalBytes,
-                skippedSpecialFiles: plan.skippedSpecialFiles
+                skippedSpecialFiles: plan.skippedSpecialFiles,
+                takenWhileArcRunning: runningAtStart || runningAtEnd
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -102,7 +110,8 @@ public struct ArcSnapshotter: Sendable {
         var plan = Plan()
         while let relative = enumerator.nextObject() as? String {
             // attributesOfItem doesn't follow symlinks, so a link reports as a link.
-            let attributes = try fm.attributesOfItem(atPath: source.appending(path: relative).path)
+            let path = source.appending(path: relative).path
+            let attributes = try fm.attributesOfItem(atPath: path)
             switch attributes[.type] as? FileAttributeType {
             case .typeSymbolicLink?:
                 plan.symlinks.append(relative)
@@ -110,9 +119,14 @@ public struct ArcSnapshotter: Sendable {
                 if Self.excludedDirectoryNames.contains((relative as NSString).lastPathComponent) {
                     enumerator.skipDescendants()
                 } else {
+                    // The path enumerator silently skips folders it can't open, so check first.
+                    guard fm.isReadableFile(atPath: path), fm.isExecutableFile(atPath: path) else {
+                        throw ArcSnapshotError.unreadable(relative)
+                    }
                     plan.directories.append(relative)
                 }
             case .typeRegular?:
+                guard fm.isReadableFile(atPath: path) else { throw ArcSnapshotError.unreadable(relative) }
                 plan.files.append(relative)
                 plan.totalBytes += (attributes[.size] as? NSNumber)?.int64Value ?? 0
             default:

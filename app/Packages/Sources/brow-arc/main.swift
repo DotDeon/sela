@@ -50,6 +50,10 @@ func runSnapshot(_ arguments: [String]) {
         let gigabytes = Double(result.manifest.totalBytes) / 1_000_000_000
         print(result.folderURL.path)
         print("\(result.manifest.fileCount) files, \(String(format: "%.1f", gigabytes)) GB")
+        for note in snapshotNotes(for: result.manifest) {
+            print("")
+            print(note)
+        }
     } catch ArcSnapshotError.arcIsRunning {
         fail("Arc is running. Quit Arc first, or pass --allow-running.")
     } catch ArcSnapshotError.insufficientSpace(let needed, let available) {
@@ -59,6 +63,8 @@ func runSnapshot(_ arguments: [String]) {
         fail("No Arc data found at \(url.path).")
     } catch ArcSnapshotError.destinationExists(let url) {
         fail("\(url.path) already exists.")
+    } catch ArcSnapshotError.unreadable(let path) {
+        fail("Couldn't read \(path) in Arc's folder, so no snapshot was made. Check its permissions and try again.")
     } catch {
         fail("Snapshot failed: \(error.localizedDescription)")
     }

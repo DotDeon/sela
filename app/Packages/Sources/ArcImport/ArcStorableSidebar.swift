@@ -13,7 +13,7 @@ struct ArcStorableSidebar: Decodable {
 
 struct ArcSidebarContainer: Decodable {
     var spaces: AlternatingPairs<String, ArcSpace>?
-    var items: AlternatingPairs<String, ArcItem>?
+    var items: AlternatingPairs<String, LossyArcItem>?
     var topAppsContainerIDs: AlternatingPairs<ArcProfileReference, String>?
 }
 
@@ -63,6 +63,20 @@ struct ArcItem: Decodable {
     var createdAt: Double?
     var isUnread: Bool?
     var data: ArcItemData
+}
+
+/// An item that failed to decode doesn't fail the whole file. The pair key still identifies it.
+enum LossyArcItem: Decodable {
+    case readable(ArcItem)
+    case unreadable
+
+    init(from decoder: Decoder) throws {
+        if let item = try? ArcItem(from: decoder) {
+            self = .readable(item)
+        } else {
+            self = .unreadable
+        }
+    }
 }
 
 struct ArcTab: Decodable {

@@ -133,3 +133,66 @@ private func listing(_ root: URL) -> [String] {
     _ = try fixture.snapshotter().run(now: fixedNow)
     #expect(listing(fixture.source) == before)
 }
+
+private final class CallCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    /// Returns false on the first call and true afterwards.
+    func runningAfterFirstCheck() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        count += 1
+        return count > 1
+    }
+}
+
+@Test func unreadableFolderFailsTheSnapshot() throws {
+    let fixture = try Fixture()
+    let locked = fixture.source.appending(path: "User Data/Locked")
+    try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+    try Data(repeating: 5, count: 5).write(to: locked.appending(path: "Secrets"))
+    try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked.path)
+    defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+
+    #expect(throws: ArcSnapshotError.unreadable("User Data/Locked")) {
+        try fixture.snapshotter().run(now: fixedNow)
+    }
+    #expect(fixture.destinationEntries.isEmpty)
+}
+
+@Test func manifestRecordsSnapshotTakenWhileRunning() throws {
+    let running = try Fixture().snapshotter(running: true).run(now: fixedNow, allowWhileRunning: true)
+    #expect(running.manifest.takenWhileArcRunning == true)
+    let quit = try Fixture().snapshotter().run(now: fixedNow)
+    #expect(quit.manifest.takenWhileArcRunning == false)
+}
+
+@Test func arcOpenedDuringCopyFailsTheSnapshot() throws {
+    let fixture = try Fixture()
+    let counter = CallCounter()
+    let snapshotter = ArcSnapshotter(
+        source: fixture.source,
+        destinationRoot: fixture.destination,
+        arcVersion: nil,
+        isArcRunning: { counter.runningAfterFirstCheck() },
+        availableCapacity: { _ in 1_000_000 }
+    )
+    #expect(throws: ArcSnapshotError.arcIsRunning) {
+        try snapshotter.run(now: fixedNow)
+    }
+    #expect(fixture.destinationEntries.isEmpty)
+}
+
+@Test func notesRemindAboutPasswords() throws {
+    let result = try Fixture().snapshotter().run(now: fixedNow)
+    #expect(snapshotNotes(for: result.manifest) == [
+        "Arc encrypts saved passwords with a key that stays in this Mac's keychain, so this copy can't recover them on another Mac. Export your passwords to a CSV file from Arc's password settings before Arc shuts down.",
+    ])
+}
+
+@Test func notesWarnWhenTakenWhileRunning() throws {
+    let result = try Fixture().snapshotter(running: true).run(now: fixedNow, allowWhileRunning: true)
+    #expect(snapshotNotes(for: result.manifest).first == "This snapshot was taken while Arc was running, so some of its databases may be inconsistent. Quit Arc and take another one.")
+    #expect(snapshotNotes(for: result.manifest).count == 2)
+}

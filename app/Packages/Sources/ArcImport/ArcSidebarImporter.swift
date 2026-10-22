@@ -11,6 +11,7 @@ public enum ArcImportWarning: Equatable, Sendable {
     case danglingChild(parent: ItemID, child: ItemID)
     case unreachableItems(count: Int)
     case missingFavorites
+    case unreadableItem(id: ItemID)
 }
 
 public enum ArcImportError: Error, Equatable, Sendable {
@@ -41,7 +42,7 @@ public struct ArcSidebarImporter: Sendable {
               let arcSpaces = container.spaces?.values, !arcSpaces.isEmpty
         else { throw ArcImportError.noSpaces }
 
-        var builder = Builder(arcItems: container.items?.values ?? [])
+        var builder = Builder(pairs: container.items?.pairs ?? [])
 
         let favoritesID: ItemID
         if let arcFavoritesID = container.topAppsContainerIDs?.pairs.first(where: { $0.key.isDefault })?.value {
@@ -90,10 +91,24 @@ private struct Builder {
     let arcItemsByID: [String: ArcItem]
     var visited: Set<String> = []
     var items: [SidebarItem] = []
+    let unreadableIDs: Set<String>
     var warnings: [ArcImportWarning] = []
 
-    init(arcItems: [ArcItem]) {
-        arcItemsByID = Dictionary(arcItems.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    init(pairs: [(key: String, value: LossyArcItem)]) {
+        var readable: [String: ArcItem] = [:]
+        var unreadable: Set<String> = []
+        for (key, value) in pairs {
+            switch value {
+            case .readable(let item):
+                if readable[item.id] == nil { readable[item.id] = item }
+            case .unreadable:
+                if unreadable.insert(key).inserted {
+                    warnings.append(.unreadableItem(id: ItemID(rawValue: key)))
+                }
+            }
+        }
+        arcItemsByID = readable
+        unreadableIDs = unreadable
     }
 
     /// Adds a root container with the given role. A missing Arc container becomes an empty one.
@@ -122,6 +137,8 @@ private struct Builder {
     private mutating func addChildren(of parent: ArcItem) -> [ItemID] {
         var childIDs: [ItemID] = []
         for childID in parent.childrenIds ?? [] {
+            // Already reported as unreadable.
+            if unreadableIDs.contains(childID) { continue }
             guard let child = arcItemsByID[childID], !visited.contains(childID) else {
                 warnings.append(.danglingChild(parent: ItemID(rawValue: parent.id), child: ItemID(rawValue: childID)))
                 continue

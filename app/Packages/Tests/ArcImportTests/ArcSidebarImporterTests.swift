@@ -121,3 +121,26 @@ private func tabInfo(_ doc: SidebarDocument, _ id: ItemID) throws -> TabInfo {
     #expect(favorites.childIDs.isEmpty)
     try result.document.validate()
 }
+
+@Test func unreadableItemIsSkippedWithWarning() throws {
+    let url = try writeTemp(#"""
+    { "version": 1, "sidebar": { "containers": [ { "global": {} }, {
+      "topAppsContainerIDs": [ { "default": true }, "f" ],
+      "spaces": [ "s", { "id": "s", "containerIDs": [ "pinned", "p", "unpinned", "u" ] } ],
+      "items": [
+        "f", { "id": "f", "parentID": null, "childrenIds": [], "createdAt": 1.0, "isUnread": false,
+               "data": { "itemContainer": { "containerType": { "topApps": { "_0": { "default": true } } } } } },
+        "p", { "id": "p", "parentID": null, "childrenIds": [ "bad", "good" ], "createdAt": 1.0, "isUnread": false,
+               "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "s" } } } } },
+        "bad", { "id": "bad", "parentID": "p", "childrenIds": [], "createdAt": "yesterday", "isUnread": false,
+                 "data": { "tab": { "savedURL": "https://bad.example.com/" } } },
+        "good", { "id": "good", "parentID": "p", "childrenIds": [], "createdAt": 2.0, "isUnread": false,
+                  "data": { "tab": { "savedURL": "https://good.example.com/" } } },
+        "u", { "id": "u", "parentID": null, "childrenIds": [], "createdAt": 1.0, "isUnread": false,
+               "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "s" } } } } }
+      ] } ] } }
+    """#)
+    let result = try ArcSidebarImporter().importSidebar(from: url)
+    #expect(result.document.children(of: "p").map(\.id) == ["good"])
+    #expect(result.warnings == [.unreadableItem(id: "bad")])
+}

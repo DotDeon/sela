@@ -40,6 +40,8 @@ swift run --package-path app/Packages brow-arc snapshot "/Volumes/Backup"
 
 This creates a folder named `Arc-snapshot-<date>`. It refuses to run while Arc is open, because copying Arc's databases while Arc writes to them gives a broken copy.
 
+The snapshot can't recover your saved passwords on another Mac, because Arc encrypts them with a key that stays in this Mac's keychain. Export your passwords to a CSV file from Arc's password settings before Arc shuts down.
+
 To see what Brow would import from your live Arc data or from a snapshot:
 
 ```bash

@@ -37,15 +37,18 @@ private func counts(under id: ItemID, in document: SidebarDocument) -> (tabs: In
 
 private func order(_ warning: ArcImportWarning) -> Int {
     switch warning {
-    case .unsupportedItem: 0
-    case .danglingChild: 1
-    case .unreachableItems: 2
-    case .missingFavorites: 3
+    case .unreadableItem: 0
+    case .unsupportedItem: 1
+    case .danglingChild: 2
+    case .unreachableItems: 3
+    case .missingFavorites: 4
     }
 }
 
 private func describe(_ warning: ArcImportWarning) -> String {
     switch warning {
+    case .unreadableItem(let id):
+        "Skipped unreadable item \(id)"
     case .unsupportedItem(let id, let kind):
         "Skipped unsupported item \(id) (\(kind))"
     case .danglingChild(let parent, let child):
