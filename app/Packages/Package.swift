@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "SidebarModel", targets: ["SidebarModel"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
+        .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
     ],
     targets: [
         .target(name: "SidebarModel"),
@@ -17,5 +18,7 @@ let package = Package(
             dependencies: ["ArcImport", "SidebarModel"],
             resources: [.copy("Fixtures")]
         ),
+        .target(name: "ArcSnapshot"),
+        .testTarget(name: "ArcSnapshotTests", dependencies: ["ArcSnapshot"]),
     ]
 )
