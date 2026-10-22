@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "sidebar": { "containers": [
+    { "global": {} },
+    {
+      "topAppsContainerIDs": [ { "default": true }, "fav-root" ],
+      "spaces": [
+        "space-A", { "id": "space-A", "title": "Work", "profile": { "default": true },
+                     "customInfo": { "iconType": { "icon": "💼" } },
+                     "containerIDs": [ "pinned", "A-pinned", "unpinned", "A-unpinned" ] },
+        "space-B", { "id": "space-B", "profile": { "default": true }, "customInfo": {},
+                     "containerIDs": [ "pinned", "B-pinned", "unpinned", "B-unpinned" ] }
+      ],
+      "items": [
+        "fav-root", { "id": "fav-root", "parentID": null, "childrenIds": [ "fav-1" ], "title": null, "createdAt": 700000000.0, "isUnread": false,
+                      "data": { "itemContainer": { "containerType": { "topApps": { "_0": { "default": true } } } } } },
+        "fav-1", { "id": "fav-1", "parentID": "fav-root", "childrenIds": [], "title": "Mail", "createdAt": 700000001.0, "isUnread": false,
+                   "data": { "tab": { "savedURL": "https://mail.example.com/", "savedTitle": "Mail", "timeLastActiveAt": 790000000.0, "savedMuteStatus": "allowAudio" } } },
+        "A-pinned", { "id": "A-pinned", "parentID": null, "childrenIds": [ "folder-1", "tab-p2" ], "title": null, "createdAt": 700000000.0, "isUnread": false,
+                      "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "space-A" } } } } },
+        "folder-1", { "id": "folder-1", "parentID": "A-pinned", "childrenIds": [ "tab-p1", "missing-id" ], "title": "Projects", "createdAt": 700000002.0, "isUnread": false,
+                      "data": { "list": { "customInfo": { "iconType": { "icon": "📁" } } } } },
+        "tab-p1", { "id": "tab-p1", "parentID": "folder-1", "childrenIds": [], "title": null, "createdAt": 700000003.0, "isUnread": true,
+                    "data": { "tab": { "savedURL": "https://docs.example.com/", "savedTitle": "Docs", "referrerID": "x" } } },
+        "tab-p2", { "id": "tab-p2", "parentID": "A-pinned", "childrenIds": [], "title": "My calendar", "createdAt": 700000004.0, "isUnread": false,
+                    "data": { "tab": { "savedURL": "https://calendar.example.com/", "savedTitle": "Calendar", "savedMuteStatus": "muted" } } },
+        "A-unpinned", { "id": "A-unpinned", "parentID": null, "childrenIds": [ "tab-u1", "easel-1" ], "title": null, "createdAt": 700000000.0, "isUnread": false,
+                        "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "space-A" } } } } },
+        "tab-u1", { "id": "tab-u1", "parentID": "A-unpinned", "childrenIds": [], "title": null, "createdAt": 700000005.0, "isUnread": false,
+                    "data": { "tab": { "savedURL": "https://news.example.com/", "timeLastActiveAt": 790100000.0 } } },
+        "easel-1", { "id": "easel-1", "parentID": "A-unpinned", "childrenIds": [], "title": "Board", "createdAt": 700000006.0, "isUnread": false,
+                     "data": { "easel": {} } },
+        "B-pinned", { "id": "B-pinned", "parentID": null, "childrenIds": [], "title": null, "createdAt": 700000000.0, "isUnread": false,
+                      "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "space-B" } } } } },
+        "B-unpinned", { "id": "B-unpinned", "parentID": null, "childrenIds": [], "title": null, "createdAt": 700000000.0, "isUnread": false,
+                        "data": { "itemContainer": { "containerType": { "spaceItems": { "_0": "space-B" } } } } },
+        "orphan-1", { "id": "orphan-1", "parentID": "gone", "childrenIds": [], "title": null, "createdAt": 700000007.0, "isUnread": false,
+                      "data": { "tab": { "savedURL": "https://orphan.example.com/" } } }
+      ]
+    }
+  ] },
+  "firebaseSyncState": { "ignored": true }
+}
