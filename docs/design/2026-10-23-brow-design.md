@@ -92,8 +92,23 @@ Branding (name, icons, bundle identifiers, user data directory, update URLs) is 
 ### The Brow app
 
 - Swift, with the sidebar, command bar, split view and Peek in AppKit, and smaller panels and settings screens in SwiftUI hosted inside AppKit. This matches how Arc gets its feel: table view rows for sidebar items and native drag and drop.
-- The app links BrowCore and talks to it only through the bridge.
-- Feature code lives in Swift packages, one module per feature, so features stay isolated and each can be tested without a Chromium build where possible. The bridge sits behind Swift protocols, so the sidebar and its state can run against a fake browser engine in tests and SwiftUI previews.
+- Feature code lives in Swift packages, one module per feature, so features stay isolated and each can be tested without a Chromium build.
+- The UI never talks to a browser engine directly. It talks to the engine protocols described below.
+
+### Browser engines
+
+Brow's UI depends only on a set of Swift protocols in the `BrowserEngine` module: create and close tabs, show a tab's content view, navigate, observe title, URL, favicon, loading and audio state, back/forward, find in page, handle new-window requests, downloads, permission prompts and JavaScript dialogs. Three implementations sit behind them:
+
+1. **`WebKitEngine`, first.** Built on `WKWebView`, which ships with macOS. It lets Brow load real websites on the owner's current Mac, so Brow becomes usable before the Chromium build exists.
+2. **`ChromiumEngine`, later.** Built on BrowCore's Objective-C bridge once the new Mac arrives. It becomes the default engine and brings Chrome extensions, Chrome's password manager, history import and `chrome://` pages.
+3. **`FakeEngine`, for tests and previews only.** No web content.
+
+Rules that keep the swap cheap:
+
+- No WebKit or Chromium type appears in a protocol or in any feature module. Only `BrowserEngine` implementations import `WebKit` or BrowCore.
+- Engine-specific capabilities (extensions, `chrome://` pages, profile import) are optional protocol members the UI checks for. With WebKit they're absent and the UI hides them. It doesn't fake them.
+- Each engine keeps its own cookies and site data. Switching engines means signing in to websites again once, which is acceptable.
+- The same protocol test suite runs against every engine that's available on the machine.
 
 ### Sidebar data model
 
@@ -144,7 +159,8 @@ brow/
     Brow/                app entry point, window management, menus
     Packages/            one Swift package per feature: Sidebar, Spaces,
                          CommandBar, SplitView, Peek, Archive, ArcImport,
-                         Sync, Settings, BrowserEngine (bridge protocols and fakes)
+                         Sync, Settings, BrowserEngine (engine protocols),
+                         WebKitEngine, ChromiumEngine, FakeEngine
   scripts/               fetch, patch, build, sign, notarize, release
   .github/workflows/     CI for the Swift app and patch-stack checks
 ```
@@ -174,6 +190,7 @@ Made as calls during design. The owner can override any of these:
 - Apply for Widevine early, since Netflix, Spotify and other DRM video and music sites won't play without it and approval can take weeks.
 - One profile for all spaces in the first version.
 - Extensions are reinstalled from the Web Store during import, not copied.
+- WebKit is the first engine so Brow is usable on the owner's current Mac. Chromium replaces it as the default when BrowCore is ready. (Owner agreed.)
 - Feature state uses Swift's Observation framework (`@Observable` stores per feature) instead of The Composable Architecture. It's simpler for a small team and doesn't fight AppKit.
 
 ## Suggested milestones
@@ -185,22 +202,23 @@ Made as calls during design. The owner can override any of these:
 4. **Archiving, command bar, split view and Peek.**
 5. **Arc import.**
 6. **Browser essentials.** Extensions toolbar, downloads, history, find in page, permissions, dialogs, settings through `chrome://settings`.
-
-The owner's daily-driver cut is milestones 1, 2, 3, 5 and the extension parts of 6. Milestone 4 can follow it if time runs short.
 7. **CloudKit sync.**
 8. **Release.** Signing, notarization, Sparkle updates, a public DMG.
 
+The owner's daily-driver cut on Chromium is milestones 1, 2, 3, 5 and the extension parts of 6. Milestone 4 can follow it if time runs short.
+
 ### Order before the new Mac arrives
 
-The owner's current Mac (M2, 8 GB RAM) can't build Chromium, but it can build everything on the Swift side. Work starts there, against a fake browser engine that implements the same bridge protocols with placeholder pages:
+The owner's current Mac (M2, 8 GB RAM) can't build Chromium, but it can build everything on the Swift side. Work starts there, on `WebKitEngine`:
 
 1. Milestone 0, the Arc snapshot tool.
 2. The sidebar data model, JSON storage and the Arc sidebar importer, tested against the owner's real `StorableSidebar.json`.
-3. The sidebar UI from milestone 3: spaces, pinned tabs, folders, favourites, unpinned tabs, drag and drop, swiping and animations.
-4. Archiving, then the command bar, split view and Peek UI from milestone 4.
-5. CloudKit sync logic from milestone 7, tested without Chromium.
+3. The engine protocols, `FakeEngine` and `WebKitEngine`, and a Brow window that browses real websites.
+4. The sidebar UI from milestone 3: spaces, pinned tabs, folders, favourites, unpinned tabs, drag and drop, swiping and animations.
+5. Archiving, then the command bar, split view and Peek from milestone 4.
+6. CloudKit sync from milestone 7.
 
-When the new Mac arrives, milestones 1 and 2 run, and BrowCore replaces the fake engine behind the same protocols.
+When the new Mac arrives, milestones 1 and 2 run, `ChromiumEngine` is built behind the same protocols, and it becomes the default.
 
 ## Left to the builder
 
