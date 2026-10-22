@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "SidebarModel", targets: ["SidebarModel"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
+        .executable(name: "brow-arc", targets: ["brow-arc"]),
     ],
     targets: [
         .target(name: "SidebarModel"),
@@ -20,5 +21,6 @@ let package = Package(
         ),
         .target(name: "ArcSnapshot"),
         .testTarget(name: "ArcSnapshotTests", dependencies: ["ArcSnapshot"]),
+        .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )
