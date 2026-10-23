@@ -33,3 +33,19 @@ import Testing
     #expect(!doc.canMove("t1", to: "t2"))
     #expect(!doc.canMove("nope", to: "U"))
 }
+
+@Test func favoritesHoldOnlyTabs() {
+    let doc = fixtureDocument()
+    #expect(!doc.canMove("folder", to: "F"))
+    #expect(doc.canMove("t1", to: "F"))
+}
+
+@Test func validateRequiresASpace() {
+    let doc = SidebarDocument(version: 1, spaces: [], favoritesContainerID: "F", items: [fixtureItem("F", parent: nil, kind: .container(.favorites))])
+    #expect {
+        try doc.validate()
+    } throws: { error in
+        if case SidebarError.integrity = error { return true }
+        return false
+    }
+}

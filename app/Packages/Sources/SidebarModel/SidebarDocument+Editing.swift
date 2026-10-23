@@ -6,6 +6,7 @@ extension SidebarDocument {
         guard itemsByID[item.id] == nil else { throw SidebarError.duplicateItem(item.id) }
         let parent = try requireItem(parentID)
         guard parent.canHaveChildren else { throw SidebarError.parentCannotHaveChildren(parentID) }
+        try checkFavoritesHoldOnlyTabs(item, in: parent)
 
         var item = item
         item.parentID = parentID
@@ -75,6 +76,7 @@ extension SidebarDocument {
             }
         }
 
+        guard !spaces.isEmpty else { throw fail("there are no spaces") }
         try requireContainer(favoritesContainerID, role: .favorites)
         for space in spaces {
             try requireContainer(space.pinnedContainerID, role: .pinned(space.id))
@@ -114,7 +116,14 @@ extension SidebarDocument {
         let parent = try requireItem(parentID)
         guard parent.canHaveChildren else { throw SidebarError.parentCannotHaveChildren(parentID) }
         guard parentID != id, !isDescendant(parentID, of: id) else { throw SidebarError.wouldCreateCycle(id) }
+        try checkFavoritesHoldOnlyTabs(item, in: parent)
         return item
+    }
+
+    /// Favourites are a grid of site icons, so they hold tabs only.
+    private func checkFavoritesHoldOnlyTabs(_ item: SidebarItem, in parent: SidebarItem) throws {
+        guard parent.kind == .container(.favorites) else { return }
+        guard case .tab = item.kind else { throw SidebarError.notATab(item.id) }
     }
 
     func requireItem(_ id: ItemID) throws -> SidebarItem {
