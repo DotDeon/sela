@@ -50,8 +50,8 @@ let package = Package(
         .target(name: "WebKitEngine", dependencies: ["BrowserEngine"]),
         .testTarget(name: "WebKitEngineTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
-        .target(name: "Browsing", dependencies: ["BrowserEngine", "Sidebar", "SidebarModel"]),
-        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "BrowTestSupport"]),
+        .target(name: "Browsing", dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "BrowTestSupport"]),
         .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )

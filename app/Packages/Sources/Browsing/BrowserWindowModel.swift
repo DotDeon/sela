@@ -1,3 +1,4 @@
+import Archive
 import BrowserEngine
 import Foundation
 import Observation
@@ -10,6 +11,10 @@ import SidebarModel
 @Observable
 public final class BrowserWindowModel: BrowserTabDelegate {
     public let sidebar: SidebarStore
+    /// Where closed unpinned tabs go. Nil keeps no archive.
+    public let archive: ArchiveStore?
+    /// Called once each time a tab finishes loading a new web address, with the title it has then.
+    @ObservationIgnored public var onPageVisited: ((URL, String?) -> Void)?
     public private(set) var selectedSpaceID: SpaceID
     public private(set) var selectedItemID: ItemID?
     private var liveTabs: [ItemID: any BrowserTab] = [:]
@@ -21,12 +26,14 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// Item to the item whose page opened it.
     @ObservationIgnored private var openerIDs: [ItemID: ItemID] = [:]
     @ObservationIgnored private var lastSelection: [SpaceID: ItemID] = [:]
+    @ObservationIgnored private var lastVisitedURLs: [TabID: URL] = [:]
     @ObservationIgnored private var dialogAnswers: [UUID: CheckedContinuation<JavaScriptDialogResult, Never>] = [:]
 
     /// Shows the first space, with its most recently active tab selected.
-    public init(engine: any BrowserEngine, sidebar: SidebarStore, now: @escaping @MainActor () -> Date = { .now }) {
+    public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, now: @escaping @MainActor () -> Date = { .now }) {
         self.engine = engine
         self.sidebar = sidebar
+        self.archive = archive
         self.now = now
         selectedSpaceID = sidebar.document.spaces[0].id
         if let recent = mostRecentTab(in: selectedSpaceID) {
@@ -121,8 +128,13 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// Unpinned tabs are removed from the sidebar. Pinned tabs and favourites stay and only unload their page.
     public func close(_ id: ItemID) {
         let next = selectedItemID == id ? selectionAfterClosing(id) : selectedItemID
+        let isUnpinned: Bool
+        if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
+        if isUnpinned {
+            archive?.add(archiveEntries(for: [id]))
+        }
         unload(id)
-        if case .unpinned = document.containerRole(of: id) {
+        if isUnpinned {
             sidebar.remove(id)
         }
         forgetOpener(id)
@@ -165,6 +177,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         guard let container = document.space(selectedSpaceID)?.unpinnedContainerID else { return }
         let ids = document.tabIDs(under: container)
         let selectionCleared = selectedItemID.map { document.containerRole(of: $0) == .unpinned(selectedSpaceID) } ?? false
+        archive?.add(archiveEntries(for: ids))
         for id in ids {
             unload(id)
             forgetOpener(id)
@@ -173,6 +186,23 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         if selectionCleared {
             if let recent = mostRecentTab(in: selectedSpaceID) { setSelection(recent) } else { leaveSelection() }
         }
+    }
+
+    /// Brings an archived tab back at the top of its space's unpinned tabs, or the current space's
+    /// if its space is gone, and shows it.
+    public func restore(_ entryID: UUID) {
+        guard let entry = archive?.remove(entryID) else { return }
+        let spaceID = entry.spaceID.flatMap { document.space($0)?.id } ?? selectedSpaceID
+        guard let container = document.space(spaceID)?.unpinnedContainerID else { return }
+        let id = sidebar.createTab(url: entry.url, title: entry.title, in: container, at: 0)
+        register(engine.makeTab(url: entry.url), for: id)
+        select(id)
+    }
+
+    /// Restores the most recently archived tab. Does nothing when the archive is empty.
+    public func reopenLastArchived() {
+        guard let newest = archive?.entries.first else { return }
+        restore(newest.id)
     }
 
     /// Drops live pages and selections whose sidebar items or spaces no longer exist,
@@ -228,7 +258,13 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     public func tabStateDidChange(_ tab: any BrowserTab) {
         guard let id = itemIDsByTab[tab.id] else { return }
-        sidebar.recordPage(id, url: tab.state.url, title: tab.state.title)
+        let state = tab.state
+        sidebar.recordPage(id, url: state.url, title: state.title)
+        if !state.isLoading, let url = state.url, let scheme = url.scheme?.lowercased(),
+           ["http", "https"].contains(scheme), lastVisitedURLs[tab.id] != url {
+            lastVisitedURLs[tab.id] = url
+            onPageVisited?(url, state.title)
+        }
     }
 
     public func tabDidRequestClose(_ tab: any BrowserTab) {
@@ -282,6 +318,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     private func unload(_ id: ItemID) {
         guard let tab = liveTabs.removeValue(forKey: id) else { return }
         itemIDsByTab[tab.id] = nil
+        lastVisitedURLs[tab.id] = nil
         for dialog in dialogs where dialog.tabID == tab.id {
             dialogAnswers.removeValue(forKey: dialog.id)?.resume(returning: .dismissed)
         }
@@ -303,6 +340,19 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         let newOpener = openerIDs[id]
         let related = id == currentOpener || newOpener == current || (newOpener != nil && newOpener == currentOpener)
         if !related { openerIDs.removeAll() }
+    }
+
+    /// Archive entries for tabs about to leave the sidebar, using the live page's address and title when there is one.
+    private func archiveEntries(for ids: [ItemID]) -> [ArchiveEntry] {
+        let date = now()
+        return ids.compactMap { id in
+            guard var entry = archiveEntry(for: id, in: document, at: date) else { return nil }
+            if let state = liveTabs[id]?.state, let url = state.url {
+                entry.url = url
+                entry.title = document.item(id)?.title ?? state.title ?? entry.title
+            }
+            return entry
+        }
     }
 
     /// The next sibling with the same opener, then the opener, then the tab below, then the tab above.
