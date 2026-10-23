@@ -132,3 +132,48 @@ private let page = URL(string: "https://a.example.com/some/page")!
     try await Task.sleep(for: .milliseconds(50))
     #expect(server.fetched == [icon])
 }
+
+@MainActor @Test func rememberIgnoresNonWebIconAddresses() async throws {
+    let server = FakeServer { _ in png() }
+    let store = FaviconStore(cacheFolder: try folder(), fetch: server.fetch)
+    store.remember(iconURL: URL(fileURLWithPath: "/dev/zero"), forPage: page)
+    store.remember(iconURL: URL(string: "ftp://example.com/icon.png")!, forPage: page)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(server.fetched.isEmpty)
+}
+
+/// A server that sends data forever.
+private final class EndlessProtocol: URLProtocol, @unchecked Sendable {
+    private let lock = NSLock()
+    private var stopped = false
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        DispatchQueue.global().async {
+            let chunk = Data(count: 64 * 1024)
+            while !self.lock.withLock({ self.stopped }) {
+                self.client?.urlProtocol(self, didLoad: chunk)
+                Thread.sleep(forTimeInterval: 0.001)
+            }
+        }
+    }
+
+    override func stopLoading() {
+        lock.withLock { stopped = true }
+    }
+}
+
+@Test func sessionFetchStopsPastTheSizeLimit() async throws {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [EndlessProtocol.self]
+    let fetch = FaviconStore.sessionFetch(using: URLSession(configuration: configuration))
+    let started = Date()
+    await #expect(throws: (any Error).self) {
+        _ = try await fetch(URL(string: "https://endless.example.com/favicon.ico")!)
+    }
+    #expect(Date().timeIntervalSince(started) < 5)
+}

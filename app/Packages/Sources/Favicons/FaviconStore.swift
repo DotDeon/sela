@@ -9,7 +9,7 @@ public final class FaviconStore {
     public typealias Fetch = @Sendable (URL) async throws -> Data
 
     /// Icons larger than this are ignored.
-    static let maximumBytes = 512 * 1024
+    nonisolated static let maximumBytes = 512 * 1024
 
     private var images: [String: NSImage] = [:]
 
@@ -52,24 +52,41 @@ public final class FaviconStore {
     /// Fetches the icon a page declared and uses it for the page's site from now on.
     /// Reporting the same icon again does nothing.
     public func remember(iconURL: URL, forPage url: URL) {
-        guard let host = Self.cacheKey(for: url), rememberedIcons[host] != iconURL else { return }
+        guard let scheme = iconURL.scheme?.lowercased(), ["http", "https", "data"].contains(scheme),
+              let host = Self.cacheKey(for: url), rememberedIcons[host] != iconURL
+        else { return }
         rememberedIcons[host] = iconURL
         failed.remove(host)
         load(iconURL, for: host)
     }
 
-    /// Fetches with a 10-second timeout and no cookies.
-    public static let urlSessionFetch: Fetch = { url in
-        let (data, response) = try await session.data(from: url)
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw URLError(.badServerResponse)
+    /// Fetches with no cookies, giving up after 15 seconds or past 512 KB.
+    public static let urlSessionFetch: Fetch = sessionFetch(using: session)
+
+    /// A fetch on `session` that streams the response and stops as soon as it passes 512 KB,
+    /// so a page can't make Brow download without limit.
+    public nonisolated static func sessionFetch(using session: URLSession) -> Fetch {
+        { url in
+            let (bytes, response) = try await session.bytes(from: url)
+            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                throw URLError(.badServerResponse)
+            }
+            var data = Data()
+            for try await byte in bytes {
+                data.append(byte)
+                if data.count > maximumBytes {
+                    bytes.task.cancel()
+                    throw URLError(.dataLengthExceedsMaximum)
+                }
+            }
+            return data
         }
-        return data
     }
 
     private static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 10
+        configuration.timeoutIntervalForResource = 15
         configuration.httpShouldSetCookies = false
         configuration.httpCookieAcceptPolicy = .never
         return URLSession(configuration: configuration)
