@@ -4,7 +4,7 @@
 
 Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on Chromium so Chrome extensions work, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today the repository holds the sidebar data model, an importer for Arc's sidebar, and a tool that backs up your Arc data.
+Brow is early. Today it opens a window that browses websites with tabs, plus the sidebar data model, an importer for Arc's sidebar, and a tool that backs up your Arc data. It runs on WebKit for now, so Chrome extensions don't work yet. Chromium replaces WebKit once Brow's Chromium build is ready.
 
 ## Folder layout
 
@@ -12,6 +12,9 @@ Brow is early. Today the repository holds the sidebar data model, an importer fo
 assets/        Brow's own icons and artwork
 docs/design/   design documents
 docs/plans/    implementation plans
+app/Brow/      the Mac app: windows, menus and toolbar
+app/Brow.xcodeproj  Xcode project that builds Brow.app
+app/Support/   the app's Info.plist
 app/Packages/  Swift package with one module per feature
 chromium/      Chromium patches and Brow's C++ code (coming later)
 scripts/       build, sign and release scripts (coming later)
@@ -23,6 +26,21 @@ Inside `app/Packages`:
 - `ArcImport`: reads Arc's `StorableSidebar.json` into Brow's sidebar
 - `ArcSnapshot`: copies Arc's data folder, minus caches, so it survives Arc shutting down
 - `brow-arc`: command-line tool for the two above
+- `BrowserEngine`: the protocols Brow's UI uses to talk to a browser engine
+- `WebKitEngine`: those protocols built on Safari's WebKit
+- `FakeEngine`: a stand-in engine with no web content, for tests
+- `Browsing`: a window's tabs, popups and page dialogs, and address bar parsing
+
+## Running Brow
+
+You need Xcode 27.
+
+```bash
+xcodebuild -project app/Brow.xcodeproj -scheme Brow -configuration Debug -derivedDataPath .build/xcode build
+open .build/xcode/Build/Products/Debug/Brow.app
+```
+
+You can also open `app/Brow.xcodeproj` in Xcode and press Cmd+R.
 
 ## Running the tests
 
