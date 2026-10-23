@@ -17,6 +17,8 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     @ObservationIgnored public var onPageVisited: ((URL, String?) -> Void)?
     public private(set) var selectedSpaceID: SpaceID
     public private(set) var selectedItemID: ItemID?
+    /// The page showing in Peek over the selected tab, or nil. A window has at most one.
+    public private(set) var peekTab: (any BrowserTab)?
     private var liveTabs: [ItemID: any BrowserTab] = [:]
     private var dialogs: [PendingDialog] = []
 
@@ -26,6 +28,8 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// Item to the item whose page opened it.
     @ObservationIgnored private var openerIDs: [ItemID: ItemID] = [:]
     @ObservationIgnored private var lastSelection: [SpaceID: ItemID] = [:]
+    /// The tab whose link opened the current Peek.
+    @ObservationIgnored private var peekSourceID: ItemID?
     @ObservationIgnored private var lastVisitedURLs: [TabID: URL] = [:]
     @ObservationIgnored private var dialogAnswers: [UUID: CheckedContinuation<JavaScriptDialogResult, Never>] = [:]
 
@@ -53,6 +57,9 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     /// The oldest dialog from the selected tab. Dialogs from other tabs wait until their tab is selected.
     public var dialogForSelectedTab: PendingDialog? {
+        if let peekID = peekTab?.id, let dialog = dialogs.first(where: { $0.tabID == peekID }) {
+            return dialog
+        }
         guard let tabID = selectedTab?.id else { return nil }
         return dialogs.first { $0.tabID == tabID }
     }
@@ -70,6 +77,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     public func selectSpace(_ id: SpaceID) {
         guard document.space(id) != nil, id != selectedSpaceID else { return }
+        closePeek()
         openerIDs.removeAll()
         selectedSpaceID = id
         if let remembered = lastSelection[id], isTab(remembered), belongsToSelectedSpace(remembered) {
@@ -189,6 +197,63 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         }
     }
 
+    // MARK: Peek
+
+    /// True when the Peek page can go in a split with the selected tab.
+    public var canSplitPeek: Bool {
+        guard peekTab != nil, let selected = selectedItemID, document.containerRole(of: selected) != .favorites else { return false }
+        return (selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
+    }
+
+    /// Closes the Peek page.
+    public func closePeek() {
+        guard let tab = peekTab else { return }
+        peekTab = nil
+        peekSourceID = nil
+        dismissDialogs(of: tab)
+        lastVisitedURLs[tab.id] = nil
+        tab.delegate = nil
+        tab.close()
+    }
+
+    /// Turns the Peek page into a tab at the top of the current space's unpinned tabs and selects it.
+    /// The page stays live, so it doesn't reload.
+    @discardableResult
+    public func expandPeek() -> ItemID? {
+        guard let tab = peekTab, let container = document.space(selectedSpaceID)?.unpinnedContainerID else { return nil }
+        let source = peekSourceID
+        peekTab = nil
+        peekSourceID = nil
+        let id = sidebar.createTab(url: tab.state.url, title: nil, in: container, at: 0)
+        register(tab, for: id)
+        if let source { openerIDs[id] = source }
+        select(id)
+        return id
+    }
+
+    /// Puts the Peek page in a split beside the selected tab. Only expands it when the selected tab can't be split.
+    public func splitPeek() {
+        let anchor = selectedItemID
+        let canSplit = canSplitPeek
+        guard let id = expandPeek() else { return }
+        if canSplit, let anchor, sidebar.addToSplit(id, with: anchor) != nil {
+            select(id)
+        }
+    }
+
+    /// Opens `url` in Peek over the current page, replacing any Peek already open.
+    private func openPeek(_ url: URL, from sourceID: ItemID) {
+        closePeek()
+        let tab = engine.makeTab(url: url)
+        tab.delegate = self
+        peekTab = tab
+        peekSourceID = sourceID
+    }
+
+    private func isPeek(_ tab: any BrowserTab) -> Bool {
+        peekTab?.id == tab.id
+    }
+
     // MARK: Closing
 
     /// Unpinned tabs are removed from the sidebar. Pinned tabs and favourites stay and only unload their page.
@@ -297,6 +362,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     /// Closes every live page, for when the window closes.
     public func closeAllLiveTabs() {
+        closePeek()
         for id in Array(liveTabs.keys) { unload(id) }
         openerIDs.removeAll()
         leaveSelection()
@@ -312,7 +378,8 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     // MARK: BrowserTabDelegate
 
     public func tab(_ tab: any BrowserTab, didOpen newTab: any BrowserTab, disposition: NewTabDisposition) {
-        let sourceID = itemIDsByTab[tab.id]
+        // Pages opened from Peek belong to the tab whose link opened the Peek.
+        let sourceID = itemIDsByTab[tab.id] ?? (isPeek(tab) ? peekSourceID : nil)
         let spaceID = sourceID.flatMap(document.spaceID(containing:)) ?? selectedSpaceID
         guard let container = document.space(spaceID)?.unpinnedContainerID else { return }
 
@@ -332,9 +399,12 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     }
 
     public func tabStateDidChange(_ tab: any BrowserTab) {
-        guard let id = itemIDsByTab[tab.id] else { return }
         let state = tab.state
-        sidebar.recordPage(id, url: state.url, title: state.title)
+        if let id = itemIDsByTab[tab.id] {
+            sidebar.recordPage(id, url: state.url, title: state.title)
+        } else if !isPeek(tab) {
+            return
+        }
         if !state.isLoading, let url = state.url, let scheme = url.scheme?.lowercased(),
            ["http", "https"].contains(scheme), lastVisitedURLs[tab.id] != url {
             lastVisitedURLs[tab.id] = url
@@ -343,12 +413,16 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     }
 
     public func tabDidRequestClose(_ tab: any BrowserTab) {
+        if isPeek(tab) {
+            closePeek()
+            return
+        }
         guard let id = itemIDsByTab[tab.id] else { return }
         close(id)
     }
 
     public func tab(_ tab: any BrowserTab, runDialog dialog: JavaScriptDialog) async -> JavaScriptDialogResult {
-        guard itemIDsByTab[tab.id] != nil else { return .dismissed }
+        guard itemIDsByTab[tab.id] != nil || isPeek(tab) else { return .dismissed }
         let pending = PendingDialog(id: UUID(), tabID: tab.id, dialog: dialog)
         return await withCheckedContinuation { continuation in
             dialogAnswers[pending.id] = continuation
@@ -356,10 +430,26 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         }
     }
 
+    /// Links from pinned tabs and favourites to another site open in Peek, and so does a Shift-click in any tab.
+    public func tab(_ tab: any BrowserTab, shouldFollowLinkTo url: URL, shiftKey: Bool) -> Bool {
+        guard let sourceID = itemIDsByTab[tab.id] else { return true }
+        let isKept: Bool
+        switch document.containerRole(of: sourceID) {
+        case .pinned, .favorites: isKept = true
+        default: isKept = false
+        }
+        let current = tab.state.url ?? tabInfo(sourceID)?.savedURL
+        let leavesSite = siteKey(forHost: url.host() ?? "") != siteKey(forHost: current?.host() ?? "")
+        guard shiftKey || (isKept && leavesSite) else { return true }
+        openPeek(url, from: sourceID)
+        return false
+    }
+
     // MARK: Helpers
 
     /// Selects without touching opener links. Creates the live page if needed and records activity.
     private func setSelection(_ id: ItemID) {
+        closePeek()
         if let spaceID = document.spaceID(containing: id), spaceID != selectedSpaceID {
             selectedSpaceID = spaceID
         }
@@ -396,12 +486,17 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         guard let tab = liveTabs.removeValue(forKey: id) else { return }
         itemIDsByTab[tab.id] = nil
         lastVisitedURLs[tab.id] = nil
+        dismissDialogs(of: tab)
+        tab.delegate = nil
+        tab.close()
+    }
+
+    /// Answers a page's waiting dialogs as dismissed.
+    private func dismissDialogs(of tab: any BrowserTab) {
         for dialog in dialogs where dialog.tabID == tab.id {
             dialogAnswers.removeValue(forKey: dialog.id)?.resume(returning: .dismissed)
         }
         dialogs.removeAll { $0.tabID == tab.id }
-        tab.delegate = nil
-        tab.close()
     }
 
     private func forgetOpener(_ id: ItemID) {
