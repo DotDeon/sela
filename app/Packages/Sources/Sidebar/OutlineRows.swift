@@ -12,8 +12,11 @@ public func rootRows(for space: Space, in document: SidebarDocument) -> [Outline
     childRows(of: space.pinnedContainerID, in: document) + [.divider] + childRows(of: space.unpinnedContainerID, in: document)
 }
 
+/// A split's tabs show inside its one row, so a split has no child rows.
 public func childRows(of id: ItemID, in document: SidebarDocument) -> [OutlineRow] {
-    (document.item(id)?.childIDs ?? []).map(OutlineRow.item)
+    guard let item = document.item(id) else { return [] }
+    if case .split = item.kind { return [] }
+    return item.childIDs.map(OutlineRow.item)
 }
 
 /// Each visible parent's rows, keyed by parent. Nil is the root. Collapsed folders are left out.

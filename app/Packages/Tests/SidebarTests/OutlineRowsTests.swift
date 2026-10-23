@@ -59,3 +59,21 @@ func dropDestinations(parent: OutlineRow?, childIndex: Int, expectedParent: Item
     themed.theme = SpaceTheme(primary: red)
     #expect(themeColor(for: themed, at: 0) == red)
 }
+
+@Test func aSplitIsOneRow() throws {
+    var doc = fixtureDocument()
+    let s = try doc.addToSplit("u2", with: "u1")
+    let snapshot = outlineSnapshot(for: space, in: doc)
+    let rows = snapshot.values.flatMap { $0 }
+    #expect(rows.contains(.item(s)))
+    #expect(!rows.contains(.item("u1")))
+    #expect(!rows.contains(.item("u2")))
+    #expect(childRows(of: s, in: doc).isEmpty)
+}
+
+@Test func nothingDropsIntoASplit() throws {
+    var doc = fixtureDocument()
+    let s = try doc.addToSplit("u2", with: "u1")
+    #expect(dropDestination(parent: .item(s), childIndex: 0, space: space, document: doc) == nil)
+    #expect(dropDestination(parent: .item(s), childIndex: -1, space: space, document: doc) == nil)
+}

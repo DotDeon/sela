@@ -9,9 +9,19 @@ import SidebarModel
 public func inactiveTabs(in document: SidebarDocument, now: Date, after interval: TimeInterval, protecting: Set<ItemID>, notBefore: Date? = nil) -> [ItemID] {
     let cutoff = now.addingTimeInterval(-interval)
     if let notBefore, notBefore >= cutoff { return [] }
-    return document.spaces.flatMap { document.tabIDs(under: $0.unpinnedContainerID) }.filter { id in
+    func isDue(_ id: ItemID) -> Bool {
         guard !protecting.contains(id), let item = document.item(id), case .tab(let info) = item.kind else { return false }
         return (info.lastActiveAt ?? item.createdAt) < cutoff
+    }
+    // A split goes as a unit, once every one of its panes is due.
+    return document.spaces.flatMap { space in
+        (document.item(space.unpinnedContainerID)?.childIDs ?? []).flatMap { id -> [ItemID] in
+            if case .split = document.item(id)?.kind {
+                let panes = document.tabIDs(under: id)
+                return panes.allSatisfy(isDue) ? panes : []
+            }
+            return document.tabIDs(under: id).filter(isDue)
+        }
     }
 }
 

@@ -51,3 +51,30 @@ private let now = fixtureDate.addingTimeInterval(13 * hour)
     #expect(inactiveTabs(in: fixtureDocument(), now: now, after: 12 * hour, protecting: [], notBefore: started).isEmpty)
     #expect(Set(inactiveTabs(in: fixtureDocument(), now: now.addingTimeInterval(12 * hour), after: 12 * hour, protecting: [], notBefore: started)) == ["u1", "u2"])
 }
+
+@Test func aSplitArchivesOnlyWhenEveryPaneIsDue() throws {
+    var doc = fixtureDocument()
+    try doc.addToSplit("u2", with: "u1")
+    try doc.updateTab("u2") { $0.lastActiveAt = now.addingTimeInterval(-1 * hour) }
+    #expect(inactiveTabs(in: doc, now: now, after: 12 * hour, protecting: []).isEmpty)
+    try doc.updateTab("u2") { $0.lastActiveAt = now.addingTimeInterval(-13 * hour) }
+    #expect(inactiveTabs(in: doc, now: now, after: 12 * hour, protecting: []) == ["u1", "u2"])
+}
+
+@Test func aProtectedPaneProtectsItsSplit() throws {
+    var doc = fixtureDocument()
+    try doc.addToSplit("u2", with: "u1")
+    #expect(inactiveTabs(in: doc, now: now, after: 12 * hour, protecting: ["u2"]).isEmpty)
+}
+
+@MainActor @Test func archivingASplitRemovesIt() throws {
+    let folder = try temporaryFolder()
+    let sidebar = SidebarStore(fileStore: SidebarDocumentStore(fileURL: folder.appending(path: "Sidebar.json")), saveDelay: .seconds(60), firstRunDocument: { fixtureDocument() })
+    let archive = ArchiveStore(fileURL: folder.appending(path: "Archive.json"), now: { now })
+    let s = try #require(sidebar.addToSplit("u2", with: "u1"))
+    archiveInactiveTabs(sidebar: sidebar, archive: archive, now: now, after: 12 * hour, protecting: [])
+    #expect(archive.entries.count == 2)
+    #expect(sidebar.document.item(s) == nil)
+    #expect(sidebar.document.item("U")?.childIDs == [])
+    try sidebar.document.validate()
+}
