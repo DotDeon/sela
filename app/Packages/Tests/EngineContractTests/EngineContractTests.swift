@@ -103,4 +103,12 @@ struct EngineContractTests {
         tab.close()
         #expect(tab.contentView.superview == nil)
     }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func failedLoadShowsErrorPage(engine: EngineUnderTest) async throws {
+        let unreachable = URL(string: "https://brow-test.invalid/")!
+        let tab = engine.make().makeTab(url: unreachable)
+        try await eventually { tab.state.title == "Can’t open this page" }
+        #expect(tab.state.url == unreachable)
+    }
 }

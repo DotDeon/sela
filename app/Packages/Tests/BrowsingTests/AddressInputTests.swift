@@ -10,6 +10,8 @@ import Browsing
     ("https://example.com/a b", "https://example.com/a%20b"),
     ("localhost:3000", "http://localhost:3000"),
     ("localhost", "http://localhost"),
+    ("app.localhost:5173", "http://app.localhost:5173"),
+    ("my-mac.local:3000", "http://my-mac.local:3000"),
     ("192.168.1.1:8080/admin", "http://192.168.1.1:8080/admin"),
     ("about:blank", "about:blank"),
     ("file:///Users/me/page.html", "file:///Users/me/page.html"),

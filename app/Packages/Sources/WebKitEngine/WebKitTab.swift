@@ -106,11 +106,25 @@ extension WebKitTab: WKNavigationDelegate {
         reloadedAfterCrash = false
     }
 
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
+        let error = error as NSError
+        guard !isIgnorable(error),
+              let failedURL = error.userInfo[NSURLErrorFailingURLErrorKey] as? URL ?? webView.url
+        else { return }
+        webView.loadSimulatedRequest(URLRequest(url: failedURL), responseHTML: errorPageHTML(for: failedURL, error: error))
+    }
+
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         guard !reloadedAfterCrash else { return }
         reloadedAfterCrash = true
         webView.reload()
     }
+}
+
+/// Cancelled loads, and loads WebKit handed elsewhere, aren't failures the user needs to see.
+private func isIgnorable(_ error: NSError) -> Bool {
+    (error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled)
+        || (error.domain == "WebKitErrorDomain" && [102, 204].contains(error.code))
 }
 
 extension WebKitTab: WKUIDelegate {

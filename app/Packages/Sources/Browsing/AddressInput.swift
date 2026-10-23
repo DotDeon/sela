@@ -16,7 +16,7 @@ public enum AddressInput {
         if text.contains(where: \.isWhitespace) {
             return search(text)
         }
-        if text.wholeMatch(of: localAddress()) != nil {
+        if text.wholeMatch(of: localAddress()) != nil || isLocalNetworkHost(text) {
             return URL(string: "http://" + text)
         }
         if looksLikeDomain(text) {
@@ -30,8 +30,18 @@ public enum AddressInput {
         /(?i)(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([\/?#].*)?/
     }
 
+    /// `*.localhost` and `*.local` names are dev servers and machines on the local network, which rarely speak HTTPS.
+    private static func isLocalNetworkHost(_ text: String) -> Bool {
+        let host = host(of: text).lowercased()
+        return host.hasSuffix(".localhost") || host.hasSuffix(".local")
+    }
+
+    private static func host(of text: String) -> Substring {
+        text.prefix { !"/?:#".contains($0) }
+    }
+
     private static func looksLikeDomain(_ text: String) -> Bool {
-        let host = text.prefix { !"/?:#".contains($0) }
+        let host = host(of: text)
         let labels = host.split(separator: ".", omittingEmptySubsequences: false)
         guard labels.count >= 2, let last = labels.last, last.count >= 2 else { return false }
         return last.allSatisfy { $0.isASCII && $0.isLetter }
