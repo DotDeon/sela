@@ -220,6 +220,14 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         }
     }
 
+    /// Records that the selected tab is in use right now, for example when Brow quits,
+    /// so archiving counts from now rather than from when it was selected.
+    public func markSelectionActive() {
+        if let selected = selectedItemID {
+            sidebar.markActive(selected, at: now())
+        }
+    }
+
     /// Closes every live page, for when the window closes.
     public func closeAllLiveTabs() {
         for id in Array(liveTabs.keys) { unload(id) }

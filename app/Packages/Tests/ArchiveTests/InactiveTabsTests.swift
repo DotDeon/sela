@@ -45,3 +45,9 @@ private let now = fixtureDate.addingTimeInterval(13 * hour)
     #expect(Set(archive.entries.compactMap(\.title)) == ["u1 title", "u2 title"])
     #expect(archive.entries.allSatisfy { $0.spaceID == "S" && $0.archivedAt == now })
 }
+
+@Test func inactivityCountsFromWhenArchivingStarted() {
+    let started = now.addingTimeInterval(-1 * hour)
+    #expect(inactiveTabs(in: fixtureDocument(), now: now, after: 12 * hour, protecting: [], notBefore: started).isEmpty)
+    #expect(Set(inactiveTabs(in: fixtureDocument(), now: now.addingTimeInterval(12 * hour), after: 12 * hour, protecting: [], notBefore: started)) == ["u1", "u2"])
+}

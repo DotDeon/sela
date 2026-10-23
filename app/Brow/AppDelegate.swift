@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        for controller in windowControllers { controller.model.markSelectionActive() }
         sidebar?.saveNow()
     }
 

@@ -7,6 +7,9 @@ import SidebarModel
 @MainActor
 final class ArchiveSweeper {
     static let intervalKey = "ArchiveAfterHours"
+    /// When this Mac first ran archiving. Tabs count as inactive only from then, so an Arc import
+    /// or a sidebar from before archiving existed isn't swept on the first launch.
+    static let startedKey = "ArchivingStartedAt"
     static let defaultHours = 12
     static let choices = [12, 24, 7 * 24, 30 * 24, 0]
 
@@ -29,6 +32,9 @@ final class ArchiveSweeper {
     }
 
     func start() {
+        if UserDefaults.standard.object(forKey: Self.startedKey) == nil {
+            UserDefaults.standard.set(Date.now, forKey: Self.startedKey)
+        }
         sweep()
         timer = Timer.scheduledTimer(withTimeInterval: 5 * 60, repeats: true) { _ in
             MainActor.assumeIsolated { self.sweep() }
@@ -41,6 +47,7 @@ final class ArchiveSweeper {
     func sweep() {
         let hours = Self.hours
         guard hours > 0 else { return }
-        archiveInactiveTabs(sidebar: sidebar, archive: archive, now: .now, after: TimeInterval(hours) * 3600, protecting: protectedItems())
+        let started = UserDefaults.standard.object(forKey: Self.startedKey) as? Date
+        archiveInactiveTabs(sidebar: sidebar, archive: archive, now: .now, after: TimeInterval(hours) * 3600, protecting: protectedItems(), notBefore: started)
     }
 }

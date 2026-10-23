@@ -116,3 +116,14 @@ private struct Harness {
     tab.finishLoading(title: nil)
     #expect(visits.count == 2)
 }
+
+@MainActor @Test func markSelectionActiveRefreshesTheTabYouAreReading() throws {
+    var clock = fixtureDate
+    let folder = try temporaryFolder()
+    let store = SidebarStore(fileStore: SidebarDocumentStore(fileURL: folder.appending(path: "Sidebar.json")), saveDelay: .seconds(60), firstRunDocument: { fixtureDocument() })
+    let model = BrowserWindowModel(engine: FakeEngine(), sidebar: store, now: { clock })
+    model.select("p1")
+    clock = fixtureDate.addingTimeInterval(10 * 60 * 60)
+    model.markSelectionActive()
+    #expect(tabInfo(store.document, "p1")?.lastActiveAt == clock)
+}
