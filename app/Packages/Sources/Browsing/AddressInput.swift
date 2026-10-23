@@ -2,7 +2,7 @@ import Foundation
 
 /// Turns what someone typed in the address bar into a URL to load.
 public enum AddressInput {
-    static let searchURLPrefix = "https://www.google.com/search?q="
+    public static let searchURLPrefix = "https://www.google.com/search?q="
 
     /// Nil for blank input. Otherwise a website, a local address, or a search.
     public static func resolve(_ text: String) -> URL? {

@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "SidebarUI", targets: ["SidebarUI"]),
         .library(name: "Archive", targets: ["Archive"]),
         .library(name: "History", targets: ["History"]),
+        .library(name: "CommandBar", targets: ["CommandBar"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
         .library(name: "BrowserEngine", targets: ["BrowserEngine"]),
@@ -36,6 +37,8 @@ let package = Package(
         .testTarget(name: "ArchiveTests", dependencies: ["Archive", "Sidebar", "SidebarModel", "BrowTestSupport"]),
         .target(name: "History", linkerSettings: [.linkedLibrary("sqlite3")]),
         .testTarget(name: "HistoryTests", dependencies: ["History"]),
+        .target(name: "CommandBar", dependencies: ["Browsing", "SidebarModel", "SidebarUI"]),
+        .testTarget(name: "CommandBarTests", dependencies: ["CommandBar", "SidebarModel"]),
         .target(name: "ArcImport", dependencies: ["SidebarModel"]),
         .testTarget(
             name: "ArcImportTests",
