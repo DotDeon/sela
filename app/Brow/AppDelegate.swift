@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var sweeper: ArchiveSweeper?
     private var contentBlocker: ContentBlocker!
     private var listRefreshTimer: Timer?
+    private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
     private var windowControllers: [BrowserWindowController] = []
 
@@ -93,7 +94,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: Content blocking
 
-    /// Installs the lists already downloaded, then checks for new ones now, every 6 hours and after waking.
+    /// Installs the lists already downloaded, then checks for new ones now, every 6 hours and after waking,
+    /// and every 2 minutes while a list has never downloaded, such as after a first launch with no network.
     private func startContentBlocking() {
         let folder = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
             .map { $0.appending(path: "Brow/ContentBlocking", directoryHint: .isDirectory) }
@@ -107,6 +109,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         listRefreshTimer = Timer.scheduledTimer(withTimeInterval: 6 * 60 * 60, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }
+        }
+        missingListTimer = Timer.scheduledTimer(withTimeInterval: 2 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let blocker = self?.contentBlocker, blocker.isMissingLists else { return }
+                await blocker.refreshIfNeeded()
+            }
         }
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }

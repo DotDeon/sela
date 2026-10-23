@@ -55,6 +55,12 @@ public final class ContentBlocker {
 
     // MARK: Lists and rules
 
+    /// True while any list has never downloaded, for example after a first launch with no network.
+    /// The app retries sooner while this is true.
+    public var isMissingLists: Bool {
+        lists.contains { store.text(for: $0) == nil }
+    }
+
     /// Connects to the engine, installs the lists already on disk, then downloads any that are missing or old.
     public func start() async {
         engine?.isContentBlockingEnabled = { [weak self] url in self?.isBlocking(on: url) ?? true }

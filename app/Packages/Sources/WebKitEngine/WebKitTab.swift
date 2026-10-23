@@ -55,6 +55,7 @@ final class WebKitTab: NSObject, BrowserTab {
     }
 
     private func setBlocking(_ blocking: Bool) {
+        guard blocking != isBlocking else { return }
         isBlocking = blocking
         refreshContentBlocking()
     }
@@ -129,10 +130,22 @@ final class WebKitTab: NSObject, BrowserTab {
 
 extension WebKitTab: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-        // A new top-level page decides whether this tab blocks content, before anything on it loads.
-        if navigationAction.targetFrame?.isMainFrame ?? true {
+        let policy = linkPolicy(for: navigationAction)
+        // A new top-level page in this tab decides whether it blocks content, before anything on it loads.
+        // Links that open elsewhere, or that the window takes for Peek, leave the page here as it is.
+        if policy == .allow, navigationAction.targetFrame?.isMainFrame == true {
             setBlocking(engine.blocksContent(on: navigationAction.request.url))
         }
+        return policy
+    }
+
+    /// Committing settles the page's address after any redirects, so blocking follows the page actually shown.
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        setBlocking(engine.blocksContent(on: webView.url))
+    }
+
+    /// Where a link goes: here, or somewhere else, in which case this tab cancels it.
+    private func linkPolicy(for navigationAction: WKNavigationAction) -> WKNavigationActionPolicy {
         guard navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url, let delegate else { return .allow }
         if let disposition = newTabDisposition(modifiers: navigationAction.modifierFlags, buttonNumber: navigationAction.buttonNumber) {
             delegate.tab(self, didOpen: engine.makeTab(url: url), disposition: disposition)
@@ -186,7 +199,11 @@ private func isIgnorable(_ error: NSError) -> Bool {
 extension WebKitTab: WKUIDelegate {
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         guard let delegate else { return nil }
+        // A popup gets its own rules and page script, so blocking can differ between it and the page that opened it.
+        let bridge = PageScriptBridge()
+        configuration.userContentController = engine.makeContentController(bridge: bridge)
         let popup = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: engine)
+        bridge.tab = popup
         engine.register(popup)
         delegate.tab(self, didOpen: popup, disposition: .foreground)
         return popup.webView

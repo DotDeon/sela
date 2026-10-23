@@ -96,4 +96,35 @@ struct ContentBlockingContractTests {
         let tab = try await loadedTab(browser, page)
         try await eventually { tab.state.title == "undefined" }
     }
+
+    /// A link that opens in a new tab, here to a site with blocking off, mustn't change the blocking of the page you're on.
+    @Test(arguments: EngineUnderTest.allCases)
+    func linksOpenedElsewhereLeaveThisPageBlocking(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        try await browser.installContentRules([blockBanner])
+        browser.isContentBlockingEnabled = { url in !url.lastPathComponent.hasPrefix("off") }
+        try pixel.write(to: site.folder.appending(path: "ad-banner.png"))
+        _ = try site.page("off.html", "<title>Off</title>")
+        // Opens the link in a new tab, then adds a banner image once that tab has had time to load.
+        let page = try site.page("on.html", """
+            <a id="link" href="off.html" target="_blank">off</a>
+            <script>
+            setTimeout(() => { document.getElementById('link').click() }, 200);
+            setTimeout(() => {
+                const img = document.createElement('img');
+                img.onload = () => { document.title = 'loaded' };
+                img.onerror = () => { document.title = 'blocked' };
+                img.src = 'ad-banner.png?late';
+                document.body.appendChild(img);
+            }, 800);
+            </script>
+            """)
+        let delegate = RecordingDelegate()
+        let tab = try await loadedTab(browser, page, delegate: delegate)
+        try await eventually { tab.state.title == "blocked" || tab.state.title == "loaded" }
+        #expect(delegate.opened.count == 1)
+        #expect(tab.state.title == "blocked")
+        #expect(tab.state.url == page)
+    }
 }
+

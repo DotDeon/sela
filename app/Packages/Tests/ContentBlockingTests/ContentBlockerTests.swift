@@ -133,3 +133,14 @@ private func eventually(_ condition: @MainActor () -> Bool, sourceLocation: Sour
     blocker.setBlocking(false, forSiteOf: page)
     #expect(h.engine.pageScripts?(page, nil) == nil)
 }
+
+@MainActor @Test func missingListsAreReportedUntilDownloaded() async throws {
+    let h = Harness()
+    await h.server.setFailing(true)
+    let blocker = h.makeBlocker()
+    await blocker.start()
+    #expect(blocker.isMissingLists)
+    await h.server.setFailing(false)
+    await blocker.refreshIfNeeded()
+    #expect(!blocker.isMissingLists)
+}

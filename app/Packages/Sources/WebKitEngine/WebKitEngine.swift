@@ -61,6 +61,14 @@ public final class WebKitEngine: ContentBlockingEngine {
         for tab in tabs.allObjects { tab.refreshContentBlocking() }
     }
 
+    /// A tab's own content controller, with the current rules and the page script that asks `bridge` for more.
+    func makeContentController(bridge: PageScriptBridge) -> WKUserContentController {
+        let controller = WKUserContentController()
+        contentRules.apply(to: controller, blocking: true)
+        PageScriptInjection.install(on: controller, bridge: bridge)
+        return controller
+    }
+
     /// Tracks a tab so rule changes reach it.
     func register(_ tab: WebKitTab) {
         tabs.add(tab)
@@ -78,9 +86,7 @@ public final class WebKitEngine: ContentBlockingEngine {
         webConfiguration.applicationNameForUserAgent = applicationName
         webConfiguration.preferences.isElementFullscreenEnabled = true
         webConfiguration.preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture
-        webConfiguration.userContentController = WKUserContentController()
-        contentRules.apply(to: webConfiguration.userContentController, blocking: true)
-        PageScriptInjection.install(on: webConfiguration.userContentController, bridge: bridge)
+        webConfiguration.userContentController = makeContentController(bridge: bridge)
         return webConfiguration
     }
 }
