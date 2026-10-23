@@ -10,6 +10,8 @@ import Browsing
     ("localhost", "localhost"),
     ("192.168.1.10", "192.168.1.10"),
     ("GitHub.COM", "github.com"),
+    ("chat.t3.gg", "t3.gg"),
+    ("console.x.ai", "x.ai"),
 ])
 func siteKeys(host: String, key: String) {
     #expect(siteKey(forHost: host) == key)

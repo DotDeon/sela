@@ -42,11 +42,13 @@ Inside `app/Packages`:
 You need Xcode 27.
 
 ```bash
-xcodebuild -project app/Brow.xcodeproj -scheme Brow -configuration Debug -derivedDataPath .build/xcode build
+xcodebuild -project app/Brow.xcodeproj -scheme Brow -configuration Debug -derivedDataPath .build/xcode -skipPackagePluginValidation build
 open .build/xcode/Build/Products/Debug/Brow.app
 ```
 
-You can also open `app/Brow.xcodeproj` in Xcode and press Cmd+R.
+`-skipPackagePluginValidation` lets AdGuard's SafariConverterLib run its build plugin, which only writes the library's version number into its source.
+
+You can also open `app/Brow.xcodeproj` in Xcode and press Cmd+R. The first time, Xcode asks you to trust the `GenerateVersion` plugin from `safariconverterlib`.
 
 ## Running the tests
 
@@ -74,3 +76,14 @@ swift run --package-path app/Packages brow-arc inspect --root "/Volumes/Backup/A
 ```
 
 Neither command changes anything in Arc's folder.
+
+## Licence
+
+Brow is free software under the GNU General Public License, version 3. See [`LICENSE`](LICENSE).
+
+## Third-party code
+
+- [SafariConverterLib](https://github.com/AdguardTeam/SafariConverterLib) by AdGuard (GPL-3.0) converts ad blocking filter lists into WebKit's content blocking rules.
+- [@adguard/safari-extension](https://github.com/AdguardTeam/SafariConverterLib/tree/master/Extension), [@adguard/extended-css](https://github.com/AdguardTeam/ExtendedCss) and [@adguard/scriptlets](https://github.com/AdguardTeam/Scriptlets) by AdGuard (GPL-3.0) apply the rules WebKit can't, inside each page.
+- [PunycodeSwift](https://github.com/gumob/PunycodeSwift) (MIT) and [swift-psl](https://github.com/ameshkov/swift-psl) (MIT) come with SafariConverterLib.
+- [EasyList and EasyPrivacy](https://easylist.to) (GPL-3.0 or CC BY-SA 3.0) are downloaded at run time, not shipped with Brow.

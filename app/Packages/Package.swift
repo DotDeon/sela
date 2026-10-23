@@ -18,7 +18,12 @@ let package = Package(
         .library(name: "FakeEngine", targets: ["FakeEngine"]),
         .library(name: "WebKitEngine", targets: ["WebKitEngine"]),
         .library(name: "Browsing", targets: ["Browsing"]),
+        .library(name: "ContentBlocking", targets: ["ContentBlocking"]),
         .executable(name: "brow-arc", targets: ["brow-arc"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/AdguardTeam/SafariConverterLib", exact: "4.3.1"),
+        .package(url: "https://github.com/ameshkov/swift-psl", exact: "1.1.43"),
     ],
     targets: [
         .target(name: "SidebarModel"),
@@ -53,8 +58,20 @@ let package = Package(
         .target(name: "WebKitEngine", dependencies: ["BrowserEngine"]),
         .testTarget(name: "WebKitEngineTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
-        .target(name: "Browsing", dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive"]),
+        .target(
+            name: "Browsing",
+            dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", .product(name: "PublicSuffixList", package: "swift-psl")]
+        ),
         .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "BrowTestSupport"]),
+        .target(
+            name: "ContentBlocking",
+            dependencies: [
+                "BrowserEngine",
+                .product(name: "ContentBlockerConverter", package: "SafariConverterLib"),
+                .product(name: "PublicSuffixList", package: "swift-psl"),
+            ]
+        ),
+        .testTarget(name: "ContentBlockingTests", dependencies: ["ContentBlocking", "BrowserEngine", "FakeEngine"]),
         .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )

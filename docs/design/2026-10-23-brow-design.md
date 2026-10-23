@@ -138,6 +138,8 @@ brow/
 
 Made by the owner:
 
+- Content blocking, decided 2026-10-23. Brow blocks ads and trackers by default with EasyList and EasyPrivacy, converted by AdGuard's SafariConverterLib into WebKit content rules, with a switch per site.
+- Brow is licensed GPL-3.0, decided 2026-10-23, because AdGuard's library is GPL-3.0.
 - WebKit for good, decided 2026-10-23. This replaces the earlier plan of a Chromium fork. Brow stays small and builds on any Mac, needs no Widevine licence and has no engine to update every 4 weeks. It gives up Chrome extensions.
 - Native Mac UI in Swift and AppKit. Not web-drawn.
 - Mac only.

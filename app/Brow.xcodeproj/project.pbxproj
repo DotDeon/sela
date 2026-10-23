@@ -18,6 +18,7 @@
 		B70000000000000000000021 /* Archive in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000024 /* Archive */; };
 		B70000000000000000000022 /* History in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000025 /* History */; };
 		B70000000000000000000023 /* CommandBar in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000026 /* CommandBar */; };
+		B70000000000000000000027 /* ContentBlocking in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000028 /* ContentBlocking */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,7 @@
 				B70000000000000000000021 /* Archive in Frameworks */,
 				B70000000000000000000022 /* History in Frameworks */,
 				B70000000000000000000023 /* CommandBar in Frameworks */,
+				B70000000000000000000027 /* ContentBlocking in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -101,6 +103,7 @@
 				B70000000000000000000024 /* Archive */,
 				B70000000000000000000025 /* History */,
 				B70000000000000000000026 /* CommandBar */,
+				B70000000000000000000028 /* ContentBlocking */,
 			);
 			productName = Brow;
 			productReference = B70000000000000000000005 /* Brow.app */;
@@ -323,6 +326,10 @@
 		B70000000000000000000026 /* CommandBar */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CommandBar;
+		};
+		B70000000000000000000028 /* ContentBlocking */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContentBlocking;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
