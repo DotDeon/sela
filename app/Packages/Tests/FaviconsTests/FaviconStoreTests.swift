@@ -121,3 +121,14 @@ private let page = URL(string: "https://a.example.com/some/page")!
     try await eventually { store.image(forPage: URL(string: "https://a.example.com/third")!) != nil }
     #expect(server.fetched.count == 1)
 }
+
+@MainActor @Test func rememberingTheSameIconTwiceFetchesOnce() async throws {
+    let icon = URL(string: "https://cdn.example.com/icon.png")!
+    let server = FakeServer { _ in png() }
+    let store = FaviconStore(cacheFolder: try folder(), fetch: server.fetch)
+    store.remember(iconURL: icon, forPage: page)
+    try await eventually { store.image(forPage: page) != nil }
+    store.remember(iconURL: icon, forPage: page)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(server.fetched == [icon])
+}

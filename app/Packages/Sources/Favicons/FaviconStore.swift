@@ -18,6 +18,8 @@ public final class FaviconStore {
     @ObservationIgnored private var inFlight: Set<String> = []
     /// Hosts with no usable icon this launch. Not retried until Brow restarts.
     @ObservationIgnored private var failed: Set<String> = []
+    /// The icon each host's pages last declared, so repeated reports don't refetch it.
+    @ObservationIgnored private var rememberedIcons: [String: URL] = [:]
 
     public init(cacheFolder: URL, fetch: @escaping Fetch = FaviconStore.urlSessionFetch) {
         self.cacheFolder = cacheFolder
@@ -48,8 +50,10 @@ public final class FaviconStore {
     }
 
     /// Fetches the icon a page declared and uses it for the page's site from now on.
+    /// Reporting the same icon again does nothing.
     public func remember(iconURL: URL, forPage url: URL) {
-        guard let host = Self.cacheKey(for: url) else { return }
+        guard let host = Self.cacheKey(for: url), rememberedIcons[host] != iconURL else { return }
+        rememberedIcons[host] = iconURL
         failed.remove(host)
         load(iconURL, for: host)
     }
