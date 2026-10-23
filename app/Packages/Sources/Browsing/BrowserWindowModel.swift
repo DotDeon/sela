@@ -60,10 +60,12 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     // MARK: Selecting
 
     /// Shows a tab, loading its page if it isn't live. Switches to the tab's space; favourites keep the current space.
+    /// A split's ID selects the pane used most recently.
     public func select(_ id: ItemID) {
-        guard isTab(id) else { return }
-        forgetOpenersUnlessRelated(to: id)
-        setSelection(id)
+        let target = paneToShow(for: id) ?? id
+        guard isTab(target) else { return }
+        forgetOpenersUnlessRelated(to: target)
+        setSelection(target)
     }
 
     public func selectSpace(_ id: SpaceID) {
@@ -124,6 +126,70 @@ public final class BrowserWindowModel: BrowserTabDelegate {
             newTab(url: url)
         }
     }
+
+    // MARK: Split view
+
+    /// The split holding the selected tab, or nil when the selected tab isn't in one.
+    public var selectedSplit: SplitLayout? {
+        guard let selected = selectedItemID, let splitID = document.splitID(containing: selected),
+              let split = document.item(splitID), case .split(let info) = split.kind
+        else { return nil }
+        return SplitLayout(id: splitID, paneIDs: split.childIDs, orientation: info.orientation, fractions: info.fractions)
+    }
+
+    /// Adds a blank tab beside the selected tab, making a split if there isn't one, and selects it.
+    /// Nil when nothing is selected, a favourite is selected, or the split is full.
+    @discardableResult
+    public func addSplitPane() -> ItemID? {
+        guard let selected = selectedItemID, document.containerRole(of: selected) != .favorites,
+              (selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
+        else { return nil }
+        let outer = document.splitID(containing: selected) ?? selected
+        guard let container = document.item(outer)?.parentID,
+              let index = document.item(container)?.childIDs.firstIndex(of: outer)
+        else { return nil }
+        let id = sidebar.createTab(url: nil, title: nil, in: container, at: index + 1)
+        guard sidebar.addToSplit(id, with: selected) != nil else {
+            sidebar.remove(id)
+            return nil
+        }
+        register(engine.makeTab(url: nil), for: id)
+        select(id)
+        return id
+    }
+
+    /// Shows an existing tab beside the selected tab and selects it.
+    public func openInSplit(_ id: ItemID) {
+        guard let selected = selectedItemID, selected != id, sidebar.addToSplit(id, with: selected) != nil else { return }
+        select(id)
+    }
+
+    /// Turns the selected split back into separate tabs, keeping the selection.
+    public func separateSelectedSplit() {
+        guard let split = selectedSplit else { return }
+        sidebar.separateSplit(split.id)
+    }
+
+    /// Switches the selected split between side by side and one above the other.
+    public func rotateSelectedSplit() {
+        guard let split = selectedSplit else { return }
+        sidebar.setSplitOrientation(split.id, split.orientation == .horizontal ? .vertical : .horizontal)
+    }
+
+    public func resizeSelectedSplit(_ fractions: [Double]) {
+        guard let split = selectedSplit else { return }
+        sidebar.setSplitFractions(split.id, fractions)
+    }
+
+    /// Closes every pane. Unpinned panes go to the archive, as when closed one at a time.
+    public func closeSplit(_ splitID: ItemID) {
+        guard case .split = document.item(splitID)?.kind else { return }
+        for pane in document.tabIDs(under: splitID) {
+            close(pane)
+        }
+    }
+
+    // MARK: Closing
 
     /// Unpinned tabs are removed from the sidebar. Pinned tabs and favourites stay and only unload their page.
     public func close(_ id: ItemID) {
@@ -297,8 +363,10 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         if let spaceID = document.spaceID(containing: id), spaceID != selectedSpaceID {
             selectedSpaceID = spaceID
         }
-        if liveTabs[id] == nil {
-            register(engine.makeTab(url: tabInfo(id)?.savedURL), for: id)
+        // Every pane of a split shows at once, so every pane needs its page.
+        let panes = document.splitID(containing: id).map { document.tabIDs(under: $0) } ?? [id]
+        for pane in panes where liveTabs[pane] == nil {
+            register(engine.makeTab(url: tabInfo(pane)?.savedURL), for: pane)
         }
         let date = now()
         if let previous = selectedItemID, previous != id {
@@ -366,6 +434,12 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     /// The next sibling with the same opener, then the opener, then the tab below, then the tab above.
     private func selectionAfterClosing(_ id: ItemID) -> ItemID? {
+        if let splitID = document.splitID(containing: id) {
+            let panes = document.tabIDs(under: splitID)
+            if let index = panes.firstIndex(of: id), panes.count > 1 {
+                return panes.indices.contains(index + 1) ? panes[index + 1] : panes[index - 1]
+            }
+        }
         let order = tabOrder()
         guard let index = order.firstIndex(of: id) else { return mostRecentTab(in: selectedSpaceID, excluding: id) }
         if let opener = openerIDs[id] {
@@ -412,6 +486,14 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     private func belongsToSelectedSpace(_ id: ItemID) -> Bool {
         let space = document.spaceID(containing: id)
         return space == nil || space == selectedSpaceID
+    }
+
+    /// For a split, its pane used most recently, or its first pane when none has been used.
+    private func paneToShow(for id: ItemID) -> ItemID? {
+        guard case .split = document.item(id)?.kind else { return nil }
+        let panes = document.tabIDs(under: id)
+        let recent = panes.compactMap { pane in tabInfo(pane)?.lastActiveAt.map { (pane, $0) } }.max { $0.1 < $1.1 }
+        return recent?.0 ?? panes.first
     }
 
     private func isTab(_ id: ItemID) -> Bool {
