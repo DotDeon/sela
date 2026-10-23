@@ -1,0 +1,8 @@
+import Foundation
+
+/// Creates tabs. Brow's UI talks to an engine only through this protocol and `BrowserTab`.
+@MainActor
+public protocol BrowserEngine: AnyObject {
+    /// A new tab, loading `url` when it isn't nil.
+    func makeTab(url: URL?) -> any BrowserTab
+}
