@@ -17,6 +17,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private let root: BrowserRootViewController
     private var dialogPresenter: DialogPresenter?
     private var commandBar: CommandBarPresenter?
+    private var peek: PeekPresenter?
     private let history: HistoryStore?
 
     init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore) {
@@ -45,6 +46,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         commandBar = CommandBarPresenter(model: model, history: history, favicons: favicons, host: root.view) { [weak self] id in
             self?.runCommand(id)
         }
+        peek = PeekPresenter(model: model, host: root.pageArea)
         root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
         root.sidebarController.onNewTabClicked = { [weak self] in self?.newTab(nil) }
         keepObserving { [weak self] in self?.updateTitle() }
@@ -99,7 +101,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     }
 
     @objc func closeTab(_ sender: Any?) {
-        if let id = model.selectedItemID {
+        if model.peekTab != nil {
+            model.closePeek()
+        } else if let id = model.selectedItemID {
             model.close(id)
         } else {
             window?.performClose(nil)

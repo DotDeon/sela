@@ -4,7 +4,7 @@
 
 Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
+Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 

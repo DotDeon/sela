@@ -205,8 +205,10 @@ private final class Backdrop: NSView {
     }
 }
 
-/// A soft shadow in the shape of the command bar panel.
-private final class PanelShadowView: NSView {
+/// A soft shadow in the shape of a floating panel, for panels that clip to their rounded corners.
+final class PanelShadowView: NSView {
+    var cornerRadius: CGFloat = 14
+
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
@@ -221,6 +223,6 @@ private final class PanelShadowView: NSView {
 
     override func layout() {
         super.layout()
-        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: 14, cornerHeight: 14, transform: nil)
+        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
     }
 }

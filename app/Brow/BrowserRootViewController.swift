@@ -13,6 +13,8 @@ final class BrowserRootViewController: NSViewController {
     static let widthRange: ClosedRange<CGFloat> = 200...420
 
     let sidebarController: SidebarViewController
+    /// The area beside the sidebar where pages show. Peek floats over it.
+    var pageArea: NSView { card }
     private let content: WebContentViewController
     private let model: BrowserWindowModel
     private let tint = NSView()

@@ -2,14 +2,14 @@ import AppKit
 
 /// A borderless symbol button that lights up a rounded square under the pointer and darkens it while pressed,
 /// like the toolbar buttons in Safari and Arc.
-final class HoverButton: NSButton {
-    static let size: CGFloat = 26
+public final class HoverButton: NSButton {
+    public static let size: CGFloat = 26
 
     private var isHovered = false {
         didSet { updateBackground() }
     }
 
-    init(symbol: String, label: String, pointSize: CGFloat = 13, weight: NSFont.Weight = .medium, size: CGFloat = HoverButton.size) {
+    public init(symbol: String, label: String, pointSize: CGFloat = 13, weight: NSFont.Weight = .medium, size: CGFloat = HoverButton.size) {
         super.init(frame: NSRect(x: 0, y: 0, width: size, height: size))
         bezelStyle = .inline
         isBordered = false
@@ -29,31 +29,31 @@ final class HoverButton: NSButton {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
 
-    func setSymbol(_ symbol: String, label: String, pointSize: CGFloat = 13, weight: NSFont.Weight = .medium) {
+    public func setSymbol(_ symbol: String, label: String, pointSize: CGFloat = 13, weight: NSFont.Weight = .medium) {
         image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)?
             .withSymbolConfiguration(.init(pointSize: pointSize, weight: weight))
         setAccessibilityLabel(label)
     }
 
-    override var isEnabled: Bool {
+    public override var isEnabled: Bool {
         didSet { alphaValue = isEnabled ? 1 : 0.35 }
     }
 
-    override var isHighlighted: Bool {
+    public override var isHighlighted: Bool {
         didSet { updateBackground() }
     }
 
-    override func updateTrackingAreas() {
+    public override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect], owner: self))
     }
 
-    override func mouseEntered(with event: NSEvent) { isHovered = true }
+    public override func mouseEntered(with event: NSEvent) { isHovered = true }
 
-    override func mouseExited(with event: NSEvent) { isHovered = false }
+    public override func mouseExited(with event: NSEvent) { isHovered = false }
 
-    override func viewDidMoveToWindow() {
+    public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         isHovered = false
     }
