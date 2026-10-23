@@ -79,3 +79,17 @@ private func send(_ selector: Selector, to controller: CommandBarViewController)
     #expect(model.query == "inbox")
     try await eventually { controller.tableView.numberOfRows == model.results.count && model.results.count == 2 }
 }
+
+private final class ClickRecorder: NSResponder {
+    var clicks = 0
+    override func mouseDown(with event: NSEvent) { clicks += 1 }
+}
+
+@MainActor @Test func clicksOnThePanelDontReachWhatsBehindIt() throws {
+    let (controller, _, _) = makePanel()
+    let behind = ClickRecorder()
+    controller.view.nextResponder = behind
+    let click = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+    controller.view.mouseDown(with: click)
+    #expect(behind.clicks == 0)
+}

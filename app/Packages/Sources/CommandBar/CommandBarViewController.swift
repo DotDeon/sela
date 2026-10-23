@@ -35,7 +35,7 @@ public final class CommandBarViewController: NSViewController, NSTextFieldDelega
     required init?(coder: NSCoder) { fatalError("not used") }
 
     public override func loadView() {
-        let panel = NSVisualEffectView()
+        let panel = CommandBarPanelView()
         panel.material = .popover
         panel.blendingMode = .withinWindow
         panel.state = .active
@@ -191,4 +191,9 @@ public final class CommandBarViewController: NSViewController, NSTextFieldDelega
             return (page.title, page.url.host() ?? "", "clock")
         }
     }
+}
+
+/// The panel's background. Keeps clicks on its padding, so they don't reach the backdrop behind it and close the bar.
+final class CommandBarPanelView: NSVisualEffectView {
+    override func mouseDown(with event: NSEvent) {}
 }

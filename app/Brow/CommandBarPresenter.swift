@@ -17,6 +17,8 @@ final class CommandBarPresenter {
     private weak var host: NSView?
     private var backdrop: NSView?
     private var panel: CommandBarViewController?
+    /// What had keyboard focus before the bar opened, given back when it closes without an action.
+    private weak var previousResponder: NSResponder?
 
     static let commands = [
         CommandCandidate(id: "new-space", title: "New Space", keywords: ["create"]),
@@ -40,7 +42,10 @@ final class CommandBarPresenter {
     var isShowing: Bool { panel != nil }
 
     func show(_ mode: CommandBarMode) {
-        dismiss()
+        if panel == nil {
+            previousResponder = host?.window?.firstResponder
+        }
+        removePanel()
         guard let host else { return }
         let barModel = CommandBarModel(mode: mode, sources: sources())
         let controller = CommandBarViewController(
@@ -73,7 +78,16 @@ final class CommandBarPresenter {
         controller.focus()
     }
 
+    /// Closes the bar and gives keyboard focus back to what had it.
     func dismiss() {
+        let window = host?.window
+        removePanel()
+        if let previousResponder, let window {
+            window.makeFirstResponder(previousResponder)
+        }
+    }
+
+    private func removePanel() {
         backdrop?.removeFromSuperview()
         backdrop = nil
         panel = nil
@@ -119,7 +133,7 @@ final class CommandBarPresenter {
     }
 
     private func perform(_ action: CommandBarAction) {
-        dismiss()
+        removePanel()
         switch action {
         case .open(let url, let inNewTab):
             if inNewTab { model.newTab(url: url) } else { model.load(url) }
@@ -130,8 +144,13 @@ final class CommandBarPresenter {
         case .runCommand(let id):
             runCommand(id)
         }
-        if let content = model.selectedTab?.contentView {
-            content.window?.makeFirstResponder(content)
+        // The page view is swapped in on the next pass of the main queue, so focus it after that.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let content = self.model.selectedTab?.contentView, let window = content.window else {
+                if let previous = self?.previousResponder { self?.host?.window?.makeFirstResponder(previous) }
+                return
+            }
+            window.makeFirstResponder(content)
         }
     }
 }

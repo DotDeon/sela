@@ -44,7 +44,9 @@ public func commandBarResults(
 
     var results: [CommandBarResult] = []
     var tabRows = rankedTabs.prefix(5).map { CommandBarResult.tab($0.item) }
-    if let best = rankedTabs.first, best.score == 2 * words.count {
+    // Only the title and host can make a top hit, so a word that happens to be in an address path
+    // ("docs", "com") still searches.
+    if let best = rankedTabs.first, matchScore(query, "\(best.item.title) \(best.item.url?.host() ?? "")") == 2 * words.count {
         results.append(tabRows.removeFirst())
     }
     if let url = AddressInput.resolve(query) {

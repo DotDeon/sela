@@ -71,3 +71,14 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
     let results = commandBarResults(query: "  ", tabs: tabs, commands: [command("New Space")], archived: [], history: [history("x")])
     #expect(results == tabs.prefix(6).map(CommandBarResult.tab))
 }
+
+@Test func addressPathsDontMakeATopHit() {
+    let docs = TabCandidate(id: "docs-tab", title: "Getting started", url: URL(string: "https://example.com/docs/intro"), lastActiveAt: nil)
+    let results = commandBarResults(query: "docs", tabs: [docs], commands: [], archived: [], history: [])
+    #expect(kinds(results) == ["search", "tab"])
+}
+
+@Test func hostsStillMakeATopHit() {
+    let results = commandBarResults(query: "github", tabs: [tab("Pull requests", "github")], commands: [], archived: [], history: [])
+    #expect(kinds(results).first == "tab")
+}
