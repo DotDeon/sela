@@ -13,6 +13,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private let forwardButton = NSButton()
     private let reloadButton = NSButton()
     private var dialogPresenter: DialogPresenter?
+    private var addressShownForTabID: TabID?
 
     init(engine: any BrowserEngine) {
         model = BrowserWindowModel(engine: engine)
@@ -49,6 +50,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     @objc func newTab(_ sender: Any?) {
         model.openTab(url: nil)
+        addressField.stringValue = ""
         focusAddressBar(nil)
     }
 
@@ -113,7 +115,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         forwardButton.isEnabled = state?.canGoForward ?? false
         let isLoading = state?.isLoading ?? false
         reloadButton.image = NSImage(systemSymbolName: isLoading ? "xmark" : "arrow.clockwise", accessibilityDescription: isLoading ? "Stop" : "Reload")
-        if addressField.currentEditor() == nil {
+        // Keep what the user is typing, unless they've switched to another tab.
+        let tabChanged = model.selectedTabID != addressShownForTabID
+        addressShownForTabID = model.selectedTabID
+        if addressField.currentEditor() == nil || tabChanged {
             let url = state?.url?.absoluteString
             addressField.stringValue = url == "about:blank" ? "" : url ?? ""
         }
