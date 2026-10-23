@@ -6,8 +6,8 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
 
     let iconView = NSImageView()
     let titleField = NSTextField(labelWithString: "")
-    let resetButton = NSButton()
-    let closeButton = NSButton()
+    let resetButton = HoverButton(symbol: "arrow.uturn.backward", label: "Back to Saved Address", pointSize: 11, weight: .semibold, size: 22)
+    let closeButton = HoverButton(symbol: "xmark", label: "Close", pointSize: 11, weight: .semibold, size: 22)
 
     var onClose: (() -> Void)?
     var onReset: (() -> Void)?
@@ -17,7 +17,8 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
         didSet { resetButton.isHidden = !showsReset }
     }
 
-    private var isHovered = false {
+    /// Set by the row, which the outline view keeps up to date.
+    var isHovered = false {
         didSet { closeButton.isHidden = !(isHovered && showsCloseOnHover) }
     }
 
@@ -31,8 +32,10 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
         titleField.lineBreakMode = .byTruncatingTail
         titleField.font = .systemFont(ofSize: 13)
         titleField.delegate = self
-        configureButton(resetButton, symbol: "arrow.uturn.backward", label: "Back to Saved Address", action: #selector(resetTapped))
-        configureButton(closeButton, symbol: "xmark", label: "Close", action: #selector(closeTapped))
+        resetButton.target = self
+        resetButton.action = #selector(resetTapped)
+        closeButton.target = self
+        closeButton.action = #selector(closeTapped)
         resetButton.isHidden = true
         closeButton.isHidden = true
 
@@ -42,7 +45,7 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
         }
         titleField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            iconView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
             iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
             iconView.widthAnchor.constraint(equalToConstant: 16),
             iconView.heightAnchor.constraint(equalToConstant: 16),
@@ -51,7 +54,7 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
             resetButton.leadingAnchor.constraint(greaterThanOrEqualTo: titleField.trailingAnchor, constant: 4),
             resetButton.centerYAnchor.constraint(equalTo: centerYAnchor),
             closeButton.leadingAnchor.constraint(equalTo: resetButton.trailingAnchor, constant: 2),
-            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
+            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
             closeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
@@ -59,15 +62,10 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
 
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect], owner: self))
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        isHovered = false
     }
-
-    override func mouseEntered(with event: NSEvent) { isHovered = true }
-
-    override func mouseExited(with event: NSEvent) { isHovered = false }
 
     /// Turns the title into an editable field until Return or Escape.
     func beginRenaming(currentTitle: String) {
@@ -89,16 +87,6 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
     @objc private func closeTapped() { onClose?() }
 
     @objc private func resetTapped() { onReset?() }
-
-    private func configureButton(_ button: NSButton, symbol: String, label: String, action: Selector) {
-        button.bezelStyle = .inline
-        button.isBordered = false
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
-        button.toolTip = label
-        button.target = self
-        button.action = action
-        button.contentTintColor = .secondaryLabelColor
-    }
 }
 
 /// The line between pinned and unpinned tabs, with "Clear" and "+ New Tab".

@@ -63,6 +63,7 @@ final class CommandBarPresenter {
         host.addSubview(shade)
         // The panel clips to its rounded corners, which would clip a shadow too, so the shadow sits on a view behind it.
         let shadow = PanelShadowView()
+        let panelTop = controller.view.topAnchor.constraint(equalTo: shade.topAnchor, constant: Self.panelTop)
         let panelView = controller.view
         for view in [shadow, panelView] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -74,7 +75,7 @@ final class CommandBarPresenter {
             shade.topAnchor.constraint(equalTo: host.topAnchor),
             shade.bottomAnchor.constraint(equalTo: host.bottomAnchor),
             panelView.centerXAnchor.constraint(equalTo: shade.centerXAnchor),
-            panelView.topAnchor.constraint(equalTo: shade.topAnchor, constant: 120),
+            panelTop,
             panelView.leadingAnchor.constraint(greaterThanOrEqualTo: shade.leadingAnchor, constant: 20),
             panelView.trailingAnchor.constraint(lessThanOrEqualTo: shade.trailingAnchor, constant: -20),
             shadow.leadingAnchor.constraint(equalTo: panelView.leadingAnchor),
@@ -85,6 +86,26 @@ final class CommandBarPresenter {
         backdrop = shade
         panel = controller
         controller.focus()
+        appear(shade, panelTop: panelTop)
+    }
+
+    static let panelTop: CGFloat = 120
+
+    /// Fades the bar in while it settles down a few points into place. Fades only, with Reduce Motion on.
+    private func appear(_ shade: NSView, panelTop: NSLayoutConstraint) {
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        shade.alphaValue = 0
+        if !reduceMotion {
+            panelTop.constant = Self.panelTop - 8
+            shade.layoutSubtreeIfNeeded()
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1)
+            context.allowsImplicitAnimation = true
+            shade.animator().alphaValue = 1
+            panelTop.animator().constant = Self.panelTop
+        }
     }
 
     /// Closes the bar and gives keyboard focus back to what had it.
@@ -96,10 +117,18 @@ final class CommandBarPresenter {
         }
     }
 
+    /// Takes the bar away with a short fade. The bar counts as gone straight away, so a new one can open at once.
     private func removePanel() {
-        backdrop?.removeFromSuperview()
+        guard let shade = backdrop else { return }
+        (shade as? Backdrop)?.onClick = nil
         backdrop = nil
         panel = nil
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.12
+            shade.animator().alphaValue = 0
+        }, completionHandler: {
+            MainActor.assumeIsolated { shade.removeFromSuperview() }
+        })
     }
 
     // MARK: Results

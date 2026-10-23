@@ -98,7 +98,7 @@ final class FavoritesGridView: NSView, NSCollectionViewDataSource, NSCollectionV
         let state = model.liveTab(for: item.id)?.state
         let page = state?.url ?? info.savedURL
         let title = sidebarTitle(for: item, liveState: state.map { ($0.url, displayTitle(for: $0)) })
-        tile.imageView?.image = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 22, color: .systemGray)
+        tile.imageView?.image = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 22)
         tile.view.toolTip = title
     }
 
@@ -166,14 +166,20 @@ final class FavoritesCollectionView: NSCollectionView {
     }
 }
 
-/// One favourite: a rounded tile with the site's icon.
+/// One favourite: a rounded tile with the site's icon. Brightens under the pointer and while pressed.
 final class FavoriteTile: NSCollectionViewItem {
     static let identifier = NSUserInterfaceItemIdentifier("favorite")
 
+    private var isHovered = false {
+        didSet { updateBackground() }
+    }
+
     override func loadView() {
-        let tile = NSView()
+        let tile = TileView()
+        tile.onHover = { [weak self] in self?.isHovered = $0 }
         tile.wantsLayer = true
-        tile.layer?.cornerRadius = 10
+        tile.layer?.cornerRadius = 12
+        tile.layer?.cornerCurve = .continuous
         let icon = NSImageView()
         icon.imageScaling = .scaleProportionallyUpOrDown
         icon.translatesAutoresizingMaskIntoConstraints = false
@@ -184,6 +190,9 @@ final class FavoriteTile: NSCollectionViewItem {
             icon.widthAnchor.constraint(equalToConstant: 22),
             icon.heightAnchor.constraint(equalToConstant: 22),
         ])
+        tile.layer?.shadowColor = NSColor.black.cgColor
+        tile.layer?.shadowOffset = CGSize(width: 0, height: -1)
+        tile.layer?.shadowRadius = 2
         view = tile
         imageView = icon
         updateBackground()
@@ -193,9 +202,30 @@ final class FavoriteTile: NSCollectionViewItem {
         didSet { updateBackground() }
     }
 
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        isHovered = false
+    }
+
     private func updateBackground() {
         let dark = view.effectiveAppearance.isDark
-        let alpha: CGFloat = isSelected ? (dark ? 0.22 : 0.85) : (dark ? 0.08 : 0.35)
+        let alpha: CGFloat = isSelected ? (dark ? 0.22 : 0.85) : isHovered ? (dark ? 0.13 : 0.55) : (dark ? 0.08 : 0.35)
         view.layer?.backgroundColor = NSColor.white.withAlphaComponent(alpha).cgColor
+        view.layer?.shadowOpacity = isSelected ? (dark ? 0.3 : 0.1) : 0
     }
+}
+
+/// A favourite tile's view, reporting when the pointer enters and leaves.
+final class TileView: NSView {
+    var onHover: ((Bool) -> Void)?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect], owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
 }

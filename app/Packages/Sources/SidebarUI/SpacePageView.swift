@@ -12,6 +12,45 @@ final class SidebarOutlineView: NSOutlineView {
     override func reloadData() {
         reloadCount += 1
         super.reloadData()
+        updateHover()
+    }
+
+    // MARK: Hover
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect], owner: self))
+    }
+
+    override func mouseMoved(with event: NSEvent) { updateHover() }
+
+    override func mouseEntered(with event: NSEvent) { updateHover() }
+
+    override func mouseExited(with event: NSEvent) { updateHover() }
+
+    override func endUpdates() {
+        super.endUpdates()
+        updateHover()
+    }
+
+    override func didAdd(_ rowView: NSTableRowView, forRow row: Int) {
+        super.didAdd(rowView, forRow: row)
+        (rowView as? SidebarRowView)?.isHovered = row == hoveredRow()
+    }
+
+    /// Marks only the row under the pointer as hovered. Called whenever the pointer or the rows move.
+    func updateHover() {
+        let hovered = hoveredRow()
+        enumerateAvailableRowViews { rowView, row in
+            (rowView as? SidebarRowView)?.isHovered = row == hovered
+        }
+    }
+
+    private func hoveredRow() -> Int {
+        guard let window, window.isKeyWindow || window.isMainWindow else { return -1 }
+        let point = convert(window.mouseLocationOutsideOfEventStream, from: nil)
+        return visibleRect.contains(point) ? row(at: point) : -1
     }
 
     /// No indentation marker frame for the divider; folders keep the disclosure triangle.
@@ -232,7 +271,9 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
     }
 
     func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
-        SidebarRowView()
+        let rowView = SidebarRowView()
+        rowView.showsHover = (item as? OutlineNode)?.row != .divider
+        return rowView
     }
 
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
@@ -295,7 +336,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             }
             let page = state?.url ?? info.savedURL
             cell.iconView.image = favicons.image(forPage: page)
-                ?? letterImage(for: page?.host() ?? cell.titleField.stringValue, size: 16, color: .systemGray)
+                ?? letterImage(for: page?.host() ?? cell.titleField.stringValue, size: 16)
             cell.iconView.contentTintColor = nil
             cell.titleField.textColor = live == nil ? .secondaryLabelColor : .labelColor
             cell.showsCloseOnHover = true
@@ -489,5 +530,7 @@ final class SidebarPageScrollView: NSScrollView {
             return
         }
         super.scrollWheel(with: event)
+        // The rows moved under a still pointer.
+        (documentView as? SidebarOutlineView)?.updateHover()
     }
 }

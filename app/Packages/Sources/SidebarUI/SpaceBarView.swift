@@ -8,23 +8,18 @@ import SidebarModel
 final class SpaceBarView: NSView {
     private let model: BrowserWindowModel
     private let stack = NSStackView()
-    private let addButton = NSButton()
+    private let addButton = HoverButton(symbol: "plus", label: "New Space", pointSize: 13)
     private var buttons: [SpaceButton] = []
 
     init(model: BrowserWindowModel) {
         self.model = model
         super.init(frame: NSRect(x: 0, y: 0, width: 260, height: 36))
         stack.orientation = .horizontal
-        stack.spacing = 4
+        stack.spacing = 2
         stack.alignment = .centerY
 
-        addButton.bezelStyle = .inline
-        addButton.isBordered = false
-        addButton.image = NSImage(systemSymbolName: "plus", accessibilityDescription: "New Space")
-        addButton.toolTip = "New Space"
         addButton.target = self
         addButton.action = #selector(addSpace)
-        addButton.contentTintColor = .secondaryLabelColor
 
         for view in [stack, addButton] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -36,7 +31,7 @@ final class SpaceBarView: NSView {
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
             stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 8),
             stack.trailingAnchor.constraint(lessThanOrEqualTo: addButton.leadingAnchor, constant: -4),
-            addButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            addButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             addButton.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
         keepObserving { [weak self] in self?.update() }
@@ -65,7 +60,8 @@ final class SpaceBarView: NSView {
             configureSpaceIcon(button, icon: space.icon, title: space.title)
             let selected = space.id == model.selectedSpaceID
             button.contentTintColor = selected ? .labelColor : .tertiaryLabelColor
-            button.font = .systemFont(ofSize: selected ? 15 : 13)
+            button.font = .systemFont(ofSize: 14)
+            button.isCurrent = selected
         }
     }
 
@@ -178,18 +174,33 @@ final class SpaceBarView: NSView {
     }
 }
 
-/// A space's button. Accepts dropped sidebar items.
+/// A space's button, with a soft square behind the current space. Accepts dropped sidebar items.
 final class SpaceButton: NSButton {
     let spaceID: SpaceID
     var onDrop: ((ItemID) -> Void)?
+    var isCurrent = false {
+        didSet { updateBackground() }
+    }
 
     init(spaceID: SpaceID) {
         self.spaceID = spaceID
         super.init(frame: NSRect(x: 0, y: 0, width: 26, height: 26))
         bezelStyle = .inline
         isBordered = false
+        wantsLayer = true
+        layer?.cornerRadius = 6
         registerForDraggedTypes([.sidebarItem])
-        widthAnchor.constraint(greaterThanOrEqualToConstant: 24).isActive = true
+        widthAnchor.constraint(greaterThanOrEqualToConstant: 26).isActive = true
+        heightAnchor.constraint(equalToConstant: 26).isActive = true
+    }
+
+    override var isHighlighted: Bool {
+        didSet { updateBackground() }
+    }
+
+    private func updateBackground() {
+        let alpha: CGFloat = isHighlighted ? 0.16 : isCurrent ? 0.08 : 0
+        layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(alpha).cgColor
     }
 
     @available(*, unavailable)

@@ -29,28 +29,34 @@ func configureSpaceIcon(_ button: NSButton, icon: String?, title: String?) {
         button.image = symbol
         button.title = ""
         button.imagePosition = .imageOnly
-    } else if let icon, !icon.isEmpty {
+    } else if let icon, !icon.isEmpty, icon.count <= 2 {
+        // Emoji and single characters. Longer text is a symbol name this Mac doesn't have, which would show as a word.
         button.image = nil
         button.title = icon
         button.imagePosition = .noImage
     } else {
-        button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: title)
-        button.image?.size = NSSize(width: 7, height: 7)
+        button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: title)?
+            .withSymbolConfiguration(.init(pointSize: 7, weight: .regular))
         button.title = ""
         button.imagePosition = .imageOnly
     }
     button.toolTip = title
 }
 
-/// A first-letter tile for sites without an icon.
+/// A first-letter tile for sites without an icon, in a colour picked from the text so each site keeps its own.
 @MainActor
-func letterImage(for text: String, size: CGFloat, color: NSColor) -> NSImage {
-    let letter = text.first.map { String($0).uppercased() } ?? "•"
+func letterImage(for text: String, size: CGFloat) -> NSImage {
+    let name = text.hasPrefix("www.") ? String(text.dropFirst(4)) : text
+    let letter = name.first.map { String($0).uppercased() } ?? "•"
+    let palette: [NSColor] = [.systemBlue, .systemIndigo, .systemPurple, .systemPink, .systemRed, .systemOrange, .systemTeal, .systemGreen]
+    // A stable hash, unlike `hashValue`, so a site's colour is the same on every launch.
+    let hash = name.unicodeScalars.reduce(UInt32(5381)) { ($0 &<< 5) &+ $0 &+ $1.value }
+    let color = palette[Int(hash % UInt32(palette.count))]
     return NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
-        color.withAlphaComponent(0.85).setFill()
+        color.setFill()
         NSBezierPath(roundedRect: rect, xRadius: size * 0.22, yRadius: size * 0.22).fill()
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: size * 0.55, weight: .semibold),
+            .font: NSFont.systemFont(ofSize: size * 0.58, weight: .bold),
             .foregroundColor: NSColor.white,
         ]
         let string = NSAttributedString(string: letter, attributes: attributes)

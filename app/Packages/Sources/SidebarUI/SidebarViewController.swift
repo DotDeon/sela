@@ -24,9 +24,9 @@ public final class SidebarViewController: NSViewController {
     private let tint = NSView()
     private let addressPill = AddressPill()
     private let spaceBar: SpaceBarView
-    private let backButton = NSButton()
-    private let forwardButton = NSButton()
-    private let reloadButton = NSButton()
+    private let backButton = HoverButton(symbol: "chevron.left", label: "Back", pointSize: 14)
+    private let forwardButton = HoverButton(symbol: "chevron.right", label: "Forward", pointSize: 14)
+    private let reloadButton = HoverButton(symbol: "arrow.clockwise", label: "Reload")
 
     public init(model: BrowserWindowModel, favicons: FaviconStore) {
         self.model = model
@@ -48,11 +48,12 @@ public final class SidebarViewController: NSViewController {
 
         tint.wantsLayer = true
         let controls = WindowDragView()
-        configure(backButton, symbol: "chevron.left", label: "Back", action: #selector(goBack))
-        configure(forwardButton, symbol: "chevron.right", label: "Forward", action: #selector(goForward))
-        configure(reloadButton, symbol: "arrow.clockwise", label: "Reload", action: #selector(reloadOrStop))
+        for (button, action) in [(backButton, #selector(goBack)), (forwardButton, #selector(goForward)), (reloadButton, #selector(reloadOrStop))] {
+            button.target = self
+            button.action = action
+        }
         let navigation = NSStackView(views: [backButton, forwardButton, reloadButton])
-        navigation.spacing = 2
+        navigation.spacing = 0
 
         addressPill.onSubmit = { [weak self] text in self?.submitAddress(text) }
         pager.onNewTab = { [weak self] in self?.newTab() }
@@ -74,11 +75,12 @@ public final class SidebarViewController: NSViewController {
             controls.topAnchor.constraint(equalTo: background.topAnchor),
             controls.leadingAnchor.constraint(equalTo: background.leadingAnchor),
             controls.trailingAnchor.constraint(equalTo: background.trailingAnchor),
-            controls.heightAnchor.constraint(equalToConstant: 38),
-            navigation.trailingAnchor.constraint(equalTo: controls.trailingAnchor, constant: -inset),
-            navigation.centerYAnchor.constraint(equalTo: controls.centerYAnchor, constant: 2),
+            // Level with the window's traffic lights.
+            controls.heightAnchor.constraint(equalToConstant: 40),
+            navigation.trailingAnchor.constraint(equalTo: controls.trailingAnchor, constant: -6),
+            navigation.centerYAnchor.constraint(equalTo: controls.centerYAnchor, constant: 1),
 
-            addressPill.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 4),
+            addressPill.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 2),
             addressPill.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
             addressPill.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -inset),
 
@@ -128,7 +130,7 @@ public final class SidebarViewController: NSViewController {
         backButton.isEnabled = state?.canGoBack ?? false
         forwardButton.isEnabled = state?.canGoForward ?? false
         let isLoading = state?.isLoading ?? false
-        reloadButton.image = NSImage(systemSymbolName: isLoading ? "xmark" : "arrow.clockwise", accessibilityDescription: isLoading ? "Stop" : "Reload")
+        reloadButton.setSymbol(isLoading ? "xmark" : "arrow.clockwise", label: isLoading ? "Stop" : "Reload")
     }
 
     private func submitAddress(_ text: String) {
@@ -155,16 +157,6 @@ public final class SidebarViewController: NSViewController {
     @objc private func reloadOrStop() {
         guard let tab = model.selectedTab else { return }
         if tab.state.isLoading { tab.stopLoading() } else { tab.reload() }
-    }
-
-    private func configure(_ button: NSButton, symbol: String, label: String, action: Selector) {
-        button.bezelStyle = .inline
-        button.isBordered = false
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
-        button.toolTip = label
-        button.target = self
-        button.action = action
-        button.contentTintColor = .secondaryLabelColor
     }
 }
 
