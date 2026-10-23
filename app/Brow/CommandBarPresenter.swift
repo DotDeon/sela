@@ -29,6 +29,9 @@ final class CommandBarPresenter {
         CommandCandidate(id: "reopen-archived", title: "Reopen Last Archived Tab", keywords: ["undo", "restore"]),
         CommandCandidate(id: "clear-history", title: "Clear History…", keywords: ["delete", "privacy"]),
         CommandCandidate(id: "new-window", title: "New Window", keywords: []),
+        CommandCandidate(id: "add-split", title: "Add Split View", keywords: ["side", "pane"]),
+        CommandCandidate(id: "separate-split", title: "Separate Split View", keywords: ["unsplit"]),
+        CommandCandidate(id: "rotate-split", title: "Rotate Split View", keywords: ["vertical", "horizontal"]),
     ]
 
     init(model: BrowserWindowModel, history: HistoryStore?, favicons: FaviconStore, host: NSView, runCommand: @escaping (String) -> Void) {

@@ -285,8 +285,12 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             divider.onClear = { [weak self] in self?.model.clearUnpinned() }
             divider.onNewTab = { [weak self] in self?.onNewTab?() }
             cell = divider
-        case .item:
-            cell = outlineView.makeView(withIdentifier: ItemCellView.identifier, owner: nil) as? ItemCellView ?? ItemCellView()
+        case .item(let id):
+            if case .split = document.item(id)?.kind {
+                cell = outlineView.makeView(withIdentifier: SplitCellView.splitIdentifier, owner: nil) as? SplitCellView ?? SplitCellView()
+            } else {
+                cell = outlineView.makeView(withIdentifier: ItemCellView.identifier, owner: nil) as? ItemCellView ?? ItemCellView()
+            }
         }
         configure(cell, for: node)
         return cell
@@ -328,11 +332,22 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             cell.showsCloseOnHover = false
             cell.showsReset = false
         case .split:
-            cell.titleField.stringValue = item.title ?? "Split View"
-            cell.iconView.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "Split View")
-            cell.iconView.contentTintColor = .secondaryLabelColor
-            cell.showsCloseOnHover = false
+            let panes = item.childIDs
+            (cell as? SplitCellView)?.configure(panes: panes.map { pane in
+                let state = model.liveTab(for: pane)?.state
+                let saved: URL? = if case .tab(let info) = document.item(pane)?.kind { info.savedURL } else { nil }
+                let title = document.item(pane).map { sidebarTitle(for: $0, liveState: state.map { ($0.url, displayTitle(for: $0)) }) } ?? ""
+                let page = state?.url ?? saved
+                let icon = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 16)
+                return (title, icon, pane == model.selectedItemID)
+            })
+            (cell as? SplitCellView)?.onSelectPane = { [weak self] index in
+                guard let self, let pane = document.item(id)?.childIDs[safe: index] else { return }
+                model.select(pane)
+            }
+            cell.showsCloseOnHover = true
             cell.showsReset = false
+            cell.onClose = { [weak self] in self?.model.closeSplit(id) }
         case .tab(let info):
             let live = model.liveTab(for: id)
             let state = live?.state
@@ -429,12 +444,21 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        menu.autoenablesItems = false
         let row = outlineView.clickedRow
-        guard row >= 0, let node = outlineView.item(atRow: row) as? OutlineNode, let id = node.itemID,
-              let item = document.item(id)
-        else {
+        let id = row >= 0 ? (outlineView.item(atRow: row) as? OutlineNode)?.itemID : nil
+        menuItems(for: id).forEach(menu.addItem)
+    }
+
+    /// The context menu for an item's row, or for empty space when `id` is nil.
+    func menuItems(for id: ItemID?) -> [NSMenuItem] {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        guard let id, let item = document.item(id) else {
             menu.addItem(menuItem("New Folder") { [weak self] in self?.newFolder(in: nil) })
-            return
+            let items = menu.items
+            menu.removeAllItems()
+            return items
         }
         switch item.kind {
         case .tab(let info):
@@ -452,6 +476,9 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             if model.isAwayFromSavedURL(id) {
                 menu.addItem(menuItem("Back to Saved Address") { [weak self] in self?.model.resetToSavedURL(id) })
             }
+            let split = menuItem("Open in Split View") { [weak self] in self?.model.openInSplit(id) }
+            split.isEnabled = canOpenInSplit(id)
+            menu.addItem(split)
             menu.addItem(.separator())
             menu.addItem(menuItem("Close") { [weak self] in self?.model.close(id) })
         case .folder:
@@ -459,9 +486,26 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             menu.addItem(menuItem("New Folder Inside") { [weak self] in self?.newFolder(in: id) })
             menu.addItem(.separator())
             menu.addItem(menuItem("Delete Folder…") { [weak self] in self?.deleteFolder(id) })
-        case .split, .container:
+        case .split:
+            menu.addItem(menuItem("Separate Split View") { [weak self] in self?.sidebar.separateSplit(id) })
+            menu.addItem(.separator())
+            menu.addItem(menuItem("Close Split View") { [weak self] in self?.model.closeSplit(id) })
+        case .container:
             break
         }
+        let items = menu.items
+        menu.removeAllItems()
+        return items
+    }
+
+    /// A tab can join the selected tab's split when neither is a favourite, it isn't the selected tab
+    /// or already beside it, and the split has room.
+    private func canOpenInSplit(_ id: ItemID) -> Bool {
+        guard let selected = model.selectedItemID, selected != id,
+              document.containerRole(of: id) != .favorites, document.containerRole(of: selected) != .favorites
+        else { return false }
+        let panes = model.selectedSplit?.paneIDs ?? [selected]
+        return !panes.contains(id) && panes.count < SidebarDocument.maximumSplitPanes
     }
 
     /// Makes a folder at the top of the pinned section, or inside `parent`, and starts renaming it.
@@ -539,4 +583,8 @@ final class SidebarPageScrollView: NSScrollView {
         // The rows moved under a still pointer.
         (documentView as? SidebarOutlineView)?.updateHover()
     }
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
 }

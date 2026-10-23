@@ -10,7 +10,7 @@ import SidebarUI
 
 /// One browser window: Arc's sidebar on the left and the selected page beside it.
 @MainActor
-final class BrowserWindowController: NSWindowController, NSWindowDelegate {
+final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMenuItemValidation {
     let model: BrowserWindowModel
     var onClose: (() -> Void)?
 
@@ -76,6 +76,28 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     @objc func reopenArchivedTab(_ sender: Any?) { model.reopenLastArchived() }
 
+    /// Ctrl+Shift+=: a new pane beside the current tab, with the command bar open to choose its page.
+    @objc func addSplitView(_ sender: Any?) {
+        guard model.addSplitPane() != nil else { return }
+        commandBar?.show(.currentTab(address: ""))
+    }
+
+    @objc func separateSplitView(_ sender: Any?) { model.separateSelectedSplit() }
+
+    @objc func rotateSplitView(_ sender: Any?) { model.rotateSelectedSplit() }
+
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        switch item.action {
+        case #selector(addSplitView(_:)):
+            guard let selected = model.selectedItemID, model.sidebar.document.containerRole(of: selected) != .favorites else { return false }
+            return (model.selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
+        case #selector(separateSplitView(_:)), #selector(rotateSplitView(_:)):
+            return model.selectedSplit != nil
+        default:
+            return true
+        }
+    }
+
     @objc func closeTab(_ sender: Any?) {
         if let id = model.selectedItemID {
             model.close(id)
@@ -135,6 +157,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case "clear-unpinned": model.clearUnpinned()
         case "reopen-archived": model.reopenLastArchived()
         case "clear-history": confirmClearHistory()
+        case "add-split": addSplitView(nil)
+        case "separate-split": separateSplitView(nil)
+        case "rotate-split": rotateSplitView(nil)
         case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
         default: break
         }

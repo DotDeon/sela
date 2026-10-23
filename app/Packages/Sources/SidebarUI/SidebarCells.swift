@@ -1,7 +1,7 @@
 import AppKit
 
 /// A tab or folder row: icon, title, and buttons that appear on hover.
-final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
+class ItemCellView: NSTableCellView, NSTextFieldDelegate {
     static let identifier = NSUserInterfaceItemIdentifier("item")
 
     let iconView = NSImageView()
@@ -87,6 +87,88 @@ final class ItemCellView: NSTableCellView, NSTextFieldDelegate {
     @objc private func closeTapped() { onClose?() }
 
     @objc private func resetTapped() { onReset?() }
+}
+
+/// A split view's row: one segment per pane, each with its icon and title, and a close button on hover.
+/// Clicking a segment shows that pane.
+final class SplitCellView: ItemCellView {
+    static let splitIdentifier = NSUserInterfaceItemIdentifier("split")
+
+    var onSelectPane: ((Int) -> Void)?
+    private let stack = NSStackView()
+    private var segments: [NSButton] = []
+
+    var segmentTitles: [String] { segments.map(\.title) }
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        identifier = Self.splitIdentifier
+        iconView.isHidden = true
+        titleField.isHidden = true
+        stack.orientation = .horizontal
+        stack.spacing = 0
+        stack.distribution = .fill
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
+            stack.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -2),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    /// One segment per pane. The focused pane's title is brighter than the others.
+    func configure(panes: [(title: String, icon: NSImage?, isFocused: Bool)]) {
+        if segments.count != panes.count {
+            stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            segments = panes.indices.map { index in
+                let button = NSButton(title: "", target: self, action: #selector(segmentTapped(_:)))
+                button.tag = index
+                button.bezelStyle = .inline
+                button.isBordered = false
+                button.imagePosition = .imageLeading
+                button.imageHugsTitle = true
+                button.alignment = .left
+                button.lineBreakMode = .byTruncatingTail
+                button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+                return button
+            }
+            for (index, button) in segments.enumerated() {
+                if index > 0 {
+                    let line = NSBox()
+                    line.boxType = .custom
+                    line.borderWidth = 0
+                    line.fillColor = .separatorColor
+                    line.widthAnchor.constraint(equalToConstant: 1).isActive = true
+                    stack.addArrangedSubview(line)
+                }
+                stack.addArrangedSubview(button)
+            }
+            // Equal widths for the segments only, not the separators.
+            for button in segments.dropFirst() {
+                button.widthAnchor.constraint(equalTo: segments[0].widthAnchor).isActive = true
+            }
+        }
+        for (button, pane) in zip(segments, panes) {
+            button.image = pane.icon.map { icon in
+                let sized = icon.copy() as! NSImage
+                sized.size = NSSize(width: 16, height: 16)
+                return sized
+            }
+            button.attributedTitle = NSAttributedString(string: pane.title, attributes: [
+                .font: NSFont.systemFont(ofSize: 13),
+                .foregroundColor: pane.isFocused ? NSColor.labelColor : NSColor.secondaryLabelColor,
+            ])
+        }
+    }
+
+    func selectSegment(_ index: Int) { onSelectPane?(index) }
+
+    @objc private func segmentTapped(_ sender: NSButton) { selectSegment(sender.tag) }
 }
 
 /// The line between pinned and unpinned tabs, with "Clear" and "+ New Tab".

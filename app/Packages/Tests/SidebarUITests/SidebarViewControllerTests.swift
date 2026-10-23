@@ -120,3 +120,49 @@ private struct Harness {
     #expect(clicked == 1)
     #expect(h.model.sidebar.document == before)
 }
+
+@MainActor @Test func aSplitShowsOneRowWithASegmentPerPane() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    h.model.openInSplit("u2")
+    // fold, p2, p1, divider, split
+    (h.model.liveTab(for: "u1") as? FakeTab)?.finishLoading(title: "One")
+    (h.model.liveTab(for: "u2") as? FakeTab)?.finishLoading(title: "Two")
+    try await eventually { h.firstOutline.numberOfRows == 5 }
+    let cell = try #require(h.firstOutline.view(atColumn: 0, row: 4, makeIfNecessary: true) as? SplitCellView)
+    try await eventually { cell.segmentTitles == ["One", "Two"] }
+}
+
+@MainActor @Test func clickingASegmentSelectsThatPane() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    h.model.openInSplit("u2")
+    try await eventually { h.firstOutline.numberOfRows == 5 }
+    h.model.select("u2")
+    let cell = try #require(h.firstOutline.view(atColumn: 0, row: 4, makeIfNecessary: true) as? SplitCellView)
+    cell.selectSegment(0)
+    #expect(h.model.selectedItemID == "u1")
+}
+
+@MainActor @Test func tabMenuOffersOpenInSplitView() throws {
+    let h = try Harness()
+    h.model.select("u2")
+    let page = h.controller.pager.pages[0]
+    let item = try #require(page.menuItems(for: "u1").first { $0.title == "Open in Split View" })
+    #expect(item.isEnabled)
+    #expect(page.menuItems(for: "u2").first { $0.title == "Open in Split View" }?.isEnabled == false)
+    #expect(page.menuItems(for: "f1").first { $0.title == "Open in Split View" }?.isEnabled != true)
+    h.model.select("f1")
+    #expect(page.menuItems(for: "u1").first { $0.title == "Open in Split View" }?.isEnabled == false)
+}
+
+@MainActor @Test func splitMenuSeparatesAndCloses() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    h.model.openInSplit("u2")
+    let split = try #require(h.model.selectedSplit?.id)
+    let page = h.controller.pager.pages[0]
+    let titles = page.menuItems(for: split).map(\.title)
+    #expect(titles.contains("Separate Split View"))
+    #expect(titles.contains("Close Split View"))
+}
