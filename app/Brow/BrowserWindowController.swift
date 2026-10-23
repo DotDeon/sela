@@ -1,6 +1,7 @@
 import AppKit
 import Archive
 import BrowserEngine
+import ContentBlocking
 import Browsing
 import Favicons
 import History
@@ -19,10 +20,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private var commandBar: CommandBarPresenter?
     private var peek: PeekPresenter?
     private let history: HistoryStore?
+    private let contentBlocker: ContentBlocker?
 
-    init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore) {
+    init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore, contentBlocker: ContentBlocker?) {
         model = BrowserWindowModel(engine: engine, sidebar: sidebar, archive: archive)
         self.history = history
+        self.contentBlocker = contentBlocker
         root = BrowserRootViewController(model: model, favicons: favicons)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
@@ -88,6 +91,21 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
 
     @objc func rotateSplitView(_ sender: Any?) { model.rotateSelectedSplit() }
 
+    /// Tab > Block Ads on This Site. Reloads the page so the change shows at once.
+    @objc func toggleSiteBlocking(_ sender: Any?) {
+        guard let contentBlocker, let url = blockableURL else { return }
+        contentBlocker.setBlocking(!contentBlocker.isBlocking(on: url), forSiteOf: url)
+        model.selectedTab?.reload()
+    }
+
+    /// The selected page's address when site blocking can be switched there: a web page, with blocking on globally.
+    private var blockableURL: URL? {
+        guard contentBlocker?.isEnabled == true, let url = model.selectedTab?.state.url,
+              ["http", "https"].contains(url.scheme?.lowercased() ?? "")
+        else { return nil }
+        return url
+    }
+
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
         case #selector(addSplitView(_:)):
@@ -95,6 +113,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             return (model.selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
         case #selector(separateSplitView(_:)), #selector(rotateSplitView(_:)):
             return model.selectedSplit != nil
+        case #selector(toggleSiteBlocking(_:)):
+            guard let url = blockableURL, let contentBlocker else {
+                item.state = .off
+                return false
+            }
+            item.state = contentBlocker.isBlocking(on: url) ? .on : .off
+            return true
         default:
             return true
         }
@@ -164,6 +189,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case "add-split": addSplitView(nil)
         case "separate-split": separateSplitView(nil)
         case "rotate-split": rotateSplitView(nil)
+        case "toggle-site-blocking": toggleSiteBlocking(nil)
         case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
         default: break
         }

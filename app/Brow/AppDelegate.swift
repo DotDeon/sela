@@ -1,5 +1,6 @@
 import AppKit
 import Archive
+import ContentBlocking
 import Favicons
 import History
 import Sidebar
@@ -15,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var archive: ArchiveStore!
     private var history: HistoryStore?
     private var sweeper: ArchiveSweeper?
+    private var contentBlocker: ContentBlocker!
+    private var listRefreshTimer: Timer?
+    private var wakeObserver: NSObjectProtocol?
     private var windowControllers: [BrowserWindowController] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -24,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         archive = ArchiveStore(fileURL: (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Brow-Archive.json"))
         // Brow works without history if the database can't open.
         history = (try? HistoryStore.defaultFileURL()).flatMap { try? HistoryStore(fileURL: $0) }
+        startContentBlocking()
 
         // Another window may have removed a tab or space this window shows.
         keepObserving { [weak self] in
@@ -57,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc func newWindow(_ sender: Any?) {
-        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons)
+        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons, contentBlocker: contentBlocker)
         controller.onClose = { [weak self, weak controller] in
             self?.windowControllers.removeAll { $0 === controller }
         }
@@ -71,11 +76,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         sweeper?.sweep()
     }
 
+    /// Brow > Block Ads and Trackers. Reloads each window's page so the change shows at once.
+    @objc func toggleContentBlocking(_ sender: Any?) {
+        contentBlocker.setEnabled(!contentBlocker.isEnabled)
+        for controller in windowControllers { controller.model.selectedTab?.reload() }
+    }
+
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if item.action == #selector(setArchiveInterval(_:)) {
             item.state = item.tag == ArchiveSweeper.hours ? .on : .off
+        } else if item.action == #selector(toggleContentBlocking(_:)) {
+            item.state = contentBlocker.isEnabled ? .on : .off
         }
         return true
+    }
+
+    // MARK: Content blocking
+
+    /// Installs the lists already downloaded, then checks for new ones now, every 6 hours and after waking.
+    private func startContentBlocking() {
+        let folder = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+            .map { $0.appending(path: "Brow/ContentBlocking", directoryHint: .isDirectory) }
+            ?? FileManager.default.temporaryDirectory.appending(path: "Brow-ContentBlocking")
+        let store = FilterListStore(folder: folder, fetch: { url in
+            let (data, response) = try await URLSession.shared.data(from: url)
+            return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+        })
+        contentBlocker = ContentBlocker(engine: engine, store: store, workFolder: folder)
+        Task { await contentBlocker.start() }
+
+        listRefreshTimer = Timer.scheduledTimer(withTimeInterval: 6 * 60 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }
+        }
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }
+        }
     }
 
     private func sidebarFileURL() -> URL {

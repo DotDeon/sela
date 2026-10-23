@@ -32,6 +32,7 @@ final class CommandBarPresenter {
         CommandCandidate(id: "add-split", title: "Add Split View", keywords: ["side", "pane"]),
         CommandCandidate(id: "separate-split", title: "Separate Split View", keywords: ["unsplit"]),
         CommandCandidate(id: "rotate-split", title: "Rotate Split View", keywords: ["vertical", "horizontal"]),
+        CommandCandidate(id: "toggle-site-blocking", title: "Turn Ad Blocking On or Off for This Site", keywords: ["adblock", "ads", "tracker", "shield"]),
     ]
 
     init(model: BrowserWindowModel, history: HistoryStore?, favicons: FaviconStore, host: NSView, runCommand: @escaping (String) -> Void) {
