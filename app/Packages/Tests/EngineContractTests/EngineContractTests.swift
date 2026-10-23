@@ -35,13 +35,16 @@ struct EngineContractTests {
         try await eventually { tab.state.title == "B" }
     }
 
+    // Both popup tests keep the opener tab alive, as the window model does. A freed opener can
+    // drop `window.opener` before the popup's script runs.
     @Test(arguments: EngineUnderTest.allCases)
     func popupKeepsOpener(engine: EngineUnderTest) async throws {
         _ = try site.page("child.html", "<script>document.title = window.opener ? 'has opener' : 'no opener'</script>")
         let opener = try site.page("opener.html", "<script>window.open('child.html')</script>")
         let delegate = RecordingDelegate()
-        _ = try await loadedTab(engine.make(), opener, delegate: delegate)
+        let openerTab = try await loadedTab(engine.make(), opener, delegate: delegate)
         try await eventually { delegate.opened.first?.tab.state.title == "has opener" }
+        withExtendedLifetime(openerTab) {}
         #expect(delegate.opened.count == 1)
         #expect(delegate.opened.first?.disposition == .foreground)
     }
@@ -51,8 +54,9 @@ struct EngineContractTests {
         _ = try site.page("closing.html", "<script>setTimeout(() => window.close(), 100)</script>")
         let opener = try site.page("opener.html", "<script>window.open('closing.html')</script>")
         let delegate = RecordingDelegate()
-        _ = try await loadedTab(engine.make(), opener, delegate: delegate)
+        let openerTab = try await loadedTab(engine.make(), opener, delegate: delegate)
         try await eventually { !delegate.closeRequests.isEmpty }
+        withExtendedLifetime(openerTab) {}
         #expect(delegate.closeRequests == delegate.opened.map(\.tab.id))
     }
 
