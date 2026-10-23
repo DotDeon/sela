@@ -153,7 +153,10 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
     }
 
     private func syncExpansion() {
-        for row in 0..<outlineView.numberOfRows {
+        // Expanding a folder adds rows below it, so the row count is reread each time.
+        var row = 0
+        while row < outlineView.numberOfRows {
+            defer { row += 1 }
             guard let node = outlineView.item(atRow: row) as? OutlineNode, let id = node.itemID,
                   case .folder(let info) = document.item(id)?.kind
             else { continue }
@@ -273,6 +276,8 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             return
         }
         guard let cell = view as? ItemCellView, let id = node.itemID, let item = document.item(id) else { return }
+        // Leave a row alone while it's being renamed, so other changes don't wipe what the user is typing.
+        guard !cell.titleField.isEditable else { return }
         switch item.kind {
         case .folder(let info):
             cell.titleField.stringValue = item.title ?? "Folder"
