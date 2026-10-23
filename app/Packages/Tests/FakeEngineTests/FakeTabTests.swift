@@ -11,6 +11,13 @@ private let c = URL(string: "https://c.example.com/")!
 private final class RecordingDelegate: BrowserTabDelegate {
     var opened: [(source: TabID, newTab: TabID, disposition: NewTabDisposition)] = []
     var stateChanges = 0
+    var followsLinks = true
+    var askedLinks: [(URL, Bool)] = []
+
+    func tab(_ tab: any BrowserTab, shouldFollowLinkTo url: URL, shiftKey: Bool) -> Bool {
+        askedLinks.append((url, shiftKey))
+        return followsLinks
+    }
 
     func tabStateDidChange(_ tab: any BrowserTab) {
         stateChanges += 1
@@ -108,4 +115,18 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     let (_, tab) = makeTab(a)
     tab.finishLoading(title: "A", faviconURL: URL(string: "https://a.example.com/icon.png"))
     #expect(tab.state.faviconURL == URL(string: "https://a.example.com/icon.png"))
+}
+
+@MainActor @Test func linkClickAsksTheDelegate() {
+    let (_, tab) = makeTab(a)
+    let delegate = RecordingDelegate()
+    tab.delegate = delegate
+    delegate.followsLinks = false
+    tab.simulateLinkClick(to: b, shiftKey: true)
+    #expect(tab.loadedURLs == [a])
+    #expect(delegate.askedLinks.map(\.0) == [b])
+    #expect(delegate.askedLinks.map(\.1) == [true])
+    delegate.followsLinks = true
+    tab.simulateLinkClick(to: c)
+    #expect(tab.loadedURLs == [a, c])
 }

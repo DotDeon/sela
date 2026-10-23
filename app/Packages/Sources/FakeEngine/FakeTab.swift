@@ -78,6 +78,13 @@ public final class FakeTab: BrowserTab {
         return newTab
     }
 
+    /// A plain click on a link to `url`: loads it unless the delegate takes it elsewhere.
+    public func simulateLinkClick(to url: URL, shiftKey: Bool = false) {
+        if delegate?.tab(self, shouldFollowLinkTo: url, shiftKey: shiftKey) ?? true {
+            load(url)
+        }
+    }
+
     public func simulateRequestClose() {
         delegate?.tabDidRequestClose(self)
     }

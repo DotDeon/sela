@@ -111,13 +111,17 @@ final class WebKitTab: NSObject, BrowserTab {
 
 extension WebKitTab: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-        guard navigationAction.navigationType == .linkActivated,
-              let url = navigationAction.request.url,
-              let disposition = newTabDisposition(modifiers: navigationAction.modifierFlags, buttonNumber: navigationAction.buttonNumber),
-              let delegate
-        else { return .allow }
-        delegate.tab(self, didOpen: engine.makeTab(url: url), disposition: disposition)
-        return .cancel
+        guard navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url, let delegate else { return .allow }
+        if let disposition = newTabDisposition(modifiers: navigationAction.modifierFlags, buttonNumber: navigationAction.buttonNumber) {
+            delegate.tab(self, didOpen: engine.makeTab(url: url), disposition: disposition)
+            return .cancel
+        }
+        // A plain or Shift-click in the page itself. The window may send it to Peek instead.
+        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? false
+        let isWeb = ["http", "https"].contains(url.scheme?.lowercased() ?? "")
+        guard isMainFrame, isWeb else { return .allow }
+        let shiftKey = navigationAction.modifierFlags.contains(.shift)
+        return delegate.tab(self, shouldFollowLinkTo: url, shiftKey: shiftKey) ? .allow : .cancel
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
