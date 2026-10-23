@@ -17,9 +17,9 @@ public func inactiveTabs(in document: SidebarDocument, now: Date, after interval
 
 /// An archive entry describing a sidebar tab as it's saved.
 @MainActor
-public func archiveEntry(for id: ItemID, in document: SidebarDocument, at date: Date) -> ArchiveEntry? {
+public func archiveEntry(for id: ItemID, in document: SidebarDocument, at date: Date, reason: ArchiveEntry.Reason = .closed) -> ArchiveEntry? {
     guard let item = document.item(id), case .tab(let info) = item.kind else { return nil }
-    return ArchiveEntry(id: UUID(), url: info.savedURL, title: item.title ?? info.savedTitle, spaceID: document.spaceID(containing: id), archivedAt: date)
+    return ArchiveEntry(id: UUID(), url: info.savedURL, title: item.title ?? info.savedTitle, spaceID: document.spaceID(containing: id), archivedAt: date, reason: reason)
 }
 
 /// Moves every inactive unpinned tab from the sidebar into the archive. Returns the tabs moved.
@@ -27,7 +27,7 @@ public func archiveEntry(for id: ItemID, in document: SidebarDocument, at date: 
 @discardableResult
 public func archiveInactiveTabs(sidebar: SidebarStore, archive: ArchiveStore, now: Date, after interval: TimeInterval, protecting: Set<ItemID>, notBefore: Date? = nil) -> [ItemID] {
     let due = inactiveTabs(in: sidebar.document, now: now, after: interval, protecting: protecting, notBefore: notBefore)
-    archive.add(due.compactMap { archiveEntry(for: $0, in: sidebar.document, at: now) })
+    archive.add(due.compactMap { archiveEntry(for: $0, in: sidebar.document, at: now, reason: .inactive) })
     for id in due { sidebar.remove(id) }
     return due
 }

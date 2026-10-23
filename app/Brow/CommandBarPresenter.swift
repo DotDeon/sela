@@ -61,10 +61,13 @@ final class CommandBarPresenter {
         shade.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.12).cgColor
         shade.translatesAutoresizingMaskIntoConstraints = false
         host.addSubview(shade)
+        // The panel clips to its rounded corners, which would clip a shadow too, so the shadow sits on a view behind it.
+        let shadow = PanelShadowView()
         let panelView = controller.view
-        panelView.translatesAutoresizingMaskIntoConstraints = false
-        panelView.shadow = NSShadow()
-        shade.addSubview(panelView)
+        for view in [shadow, panelView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            shade.addSubview(view)
+        }
         NSLayoutConstraint.activate([
             shade.leadingAnchor.constraint(equalTo: host.leadingAnchor),
             shade.trailingAnchor.constraint(equalTo: host.trailingAnchor),
@@ -72,6 +75,12 @@ final class CommandBarPresenter {
             shade.bottomAnchor.constraint(equalTo: host.bottomAnchor),
             panelView.centerXAnchor.constraint(equalTo: shade.centerXAnchor),
             panelView.topAnchor.constraint(equalTo: shade.topAnchor, constant: 120),
+            panelView.leadingAnchor.constraint(greaterThanOrEqualTo: shade.leadingAnchor, constant: 20),
+            panelView.trailingAnchor.constraint(lessThanOrEqualTo: shade.trailingAnchor, constant: -20),
+            shadow.leadingAnchor.constraint(equalTo: panelView.leadingAnchor),
+            shadow.trailingAnchor.constraint(equalTo: panelView.trailingAnchor),
+            shadow.topAnchor.constraint(equalTo: panelView.topAnchor),
+            shadow.bottomAnchor.constraint(equalTo: panelView.bottomAnchor),
         ])
         backdrop = shade
         panel = controller
@@ -161,5 +170,25 @@ private final class Backdrop: NSView {
 
     override func mouseDown(with event: NSEvent) {
         onClick?()
+    }
+}
+
+/// A soft shadow in the shape of the command bar panel.
+private final class PanelShadowView: NSView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.shadowColor = NSColor.black.cgColor
+        layer?.shadowOpacity = 0.25
+        layer?.shadowRadius = 24
+        layer?.shadowOffset = CGSize(width: 0, height: -8)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    override func layout() {
+        super.layout()
+        layer?.shadowPath = CGPath(roundedRect: bounds, cornerWidth: 14, cornerHeight: 14, transform: nil)
     }
 }

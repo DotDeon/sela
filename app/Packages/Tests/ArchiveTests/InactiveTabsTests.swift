@@ -43,7 +43,7 @@ private let now = fixtureDate.addingTimeInterval(13 * hour)
     #expect(archive.entries.count == 2)
     #expect(Set(archive.entries.compactMap(\.url)) == [URL(string: "https://u1.example.com/")!, URL(string: "https://u2.example.com/")!])
     #expect(Set(archive.entries.compactMap(\.title)) == ["u1 title", "u2 title"])
-    #expect(archive.entries.allSatisfy { $0.spaceID == "S" && $0.archivedAt == now })
+    #expect(archive.entries.allSatisfy { $0.spaceID == "S" && $0.archivedAt == now && $0.reason == .inactive })
 }
 
 @Test func inactivityCountsFromWhenArchivingStarted() {

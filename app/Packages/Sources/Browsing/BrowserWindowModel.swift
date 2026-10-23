@@ -199,9 +199,10 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         select(id)
     }
 
-    /// Restores the most recently archived tab. Does nothing when the archive is empty.
+    /// Restores the tab the user closed most recently. Skips tabs Brow archived for inactivity,
+    /// so a sweep in the background doesn't change what Reopen brings back. Does nothing when there's none.
     public func reopenLastArchived() {
-        guard let newest = archive?.entries.first else { return }
+        guard let newest = archive?.entries.first(where: { $0.reason == .closed }) else { return }
         restore(newest.id)
     }
 

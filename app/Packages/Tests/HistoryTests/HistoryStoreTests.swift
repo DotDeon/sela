@@ -83,6 +83,30 @@ private func url(_ string: String) -> URL { URL(string: string)! }
     #expect(store.search("", limit: 10).isEmpty)
 }
 
+@MainActor @Test func clearLeavesNoTracesInTheFiles() throws {
+    let (store, file, _) = try makeStore()
+    // Enough visits to fill many database pages, which a plain delete would leave on the free list.
+    for index in 0..<500 {
+        store.recordVisit(url: url("https://secret-site.example.com/\(index)"), title: "Secret page \(index)")
+    }
+    store.clear()
+    let folder = file.deletingLastPathComponent()
+    for name in try FileManager.default.contentsOfDirectory(atPath: folder.path) {
+        let data = try Data(contentsOf: folder.appending(path: name))
+        #expect(data.range(of: Data("secret-site".utf8)) == nil, "found in \(name)")
+    }
+    // Closing the store would tidy the files itself, so it stays open while they're read.
+    withExtendedLifetime(store) {}
+}
+
+@MainActor @Test func searchIgnoresCaseAndAccents() throws {
+    let (store, _, _) = try makeStore()
+    store.recordVisit(url: url("https://a.example.com/"), title: "Über uns")
+    #expect(store.search("über", limit: 10).map(\.title) == ["Über uns"])
+    #expect(store.search("uber", limit: 10).map(\.title) == ["Über uns"])
+    #expect(store.search("ÜBER", limit: 10).map(\.title) == ["Über uns"])
+}
+
 @MainActor @Test func historySurvivesReopen() throws {
     let (store, file, clock) = try makeStore()
     store.recordVisit(url: url("https://a.example.com/"), title: "A")

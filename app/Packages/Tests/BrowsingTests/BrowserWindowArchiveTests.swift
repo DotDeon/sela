@@ -91,6 +91,14 @@ private struct Harness {
     #expect(h.live(h.unpinned[0])?.loadedURLs == [url("u1")])
 }
 
+@MainActor @Test func reopenSkipsTabsArchivedForInactivity() throws {
+    let h = try Harness()
+    h.model.close("u1")
+    h.archive.add([ArchiveEntry(id: UUID(), url: url("swept"), title: "Swept", spaceID: "S", archivedAt: fixtureDate.addingTimeInterval(60), reason: .inactive)])
+    h.model.reopenLastArchived()
+    #expect(h.live(h.unpinned[0])?.loadedURLs == [url("u1")])
+}
+
 @MainActor @Test func reopenWithEmptyArchiveDoesNothing() throws {
     let h = try Harness()
     let before = h.store.document

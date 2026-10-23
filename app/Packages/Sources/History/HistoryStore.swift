@@ -37,6 +37,8 @@ public final class HistoryStore {
             throw HistoryError(description: "Couldn't open history: \(message)")
         }
         try execute("PRAGMA journal_mode = WAL")
+        try execute("PRAGMA secure_delete = ON")
+        try registerFold()
         try execute("CREATE TABLE IF NOT EXISTS visits (url TEXT PRIMARY KEY, title TEXT, visit_count INTEGER NOT NULL, last_visited REAL NOT NULL)")
         try execute("CREATE INDEX IF NOT EXISTS visits_by_time ON visits (last_visited)")
         run("DELETE FROM visits WHERE last_visited < ?", [.double(now().addingTimeInterval(-Self.maximumAge).timeIntervalSince1970)])
@@ -66,10 +68,11 @@ public final class HistoryStore {
             """, [.text(url.absoluteString), title.map(Value.text) ?? .null, .double(now().timeIntervalSince1970)])
     }
 
-    /// Pages whose address or title contains every word of `query`, most recent first. A blank query returns the most recent.
+    /// Pages whose address or title contains every word of `query`, ignoring case and accents, most recent first.
+    /// A blank query returns the most recent.
     public func search(_ query: String, limit: Int) -> [HistoryEntry] {
-        let words = query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)
-        let conditions = words.map { _ in "(url || ' ' || COALESCE(title, '')) LIKE ? ESCAPE '\\'" }
+        let words = Self.fold(query).split(whereSeparator: \.isWhitespace).map(String.init)
+        let conditions = words.map { _ in "brow_fold(url || ' ' || COALESCE(title, '')) LIKE ? ESCAPE '\\'" }
         let whereClause = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
         let sql = "SELECT url, title, visit_count, last_visited FROM visits \(whereClause) ORDER BY last_visited DESC LIMIT ?"
         let values = words.map { Value.text("%\(escapeLike($0))%") } + [.int(limit)]
@@ -90,8 +93,11 @@ public final class HistoryStore {
         return results
     }
 
+    /// Deletes every visit and rewrites the files, so nothing of the old history stays on disk.
     public func clear() {
         run("DELETE FROM visits", [])
+        try? execute("VACUUM")
+        try? execute("PRAGMA wal_checkpoint(TRUNCATE)")
     }
 
     // MARK: SQLite
@@ -101,6 +107,24 @@ public final class HistoryStore {
         case double(Double)
         case int(Int)
         case null
+    }
+
+    nonisolated static func fold(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+    }
+
+    /// Adds `brow_fold(text)` to SQL, which lowercases and strips accents the same way as `fold`.
+    /// SQLite's own `LIKE` only ignores case for ASCII letters.
+    private func registerFold() throws {
+        let result = sqlite3_create_function_v2(db, "brow_fold", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil, { context, _, arguments in
+            guard let argument = arguments?[0], let text = sqlite3_value_text(argument) else {
+                sqlite3_result_null(context)
+                return
+            }
+            let folded = HistoryStore.fold(String(cString: text))
+            sqlite3_result_text(context, folded, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        }, nil, nil, nil)
+        guard result == SQLITE_OK else { throw HistoryError(description: String(cString: sqlite3_errmsg(db))) }
     }
 
     private func execute(_ sql: String) throws {

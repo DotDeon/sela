@@ -14,6 +14,9 @@ public final class SidebarViewController: NSViewController {
         didSet { addressPill.onClick = onAddressClicked }
     }
 
+    /// When set, the sidebar's New Tab button calls this instead of adding a blank tab.
+    public var onNewTabClicked: (() -> Void)?
+
     let pager: SpacePagerView
     let favoritesGrid: FavoritesGridView
     private let model: BrowserWindowModel
@@ -137,6 +140,10 @@ public final class SidebarViewController: NSViewController {
     }
 
     private func newTab() {
+        if let onNewTabClicked {
+            onNewTabClicked()
+            return
+        }
         model.newTab(url: nil)
         focusAddress()
     }

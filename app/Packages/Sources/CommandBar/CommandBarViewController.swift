@@ -80,8 +80,11 @@ public final class CommandBarViewController: NSViewController, NSTextFieldDelega
             panel.addSubview(subview)
         }
         tableHeight = scrollView.heightAnchor.constraint(equalToConstant: 0)
+        // The presenter caps the width so the panel fits narrow windows.
+        let preferredWidth = panel.widthAnchor.constraint(equalToConstant: Self.width)
+        preferredWidth.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            panel.widthAnchor.constraint(equalToConstant: Self.width),
+            preferredWidth,
             searchField.topAnchor.constraint(equalTo: panel.topAnchor, constant: 12),
             searchField.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 18),
             searchField.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -18),

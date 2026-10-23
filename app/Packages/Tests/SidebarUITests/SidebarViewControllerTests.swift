@@ -110,3 +110,13 @@ private struct Harness {
     // fa, a1, a2, a3, fb, b1, b2, b3, fc, c1, divider
     #expect(h.firstOutline.numberOfRows == 11)
 }
+
+@MainActor @Test func newTabButtonCanOpenSomethingElse() throws {
+    let h = try Harness()
+    let before = h.model.sidebar.document
+    var clicked = 0
+    h.controller.onNewTabClicked = { clicked += 1 }
+    h.controller.pager.onNewTab?()
+    #expect(clicked == 1)
+    #expect(h.model.sidebar.document == before)
+}

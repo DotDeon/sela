@@ -69,3 +69,18 @@ private func entry(_ name: String, at date: Date = fixtureDate, title: String? =
     let names = try FileManager.default.contentsOfDirectory(atPath: folder.path)
     #expect(names.contains { $0.hasPrefix("Archive.corrupt-") })
 }
+
+@MainActor @Test func entriesWithoutAReasonLoadAsClosed() throws {
+    let file = try temporaryFolder().appending(path: "Archive.json")
+    let json = #"[{"archivedAt": \#(fixtureDate.timeIntervalSince1970), "id": "\#(UUID().uuidString)", "title": "Old"}]"#
+    try Data(json.utf8).write(to: file)
+    let (store, _) = try makeStore(file)
+    #expect(store.entries.map(\.reason) == [.closed])
+}
+
+@MainActor @Test func searchIgnoresCaseAndAccents() throws {
+    let (store, _) = try makeStore()
+    store.add([entry("a", title: "Über uns")])
+    #expect(store.search("über").count == 1)
+    #expect(store.search("uber").count == 1)
+}

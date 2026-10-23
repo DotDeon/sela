@@ -46,6 +46,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             self?.runCommand(id)
         }
         root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
+        root.sidebarController.onNewTabClicked = { [weak self] in self?.newTab(nil) }
         keepObserving { [weak self] in self?.updateTitle() }
     }
 

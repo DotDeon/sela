@@ -41,14 +41,19 @@ public final class ArchiveStore {
         return entry
     }
 
-    /// Entries whose title or address contains every word of `query`. A blank query returns everything.
+    /// Entries whose title or address contains every word of `query`, ignoring case and accents.
+    /// A blank query returns everything.
     public func search(_ query: String) -> [ArchiveEntry] {
-        let words = query.lowercased().split(whereSeparator: \.isWhitespace)
+        let words = Self.fold(query).split(whereSeparator: \.isWhitespace)
         guard !words.isEmpty else { return entries }
         return entries.filter { entry in
-            let text = "\(entry.title ?? "") \(entry.url?.absoluteString ?? "")".lowercased()
+            let text = Self.fold("\(entry.title ?? "") \(entry.url?.absoluteString ?? "")")
             return words.allSatisfy { text.contains($0) }
         }
+    }
+
+    private static func fold(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 
     // MARK: Storage
