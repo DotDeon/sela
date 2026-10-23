@@ -10,6 +10,7 @@ let package = Package(
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
         .library(name: "BrowserEngine", targets: ["BrowserEngine"]),
         .library(name: "FakeEngine", targets: ["FakeEngine"]),
+        .library(name: "Browsing", targets: ["Browsing"]),
         .executable(name: "brow-arc", targets: ["brow-arc"]),
     ],
     targets: [
@@ -26,6 +27,8 @@ let package = Package(
         .target(name: "BrowserEngine"),
         .target(name: "FakeEngine", dependencies: ["BrowserEngine"]),
         .testTarget(name: "FakeEngineTests", dependencies: ["FakeEngine", "BrowserEngine"]),
+        .target(name: "Browsing", dependencies: ["BrowserEngine"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine"]),
         .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )
