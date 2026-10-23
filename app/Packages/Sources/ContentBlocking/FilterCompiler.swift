@@ -20,13 +20,15 @@ public struct CompiledFilters: Sendable {
 public func compileFilters(_ lists: [(id: String, text: String)]) -> CompiledFilters {
     var ruleSets: [ContentRuleSet] = []
     var advanced: [String] = []
+    var seen: Set<String> = []
     for list in lists {
         let lines = list.text.components(separatedBy: .newlines)
         let result = ContentBlockerConverter().convertArray(rules: lines, safariVersion: .autodetect(), advancedBlocking: true)
         let digest = SHA256.hash(data: Data(result.safariRulesJSON.utf8)).map { String(format: "%02x", $0) }.joined()
         ruleSets.append(ContentRuleSet(identifier: "brow-\(list.id)-\(digest.prefix(16))", json: result.safariRulesJSON))
-        if let text = result.advancedRulesText, !text.isEmpty {
-            advanced.append(text)
+        // A rule in more than one list would otherwise run twice on a page.
+        for rule in (result.advancedRulesText ?? "").components(separatedBy: .newlines) where !rule.isEmpty && seen.insert(rule).inserted {
+            advanced.append(rule)
         }
     }
     return CompiledFilters(ruleSets: ruleSets, advancedRules: advanced.joined(separator: "\n"))

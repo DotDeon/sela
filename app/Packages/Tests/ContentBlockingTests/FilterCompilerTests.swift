@@ -37,3 +37,8 @@ private let rules = """
     #expect(lookup.scripts(page: URL(string: "https://example.com/")!, top: nil)?.scriptlets.map(\.name) == ["abort-on-property-read"])
     #expect(lookup.scripts(page: URL(string: "https://other.org/")!, top: nil) == nil)
 }
+
+@Test func advancedRulesInTwoListsAreKeptOnce() {
+    let advanced = compileFilters([(id: "a", text: rules), (id: "b", text: rules)]).advancedRules
+    #expect(advanced.components(separatedBy: "abort-on-property-read").count == 2)
+}
