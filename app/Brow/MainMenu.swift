@@ -69,6 +69,22 @@ enum MainMenu {
         menu.addItem(item("Pin or Unpin Tab", #selector(BrowserWindowController.togglePin(_:)), "d"))
         menu.addItem(item("New Folder", #selector(BrowserWindowController.newFolder(_:)), "n", [.command, .option]))
         menu.addItem(item("Copy URL", #selector(BrowserWindowController.copyURL(_:)), "c", [.command, .shift]))
+        menu.addItem(.separator())
+        menu.addItem(item("Reopen Archived Tab", #selector(BrowserWindowController.reopenArchivedTab(_:)), "t", [.command, .shift]))
+        let archiveAfter = NSMenuItem(title: "Archive Unpinned Tabs After", action: nil, keyEquivalent: "")
+        let choices = NSMenu(title: "Archive Unpinned Tabs After")
+        for hours in ArchiveSweeper.choices {
+            let title = switch hours {
+            case 0: "Never"
+            case let h where h % 24 == 0 && h >= 48: "\(h / 24) Days"
+            default: "\(hours) Hours"
+            }
+            let choice = item(title, #selector(AppDelegate.setArchiveInterval(_:)))
+            choice.tag = hours
+            choices.addItem(choice)
+        }
+        archiveAfter.submenu = choices
+        menu.addItem(archiveAfter)
         return menu
     }
 

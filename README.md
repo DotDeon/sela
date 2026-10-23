@@ -4,7 +4,7 @@
 
 Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on Chromium so Chrome extensions work, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data. It runs on WebKit for now, so Chrome extensions don't work yet. Chromium replaces WebKit once Brow's Chromium build is ready.
+Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data. It runs on WebKit for now, so Chrome extensions don't work yet. Chromium replaces WebKit once Brow's Chromium build is ready.
 
 ## Folder layout
 
@@ -33,6 +33,9 @@ Inside `app/Packages`:
 - `Sidebar`: the shared sidebar store that saves itself, plus outline, drag and drop, and swipe logic
 - `SidebarUI`: the sidebar's views: favourites grid, space pages, space bar and address
 - `Favicons`: site icons, fetched from each site and cached on disk
+- `Archive`: closed and inactive unpinned tabs, kept 30 days so they can be found and reopened
+- `History`: pages you've visited, kept 90 days in a SQLite file on your Mac
+- `CommandBar`: the Cmd+T and Cmd+L command bar: ranking and the panel
 - `BrowTestSupport`: sample sidebars shared by the tests
 
 ## Running Brow

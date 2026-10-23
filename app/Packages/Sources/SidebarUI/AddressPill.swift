@@ -3,6 +3,8 @@ import AppKit
 /// The address at the top of the sidebar. Shows the site's host; editing shows the full address, all selected.
 final class AddressPill: NSTextField {
     var onSubmit: ((String) -> Void)?
+    /// When set, a click calls this instead of editing in place.
+    var onClick: (() -> Void)?
     /// The full address of the selected tab.
     var address: String = "" {
         didSet { if currentEditor() == nil { showHost() } }
@@ -42,6 +44,10 @@ final class AddressPill: NSTextField {
     }
 
     override func mouseDown(with event: NSEvent) {
+        if let onClick {
+            onClick()
+            return
+        }
         // The first click selects the whole address instead of placing the caret.
         if currentEditor() == nil {
             window?.makeFirstResponder(self)

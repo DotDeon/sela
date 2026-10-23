@@ -9,6 +9,10 @@ import SidebarModel
 public final class SidebarViewController: NSViewController {
     /// Called with what the user typed in the address. Defaults to loading it in the selected tab.
     public var onAddressSubmitted: ((String) -> Void)?
+    /// When set, clicking the address calls this instead of editing it in place.
+    public var onAddressClicked: (() -> Void)? {
+        didSet { addressPill.onClick = onAddressClicked }
+    }
 
     let pager: SpacePagerView
     let favoritesGrid: FavoritesGridView

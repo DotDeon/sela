@@ -62,7 +62,7 @@ func letterImage(for text: String, size: CGFloat, color: NSColor) -> NSImage {
 
 /// The title a sidebar tab shows: its custom title, its live page's title, its saved title, or its host.
 @MainActor
-func sidebarTitle(for item: SidebarItem, liveState: (url: URL?, title: String)?) -> String {
+public func sidebarTitle(for item: SidebarItem, liveState: (url: URL?, title: String)?) -> String {
     if let title = item.title, !title.isEmpty { return title }
     if let liveState { return liveState.title }
     guard case .tab(let info) = item.kind else { return item.title ?? "Folder" }

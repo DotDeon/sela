@@ -15,6 +15,9 @@
 		B70000000000000000000019 /* SidebarModel in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000001E /* SidebarModel */; };
 		B7000000000000000000001A /* Favicons in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000001F /* Favicons */; };
 		B7000000000000000000001B /* ArcImport in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000020 /* ArcImport */; };
+		B70000000000000000000021 /* Archive in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000024 /* Archive */; };
+		B70000000000000000000022 /* History in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000025 /* History */; };
+		B70000000000000000000023 /* CommandBar in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000026 /* CommandBar */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +45,9 @@
 				B70000000000000000000019 /* SidebarModel in Frameworks */,
 				B7000000000000000000001A /* Favicons in Frameworks */,
 				B7000000000000000000001B /* ArcImport in Frameworks */,
+				B70000000000000000000021 /* Archive in Frameworks */,
+				B70000000000000000000022 /* History in Frameworks */,
+				B70000000000000000000023 /* CommandBar in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +98,9 @@
 				B7000000000000000000001E /* SidebarModel */,
 				B7000000000000000000001F /* Favicons */,
 				B70000000000000000000020 /* ArcImport */,
+				B70000000000000000000024 /* Archive */,
+				B70000000000000000000025 /* History */,
+				B70000000000000000000026 /* CommandBar */,
 			);
 			productName = Brow;
 			productReference = B70000000000000000000005 /* Brow.app */;
@@ -302,6 +311,18 @@
 		B70000000000000000000020 /* ArcImport */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ArcImport;
+		};
+		B70000000000000000000024 /* Archive */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Archive;
+		};
+		B70000000000000000000025 /* History */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = History;
+		};
+		B70000000000000000000026 /* CommandBar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CommandBar;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

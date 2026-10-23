@@ -1,7 +1,9 @@
 import AppKit
+import Archive
 import BrowserEngine
 import Browsing
 import Favicons
+import History
 import Sidebar
 import SidebarModel
 import SidebarUI
@@ -14,9 +16,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     private let root: BrowserRootViewController
     private var dialogPresenter: DialogPresenter?
+    private var commandBar: CommandBarPresenter?
+    private let history: HistoryStore?
 
-    init(engine: any BrowserEngine, sidebar: SidebarStore, favicons: FaviconStore) {
-        model = BrowserWindowModel(engine: engine, sidebar: sidebar)
+    init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore) {
+        model = BrowserWindowModel(engine: engine, sidebar: sidebar, archive: archive)
+        self.history = history
         root = BrowserRootViewController(model: model, favicons: favicons)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
@@ -36,6 +41,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
 
         dialogPresenter = DialogPresenter(model: model, window: window)
+        model.onPageVisited = { [weak history] url, title in history?.recordVisit(url: url, title: title) }
+        commandBar = CommandBarPresenter(model: model, history: history, favicons: favicons, host: root.view) { [weak self] id in
+            self?.runCommand(id)
+        }
+        root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
         keepObserving { [weak self] in self?.updateTitle() }
     }
 
@@ -52,15 +62,18 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: Actions
 
+    /// Cmd+T: the command bar, opening what's chosen in a new tab.
     @objc func newTab(_ sender: Any?) {
-        model.newTab(url: nil)
-        focusAddressBar(nil)
+        commandBar?.show(.newTab)
     }
 
+    /// Cmd+L: the command bar, starting with the current address.
     @objc func focusAddressBar(_ sender: Any?) {
-        root.revealSidebarIfHidden()
-        root.sidebarController.focusAddress()
+        let address = model.selectedTab?.state.url?.absoluteString ?? ""
+        commandBar?.show(.currentTab(address: address == "about:blank" ? "" : address))
     }
+
+    @objc func reopenArchivedTab(_ sender: Any?) { model.reopenLastArchived() }
 
     @objc func closeTab(_ sender: Any?) {
         if let id = model.selectedItemID {
@@ -110,6 +123,33 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     @objc func newSpace(_ sender: Any?) {
         let id = model.sidebar.addSpace(title: "New Space")
         model.selectSpace(id)
+    }
+
+    private func runCommand(_ id: String) {
+        switch id {
+        case "new-space": newSpace(nil)
+        case "toggle-sidebar": toggleSidebar(nil)
+        case "copy-url": copyURL(nil)
+        case "pin-tab": togglePin(nil)
+        case "clear-unpinned": model.clearUnpinned()
+        case "reopen-archived": model.reopenLastArchived()
+        case "clear-history": confirmClearHistory()
+        case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
+        default: break
+        }
+    }
+
+    private func confirmClearHistory() {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = "Clear your browsing history?"
+        alert.informativeText = "This removes every page Brow remembers you visiting. Your sidebar and archive aren't affected."
+        alert.addButton(withTitle: "Clear History")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+        alert.beginSheetModal(for: window) { [weak self] response in
+            if response == .alertFirstButtonReturn { self?.history?.clear() }
+        }
     }
 
     // MARK: NSWindowDelegate

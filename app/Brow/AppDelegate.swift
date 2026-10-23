@@ -1,21 +1,29 @@
 import AppKit
+import Archive
 import Favicons
+import History
 import Sidebar
 import SidebarModel
 import SidebarUI
 import WebKitEngine
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let engine = WebKitEngine()
     private var sidebar: SidebarStore!
     private var favicons: FaviconStore!
+    private var archive: ArchiveStore!
+    private var history: HistoryStore?
+    private var sweeper: ArchiveSweeper?
     private var windowControllers: [BrowserWindowController] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make()
         sidebar = SidebarStore(fileStore: SidebarDocumentStore(fileURL: sidebarFileURL()), firstRunDocument: FirstRunImport.document)
         favicons = FaviconStore(cacheFolder: (try? FaviconStore.defaultCacheFolder()) ?? FileManager.default.temporaryDirectory)
+        archive = ArchiveStore(fileURL: (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Brow-Archive.json"))
+        // Brow works without history if the database can't open.
+        history = (try? HistoryStore.defaultFileURL()).flatMap { try? HistoryStore(fileURL: $0) }
 
         // Another window may have removed a tab or space this window shows.
         keepObserving { [weak self] in
@@ -27,6 +35,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         newWindow(nil)
         NSApp.activate()
         reportLoadProblem()
+
+        sweeper = ArchiveSweeper(sidebar: sidebar, archive: archive) { [weak self] in
+            Set(self?.windowControllers.compactMap(\.model.selectedItemID) ?? [])
+        }
+        sweeper?.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -43,12 +56,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func newWindow(_ sender: Any?) {
-        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, favicons: favicons)
+        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons)
         controller.onClose = { [weak self, weak controller] in
             self?.windowControllers.removeAll { $0 === controller }
         }
         windowControllers.append(controller)
         controller.showWithTab()
+    }
+
+    /// The "Archive Unpinned Tabs After" menu. The item's tag is the number of hours, 0 for never.
+    @objc func setArchiveInterval(_ sender: NSMenuItem) {
+        ArchiveSweeper.hours = sender.tag
+        sweeper?.sweep()
+    }
+
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        if item.action == #selector(setArchiveInterval(_:)) {
+            item.state = item.tag == ArchiveSweeper.hours ? .on : .off
+        }
+        return true
     }
 
     private func sidebarFileURL() -> URL {
