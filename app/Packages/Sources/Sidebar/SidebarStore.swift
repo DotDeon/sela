@@ -8,6 +8,9 @@ public enum SidebarLoadProblem: Equatable, Sendable {
     case corrupt(backupURL: URL)
     /// A newer Brow wrote the file. Brow runs with an empty sidebar and never saves over the file.
     case newerVersion(Int)
+    /// The file couldn't be opened, for example because of its permissions. Brow runs with an empty
+    /// sidebar and never saves over the file.
+    case unreadable(reason: String)
 }
 
 /// The app's one sidebar, shared by every window. Saves itself shortly after each change.
@@ -53,7 +56,7 @@ public final class SidebarStore {
             saveNow()
         } catch {
             document = .empty(now: now())
-            lastSaveError = error.localizedDescription
+            loadProblem = .unreadable(reason: error.localizedDescription)
         }
     }
 
@@ -83,9 +86,12 @@ public final class SidebarStore {
         return result
     }
 
+    /// True when saving would destroy a sidebar file Brow couldn't read.
     private var isReadOnly: Bool {
-        if case .newerVersion = loadProblem { return true }
-        return false
+        switch loadProblem {
+        case .newerVersion, .unreadable: true
+        case .corrupt, nil: false
+        }
     }
 
     private func scheduleSave() {

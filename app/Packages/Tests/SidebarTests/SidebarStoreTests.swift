@@ -178,3 +178,22 @@ private func makeStore(
     store.pin("nope", in: "S")
     #expect(store.document == fixtureDocument())
 }
+
+@MainActor @Test func unreadableFileIsNeverOverwritten() throws {
+    let folder = try temporaryFolder()
+    let file = folder.appending(path: "Sidebar.json")
+    _ = try makeStore(folder: folder)
+    let original = try Data(contentsOf: file)
+    try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: file.path)
+    defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path) }
+
+    let (store, _) = try makeStore(folder: folder)
+    guard case .unreadable = store.loadProblem else {
+        Issue.record("expected an unreadable-file problem, got \(String(describing: store.loadProblem))")
+        return
+    }
+    store.createTab(url: nil, title: nil, in: store.document.spaces[0].unpinnedContainerID, at: 0)
+    store.saveNow()
+    try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path)
+    #expect(try Data(contentsOf: file) == original)
+}

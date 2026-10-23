@@ -66,6 +66,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .newerVersion:
             alert.messageText = "Your sidebar was saved by a newer version of Brow"
             alert.informativeText = "This version can't read it, so it's showing an empty sidebar. Changes you make now won't be saved, and your sidebar file is left as it is. Update Brow to get it back."
+        case .unreadable(let reason):
+            alert.messageText = "Brow couldn't open your sidebar"
+            alert.informativeText = "Brow is showing an empty sidebar and won't save changes, so your sidebar file stays safe. Check the file's permissions in ~/Library/Application Support/Brow, then reopen Brow. (\(reason))"
         }
         alert.runModal()
     }
