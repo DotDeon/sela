@@ -38,3 +38,43 @@ final class WebKitContentRules {
         for list in lists { controller.add(list) }
     }
 }
+
+/// AdGuard's content script, bundled by `scripts/content-blocking/build.sh`, and the bridge it asks for rules.
+@MainActor
+enum PageScriptInjection {
+    static let world = WKContentWorld.world(name: "BrowContentBlocking")
+    static let handlerName = "browContentBlocking"
+
+    static let script: WKUserScript? = {
+        guard let url = Bundle.module.url(forResource: "content-blocking", withExtension: "js"),
+              let source = try? String(contentsOf: url, encoding: .utf8)
+        else { return nil }
+        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: world)
+    }()
+
+    /// Adds the script and its bridge to a new content controller.
+    static func install(on controller: WKUserContentController, bridge: PageScriptBridge) {
+        guard let script else { return }
+        controller.addUserScript(script)
+        controller.addScriptMessageHandler(bridge, contentWorld: world, name: handlerName)
+    }
+}
+
+/// Answers the page script's request for rules. The content controller keeps its handlers alive,
+/// so this holds the tab weakly instead of being the tab.
+@MainActor
+final class PageScriptBridge: NSObject, WKScriptMessageHandlerWithReply {
+    weak var tab: WebKitTab?
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) async -> (Any?, String?) {
+        guard let body = message.body as? [String: Any], let pageText = body["page"] as? String,
+              let page = URL(string: pageText), let tab
+        else { return (nil, nil) }
+        let top = (body["top"] as? String).flatMap(URL.init(string:))
+        guard let scripts = tab.pageScripts(page: page, top: top),
+              let data = try? JSONEncoder().encode(scripts),
+              let object = try? JSONSerialization.jsonObject(with: data)
+        else { return (nil, nil) }
+        return (object, nil)
+    }
+}

@@ -62,4 +62,38 @@ struct ContentBlockingContractTests {
         tab.reload()
         try await eventually { tab.state.title == "loaded" }
     }
+
+    /// A page whose title becomes its `#ad` element's `display` half a second after loading.
+    private func adPage() throws -> URL {
+        try site.page("ad.html", """
+            <div id="ad">x</div>
+            <script>setTimeout(() => { document.title = getComputedStyle(document.getElementById('ad')).display }, 500)</script>
+            """)
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func pageScriptsHideElements(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        browser.pageScripts = { _, _ in PageScripts(css: ["#ad"], extendedCss: [], js: [], scriptlets: []) }
+        let tab = try await loadedTab(browser, try adPage())
+        try await eventually { tab.state.title == "none" }
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func pageScriptsAreSkippedWhenBlockingIsOff(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        browser.pageScripts = { _, _ in PageScripts(css: ["#ad"], extendedCss: [], js: [], scriptlets: []) }
+        browser.isContentBlockingEnabled = { _ in false }
+        let tab = try await loadedTab(browser, try adPage())
+        try await eventually { tab.state.title == "block" }
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func pagesCantReachTheBridge(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        browser.pageScripts = { _, _ in PageScripts(css: [], extendedCss: [], js: [], scriptlets: []) }
+        let page = try site.page("probe.html", "<script>document.title = typeof window.webkit?.messageHandlers?.browContentBlocking</script>")
+        let tab = try await loadedTab(browser, page)
+        try await eventually { tab.state.title == "undefined" }
+    }
 }

@@ -48,6 +48,12 @@ final class WebKitTab: NSObject, BrowserTab {
         engine.contentRules.apply(to: webView.configuration.userContentController, blocking: isBlocking)
     }
 
+    /// The page scripts for a page or frame in this tab, or nil when this tab's page has blocking off.
+    func pageScripts(page: URL, top: URL?) -> PageScripts? {
+        guard isBlocking else { return nil }
+        return engine.pageScripts?(page, top)
+    }
+
     private func setBlocking(_ blocking: Bool) {
         isBlocking = blocking
         refreshContentBlocking()

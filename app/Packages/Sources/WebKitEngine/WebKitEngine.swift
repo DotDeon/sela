@@ -48,7 +48,9 @@ public final class WebKitEngine: ContentBlockingEngine {
     }
 
     public func makeTab(url: URL?) -> any BrowserTab {
-        let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: makeWebViewConfiguration()), engine: self)
+        let bridge = PageScriptBridge()
+        let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: makeWebViewConfiguration(bridge: bridge)), engine: self)
+        bridge.tab = tab
         register(tab)
         if let url { tab.load(url) }
         return tab
@@ -70,7 +72,7 @@ public final class WebKitEngine: ContentBlockingEngine {
         return isContentBlockingEnabled?(url) ?? true
     }
 
-    func makeWebViewConfiguration() -> WKWebViewConfiguration {
+    func makeWebViewConfiguration(bridge: PageScriptBridge) -> WKWebViewConfiguration {
         let webConfiguration = WKWebViewConfiguration()
         webConfiguration.websiteDataStore = dataStore
         webConfiguration.applicationNameForUserAgent = applicationName
@@ -78,6 +80,7 @@ public final class WebKitEngine: ContentBlockingEngine {
         webConfiguration.preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture
         webConfiguration.userContentController = WKUserContentController()
         contentRules.apply(to: webConfiguration.userContentController, blocking: true)
+        PageScriptInjection.install(on: webConfiguration.userContentController, bridge: bridge)
         return webConfiguration
     }
 }
