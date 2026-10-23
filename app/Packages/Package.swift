@@ -9,6 +9,7 @@ let package = Package(
         .library(name: "Sidebar", targets: ["Sidebar"]),
         .library(name: "Favicons", targets: ["Favicons"]),
         .library(name: "SidebarUI", targets: ["SidebarUI"]),
+        .library(name: "Archive", targets: ["Archive"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
         .library(name: "BrowserEngine", targets: ["BrowserEngine"]),
@@ -30,6 +31,8 @@ let package = Package(
             name: "SidebarUITests",
             dependencies: ["SidebarUI", "Browsing", "Sidebar", "SidebarModel", "Favicons", "FakeEngine", "BrowTestSupport"]
         ),
+        .target(name: "Archive", dependencies: ["Sidebar", "SidebarModel"]),
+        .testTarget(name: "ArchiveTests", dependencies: ["Archive", "Sidebar", "SidebarModel", "BrowTestSupport"]),
         .target(name: "ArcImport", dependencies: ["SidebarModel"]),
         .testTarget(
             name: "ArcImportTests",
