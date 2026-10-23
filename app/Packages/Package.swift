@@ -10,6 +10,7 @@ let package = Package(
         .library(name: "Favicons", targets: ["Favicons"]),
         .library(name: "SidebarUI", targets: ["SidebarUI"]),
         .library(name: "Archive", targets: ["Archive"]),
+        .library(name: "History", targets: ["History"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
         .library(name: "BrowserEngine", targets: ["BrowserEngine"]),
@@ -33,6 +34,8 @@ let package = Package(
         ),
         .target(name: "Archive", dependencies: ["Sidebar", "SidebarModel"]),
         .testTarget(name: "ArchiveTests", dependencies: ["Archive", "Sidebar", "SidebarModel", "BrowTestSupport"]),
+        .target(name: "History", linkerSettings: [.linkedLibrary("sqlite3")]),
+        .testTarget(name: "HistoryTests", dependencies: ["History"]),
         .target(name: "ArcImport", dependencies: ["SidebarModel"]),
         .testTarget(
             name: "ArcImportTests",
