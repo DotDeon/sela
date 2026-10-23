@@ -79,7 +79,10 @@ extension SidebarStore {
 
     /// Records where an unpinned tab is now, so it reopens there. Pinned tabs and favourites keep their saved address.
     public func recordPage(_ id: ItemID, url: URL?, title: String?) {
-        guard case .unpinned = document.containerRole(of: id) else { return }
+        // Pinned tabs and favourites keep their saved address, except one that was made blank and has none yet.
+        let isUnpinned: Bool
+        if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
+        guard let info = tabInfo(id), isUnpinned || (info.savedURL == nil && url != nil) else { return }
         try? change {
             try $0.updateTab(id) { info in
                 info.savedURL = url
@@ -119,5 +122,12 @@ extension SidebarStore {
 
     public func updateSpace(_ id: SpaceID, title: String?, icon: String?, theme: SpaceTheme?) {
         try? change { try $0.updateSpace(id, title: title, icon: icon, theme: theme) }
+    }
+}
+
+extension SidebarStore {
+    fileprivate func tabInfo(_ id: ItemID) -> TabInfo? {
+        if case .tab(let info) = document.item(id)?.kind { return info }
+        return nil
     }
 }

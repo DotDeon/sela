@@ -124,10 +124,16 @@ final class WebContentViewController: NSViewController {
                                             fractions: split.fractions, gap: Self.gap, minimum: Self.minimumPaneSize))
     }
 
+    /// Focuses the pane a click lands in. Only clicks that reach the pane itself count, not clicks on something
+    /// floating over it, such as the command bar, Peek or the slid-out sidebar.
     private func focusPane(at event: NSEvent) {
-        guard event.window === view.window, paneIDs.count > 1 else { return }
-        let point = view.convert(event.locationInWindow, from: nil)
-        guard let (id, _) = cards.first(where: { $0.value.frame.contains(point) }), id != model.selectedItemID else { return }
+        guard event.window === view.window, paneIDs.count > 1,
+              let contentView = view.window?.contentView,
+              let hit = contentView.hitTest(contentView.convert(event.locationInWindow, from: nil))
+        else { return }
+        guard let (id, _) = cards.first(where: { hit === $0.value || hit.isDescendant(of: $0.value) }),
+              id != model.selectedItemID
+        else { return }
         model.select(id)
     }
 

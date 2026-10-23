@@ -228,8 +228,9 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
         }
     }
 
+    /// A pane's row is its split's row.
     private func rowIndex(for id: ItemID) -> Int? {
-        guard let node = nodes[.item(id)] else { return nil }
+        guard let node = nodes[.item(document.splitID(containing: id) ?? id)] else { return nil }
         let row = outlineView.row(forItem: node)
         return row >= 0 ? row : nil
     }
@@ -477,7 +478,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
                 menu.addItem(menuItem("Back to Saved Address") { [weak self] in self?.model.resetToSavedURL(id) })
             }
             let split = menuItem("Open in Split View") { [weak self] in self?.model.openInSplit(id) }
-            split.isEnabled = canOpenInSplit(id)
+            split.isEnabled = model.canOpenInSplit(id)
             menu.addItem(split)
             menu.addItem(.separator())
             menu.addItem(menuItem("Close") { [weak self] in self?.model.close(id) })
@@ -496,16 +497,6 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
         let items = menu.items
         menu.removeAllItems()
         return items
-    }
-
-    /// A tab can join the selected tab's split when neither is a favourite, it isn't the selected tab
-    /// or already beside it, and the split has room.
-    private func canOpenInSplit(_ id: ItemID) -> Bool {
-        guard let selected = model.selectedItemID, selected != id,
-              document.containerRole(of: id) != .favorites, document.containerRole(of: selected) != .favorites
-        else { return false }
-        let panes = model.selectedSplit?.paneIDs ?? [selected]
-        return !panes.contains(id) && panes.count < SidebarDocument.maximumSplitPanes
     }
 
     /// Makes a folder at the top of the pinned section, or inside `parent`, and starts renaming it.

@@ -92,12 +92,12 @@ private struct Harness {
     let h = try Harness()
     h.model.select("u1")
     h.model.openInSplit("u2")
-    h.model.openInSplit("p1")
+    let n = try #require(h.model.addSplitPane())
     h.model.select("u2")
-    #expect(h.model.selectedSplit?.paneIDs == ["u1", "u2", "p1"])
+    #expect(h.model.selectedSplit?.paneIDs == ["u1", "u2", n])
     h.model.close("u2")
-    #expect(h.model.selectedItemID == "p1")
-    #expect(h.model.selectedSplit?.paneIDs == ["u1", "p1"])
+    #expect(h.model.selectedItemID == n)
+    #expect(h.model.selectedSplit?.paneIDs == ["u1", n])
 }
 
 @MainActor @Test func closingTheSecondLastPaneLeavesAPlainTab() throws {
@@ -140,4 +140,37 @@ private struct Harness {
     #expect(h.model.selectedSplit == nil)
     #expect(h.model.selectedItemID == "u2")
     #expect(h.unpinned == ["u1", "u2"])
+}
+
+@MainActor @Test func closingAPinnedPaneTakesItOutOfTheSplit() throws {
+    let h = try Harness()
+    h.model.select("p1")
+    let n = try #require(h.model.addSplitPane())
+    h.model.select("p1")
+    h.model.close("p1")
+    #expect(h.model.selectedItemID == n)
+    #expect(h.live("p1") == nil)
+    #expect(h.model.selectedSplit == nil)
+    #expect(h.store.document.item("p1")?.parentID == "P")
+}
+
+@MainActor @Test func closeSplitOnAPinnedSplitUnloadsEveryPane() throws {
+    let h = try Harness()
+    h.model.select("p1")
+    let n = try #require(h.model.addSplitPane())
+    let s = try #require(h.model.selectedSplit?.id)
+    h.model.closeSplit(s)
+    #expect(h.live("p1") == nil)
+    #expect(h.live(n) == nil)
+    #expect(h.store.document.item("p1") != nil)
+}
+
+@MainActor @Test func openInSplitKeepsPinnedAndUnpinnedApart() throws {
+    let h = try Harness()
+    h.model.select("u1")
+    #expect(!h.model.canOpenInSplit("p1"))
+    h.model.openInSplit("p1")
+    #expect(h.model.selectedSplit == nil)
+    #expect(h.store.document.item("p1")?.parentID == "P")
+    #expect(h.model.canOpenInSplit("u2"))
 }

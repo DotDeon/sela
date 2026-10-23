@@ -166,9 +166,20 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         return id
     }
 
+    /// True when tab `id` can go beside the selected tab: neither is a favourite, both are in the same section
+    /// of the same space, so a pinned tab is never quietly unpinned, and the split has room.
+    public func canOpenInSplit(_ id: ItemID) -> Bool {
+        guard let selected = selectedItemID, selected != id, isTab(id),
+              let role = document.containerRole(of: id), role != .favorites,
+              document.containerRole(of: selected) == role
+        else { return false }
+        let panes = selectedSplit?.paneIDs ?? [selected]
+        return !panes.contains(id) && panes.count < SidebarDocument.maximumSplitPanes
+    }
+
     /// Shows an existing tab beside the selected tab and selects it.
     public func openInSplit(_ id: ItemID) {
-        guard let selected = selectedItemID, selected != id, sidebar.addToSplit(id, with: selected) != nil else { return }
+        guard canOpenInSplit(id), let selected = selectedItemID, sidebar.addToSplit(id, with: selected) != nil else { return }
         select(id)
     }
 
@@ -192,7 +203,15 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// Closes every pane. Unpinned panes go to the archive, as when closed one at a time.
     public func closeSplit(_ splitID: ItemID) {
         guard case .split = document.item(splitID)?.kind else { return }
-        for pane in document.tabIDs(under: splitID) {
+        let panes = document.tabIDs(under: splitID)
+        // Move the selection off the split first, so closing one pane never reloads another.
+        if let selected = selectedItemID, panes.contains(selected) {
+            let order = tabOrder()
+            let after = order.drop { $0 != panes.last }.dropFirst().first
+            let before = order.prefix { $0 != panes.first }.last
+            if let next = after ?? before { setSelection(next) } else { leaveSelection() }
+        }
+        for pane in panes {
             close(pane)
         }
     }
@@ -259,6 +278,11 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// Unpinned tabs are removed from the sidebar. Pinned tabs and favourites stay and only unload their page.
     public func close(_ id: ItemID) {
         let next = selectedItemID == id ? selectionAfterClosing(id) : selectedItemID
+        // A closed pane leaves its split first, so a pinned pane doesn't stay in the split and load again.
+        if let splitID = document.splitID(containing: id), let parent = document.item(splitID)?.parentID,
+           let index = document.item(parent)?.childIDs.firstIndex(of: splitID) {
+            try? sidebar.move(id, to: parent, at: index + 1)
+        }
         let isUnpinned: Bool
         if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
         if isUnpinned {

@@ -70,8 +70,9 @@ enum MainMenu {
         menu.addItem(item("New Folder", #selector(BrowserWindowController.newFolder(_:)), "n", [.command, .option]))
         menu.addItem(item("Copy URL", #selector(BrowserWindowController.copyURL(_:)), "c", [.command, .shift]))
         menu.addItem(.separator())
-        menu.addItem(item("Add Split View", #selector(BrowserWindowController.addSplitView(_:)), "=", [.control, .shift]))
-        menu.addItem(item("Separate Split View", #selector(BrowserWindowController.separateSplitView(_:)), "-", [.control, .shift]))
+        // With Shift held the keys report "+" and "_", so those are what the menu has to match.
+        menu.addItem(item("Add Split View", #selector(BrowserWindowController.addSplitView(_:)), "+", [.control, .shift]))
+        menu.addItem(item("Separate Split View", #selector(BrowserWindowController.separateSplitView(_:)), "_", [.control, .shift]))
         menu.addItem(item("Rotate Split View", #selector(BrowserWindowController.rotateSplitView(_:))))
         menu.addItem(.separator())
         menu.addItem(item("Reopen Archived Tab", #selector(BrowserWindowController.reopenArchivedTab(_:)), "t", [.command, .shift]))

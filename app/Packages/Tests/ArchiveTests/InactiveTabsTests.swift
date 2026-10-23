@@ -78,3 +78,13 @@ private let now = fixtureDate.addingTimeInterval(13 * hour)
     #expect(sidebar.document.item("U")?.childIDs == [])
     try sidebar.document.validate()
 }
+
+@Test func aSplitInsideAFolderStillArchivesAsAUnit() throws {
+    var doc = fixtureDocument()
+    try doc.insert(fixtureItem("uf", parent: "U", kind: .folder(FolderInfo(icon: nil, isExpanded: true))), into: "U", at: 0)
+    try doc.move("u1", to: "uf", at: nil)
+    try doc.move("u2", to: "uf", at: nil)
+    try doc.addToSplit("u2", with: "u1")
+    try doc.updateTab("u2") { $0.lastActiveAt = now.addingTimeInterval(-1 * hour) }
+    #expect(inactiveTabs(in: doc, now: now, after: 12 * hour, protecting: []).isEmpty)
+}

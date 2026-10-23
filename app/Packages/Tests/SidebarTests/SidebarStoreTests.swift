@@ -198,3 +198,13 @@ private func makeStore(
     try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path)
     #expect(try Data(contentsOf: file) == original)
 }
+
+@MainActor @Test func recordPageFillsInAPinnedTabWithNoAddress() throws {
+    let (store, _) = try makeStore()
+    let id = store.createTab(url: nil, title: nil, in: "P", at: 0)
+    store.recordPage(id, url: URL(string: "https://first.example.com/"), title: "First")
+    #expect(tabInfo(store.document, id)?.savedURL == URL(string: "https://first.example.com/"))
+    #expect(tabInfo(store.document, id)?.savedTitle == "First")
+    store.recordPage(id, url: URL(string: "https://second.example.com/"), title: "Second")
+    #expect(tabInfo(store.document, id)?.savedURL == URL(string: "https://first.example.com/"))
+}

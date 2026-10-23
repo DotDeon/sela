@@ -166,3 +166,18 @@ private struct Harness {
     #expect(titles.contains("Separate Split View"))
     #expect(titles.contains("Close Split View"))
 }
+
+@MainActor @Test func theSplitRowIsSelectedWhenAPaneIs() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    h.model.openInSplit("u2")
+    // fold, p2, p1, divider, split
+    try await eventually { h.firstOutline.numberOfRows == 5 && h.firstOutline.selectedRow == 4 }
+}
+
+@MainActor @Test func openInSplitIsOffAcrossSections() throws {
+    let h = try Harness()
+    h.model.select("u2")
+    let page = h.controller.pager.pages[0]
+    #expect(page.menuItems(for: "p1").first { $0.title == "Open in Split View" }?.isEnabled == false)
+}
