@@ -4,7 +4,7 @@ import Favicons
 import Sidebar
 import SidebarUI
 
-/// The window's layout: the sidebar on the left and the page in a rounded card.
+/// The window's layout: the sidebar on the left and the page area beside it, where pages show in rounded cards.
 /// With the sidebar hidden, the page fills the window and the sidebar slides out from the left edge.
 @MainActor
 final class BrowserRootViewController: NSViewController {
@@ -46,16 +46,6 @@ final class BrowserRootViewController: NSViewController {
         view = root
 
         tint.wantsLayer = true
-        card.wantsLayer = true
-        card.layer?.cornerRadius = 10
-        card.layer?.masksToBounds = true
-        card.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-        let cardShadow = NSView()
-        cardShadow.wantsLayer = true
-        cardShadow.shadow = NSShadow()
-        cardShadow.layer?.shadowOpacity = 0.12
-        cardShadow.layer?.shadowRadius = 6
-        cardShadow.layer?.shadowOffset = NSSize(width: 0, height: -1)
 
         addChild(sidebarController)
         addChild(content)
@@ -64,7 +54,7 @@ final class BrowserRootViewController: NSViewController {
         sidebar.shadow = NSShadow()
         sidebar.layer?.shadowOpacity = 0
 
-        for subview in [tint, cardShadow, card, sidebar, resizeHandle, edgeZone] {
+        for subview in [tint, card, sidebar, resizeHandle, edgeZone] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             root.addSubview(subview)
         }
@@ -100,11 +90,6 @@ final class BrowserRootViewController: NSViewController {
             sidebar.topAnchor.constraint(equalTo: root.topAnchor),
             sidebar.bottomAnchor.constraint(equalTo: root.bottomAnchor),
 
-            cardShadow.leadingAnchor.constraint(equalTo: card.leadingAnchor),
-            cardShadow.trailingAnchor.constraint(equalTo: card.trailingAnchor),
-            cardShadow.topAnchor.constraint(equalTo: card.topAnchor),
-            cardShadow.bottomAnchor.constraint(equalTo: card.bottomAnchor),
-
             content.view.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             content.view.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             content.view.topAnchor.constraint(equalTo: card.topAnchor),
@@ -120,8 +105,6 @@ final class BrowserRootViewController: NSViewController {
             edgeZone.topAnchor.constraint(equalTo: root.topAnchor),
             edgeZone.bottomAnchor.constraint(equalTo: root.bottomAnchor),
         ])
-        cardShadow.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-        cardShadow.layer?.cornerRadius = 10
 
         edgeZone.isHidden = true
         edgeZone.onEnter = { [weak self] in self?.reveal() }
@@ -166,8 +149,8 @@ final class BrowserRootViewController: NSViewController {
             NSLayoutConstraint.deactivate(hidden ? self.cardDockedConstraints : self.cardFullConstraints)
             NSLayoutConstraint.activate(hidden ? self.cardFullConstraints : self.cardDockedConstraints)
             self.sidebarLeading.animator().constant = hidden ? -self.sidebarWidth.constant : 0
-            self.card.animator().layer?.cornerRadius = hidden ? 0 : 10
         }
+        content.cornerRadius = hidden ? 0 : PageCardView.cornerRadius
         edgeZone.isHidden = !hidden
         resizeHandle.isHidden = hidden
         sidebarController.view.layer?.shadowOpacity = 0
