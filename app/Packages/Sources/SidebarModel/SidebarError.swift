@@ -9,4 +9,8 @@ public enum SidebarError: Error, Equatable, Sendable {
     case integrity(String)
     case unsupportedVersion(Int)
     case corruptFile(backupURL: URL)
+    case spaceNotFound(SpaceID)
+    case cannotRemoveLastSpace
+    case notATab(ItemID)
+    case notAFolder(ItemID)
 }

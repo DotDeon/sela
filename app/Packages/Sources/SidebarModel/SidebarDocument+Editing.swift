@@ -15,11 +15,7 @@ extension SidebarDocument {
 
     /// Moves an existing item under `parentID`. Validates everything before changing anything.
     public mutating func move(_ id: ItemID, to parentID: ItemID, at index: Int?) throws {
-        let item = try requireItem(id)
-        guard !item.isContainer else { throw SidebarError.cannotMoveContainer(id) }
-        let parent = try requireItem(parentID)
-        guard parent.canHaveChildren else { throw SidebarError.parentCannotHaveChildren(parentID) }
-        guard parentID != id, !isDescendant(parentID, of: id) else { throw SidebarError.wouldCreateCycle(id) }
+        let item = try checkMove(id, to: parentID)
 
         if let oldParentID = item.parentID {
             itemsByID[oldParentID]?.childIDs.removeAll { $0 == id }
@@ -86,9 +82,42 @@ extension SidebarDocument {
         }
     }
 
+    /// True when `move(_:to:at:)` would succeed.
+    public func canMove(_ id: ItemID, to parentID: ItemID) -> Bool {
+        (try? checkMove(id, to: parentID)) != nil
+    }
+
+    /// Sets an item's custom title. Nil clears it.
+    public mutating func setTitle(_ id: ItemID, _ title: String?) throws {
+        _ = try requireItem(id)
+        itemsByID[id]!.title = title
+    }
+
+    public mutating func setExpanded(_ id: ItemID, _ isExpanded: Bool) throws {
+        guard case .folder(var info) = try requireItem(id).kind else { throw SidebarError.notAFolder(id) }
+        info.isExpanded = isExpanded
+        itemsByID[id]!.kind = .folder(info)
+    }
+
+    public mutating func updateTab(_ id: ItemID, _ change: (inout TabInfo) -> Void) throws {
+        guard case .tab(var info) = try requireItem(id).kind else { throw SidebarError.notATab(id) }
+        change(&info)
+        itemsByID[id]!.kind = .tab(info)
+    }
+
     // MARK: Helpers
 
-    private func requireItem(_ id: ItemID) throws -> SidebarItem {
+    /// The checks `move` makes, in order. Returns the item being moved.
+    private func checkMove(_ id: ItemID, to parentID: ItemID) throws -> SidebarItem {
+        let item = try requireItem(id)
+        guard !item.isContainer else { throw SidebarError.cannotMoveContainer(id) }
+        let parent = try requireItem(parentID)
+        guard parent.canHaveChildren else { throw SidebarError.parentCannotHaveChildren(parentID) }
+        guard parentID != id, !isDescendant(parentID, of: id) else { throw SidebarError.wouldCreateCycle(id) }
+        return item
+    }
+
+    func requireItem(_ id: ItemID) throws -> SidebarItem {
         guard let item = itemsByID[id] else { throw SidebarError.itemNotFound(id) }
         return item
     }
@@ -110,7 +139,7 @@ extension SidebarDocument {
         return false
     }
 
-    private func clamped(_ index: Int?, count: Int) -> Int {
+    func clamped(_ index: Int?, count: Int) -> Int {
         guard let index else { return count }
         return min(max(index, 0), count)
     }
