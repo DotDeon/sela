@@ -1,6 +1,7 @@
 import AppKit
 import BrowserEngine
 import Browsing
+import SidebarUI
 
 /// Shows the selected tab's JavaScript dialog as a sheet and sends back the answer.
 @MainActor

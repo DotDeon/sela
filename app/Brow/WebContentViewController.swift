@@ -1,5 +1,6 @@
 import AppKit
 import Browsing
+import SidebarUI
 
 /// Shows the selected tab's page.
 @MainActor

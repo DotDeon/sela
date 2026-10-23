@@ -9,6 +9,8 @@ enum MainMenu {
         menu.addItem(submenu(fileMenu()))
         menu.addItem(submenu(editMenu()))
         menu.addItem(submenu(viewMenu()))
+        menu.addItem(submenu(tabMenu()))
+        menu.addItem(submenu(spacesMenu()))
         let window = windowMenu()
         menu.addItem(submenu(window))
         NSApp.windowsMenu = window
@@ -52,11 +54,38 @@ enum MainMenu {
 
     private static func viewMenu() -> NSMenu {
         let menu = NSMenu(title: "View")
+        menu.addItem(item("Toggle Sidebar", #selector(BrowserWindowController.toggleSidebar(_:)), "s"))
+        menu.addItem(.separator())
         menu.addItem(item("Reload Page", #selector(BrowserWindowController.reloadTab(_:)), "r"))
         menu.addItem(item("Stop", #selector(BrowserWindowController.stopTab(_:)), "."))
         menu.addItem(.separator())
         menu.addItem(item("Back", #selector(BrowserWindowController.goBackInTab(_:)), "["))
         menu.addItem(item("Forward", #selector(BrowserWindowController.goForwardInTab(_:)), "]"))
+        return menu
+    }
+
+    private static func tabMenu() -> NSMenu {
+        let menu = NSMenu(title: "Tab")
+        menu.addItem(item("Pin or Unpin Tab", #selector(BrowserWindowController.togglePin(_:)), "d"))
+        menu.addItem(item("New Folder", #selector(BrowserWindowController.newFolder(_:)), "n", [.command, .option]))
+        menu.addItem(item("Copy URL", #selector(BrowserWindowController.copyURL(_:)), "c", [.command, .shift]))
+        return menu
+    }
+
+    private static func spacesMenu() -> NSMenu {
+        let menu = NSMenu(title: "Spaces")
+        let right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
+        let left = String(UnicodeScalar(NSLeftArrowFunctionKey)!)
+        menu.addItem(item("Next Space", #selector(BrowserWindowController.selectNextSpace(_:)), right, [.command, .option]))
+        menu.addItem(item("Previous Space", #selector(BrowserWindowController.selectPreviousSpace(_:)), left, [.command, .option]))
+        menu.addItem(.separator())
+        for number in 1...9 {
+            let space = item("Space \(number)", #selector(BrowserWindowController.selectSpaceByNumber(_:)), "\(number)", [.control])
+            space.tag = number
+            menu.addItem(space)
+        }
+        menu.addItem(.separator())
+        menu.addItem(item("New Space", #selector(BrowserWindowController.newSpace(_:))))
         return menu
     }
 

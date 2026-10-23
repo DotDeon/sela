@@ -1,65 +1,69 @@
 import AppKit
 import BrowserEngine
 import Browsing
+import Favicons
+import Sidebar
+import SidebarModel
+import SidebarUI
 
-/// One browser window: a temporary tab list, the page, and a toolbar with the address field.
+/// One browser window: Arc's sidebar on the left and the selected page beside it.
 @MainActor
 final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     let model: BrowserWindowModel
     var onClose: (() -> Void)?
 
-    private let addressField = NSTextField()
-    private let backButton = NSButton()
-    private let forwardButton = NSButton()
-    private let reloadButton = NSButton()
+    private let root: BrowserRootViewController
     private var dialogPresenter: DialogPresenter?
-    private var addressShownForTabID: TabID?
 
-    init(engine: any BrowserEngine) {
-        model = BrowserWindowModel(engine: engine)
+    init(engine: any BrowserEngine, sidebar: SidebarStore, favicons: FaviconStore) {
+        model = BrowserWindowModel(engine: engine, sidebar: sidebar)
+        root = BrowserRootViewController(model: model, favicons: favicons)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.minSize = NSSize(width: 600, height: 400)
         super.init(window: window)
 
-        let split = NSSplitViewController()
-        let tabList = NSSplitViewItem(sidebarWithViewController: TabListViewController(model: model))
-        tabList.minimumThickness = 180
-        tabList.maximumThickness = 360
-        split.addSplitViewItem(tabList)
-        split.addSplitViewItem(NSSplitViewItem(viewController: WebContentViewController(model: model)))
-        window.contentViewController = split
+        window.contentViewController = root
         window.setContentSize(NSSize(width: 1280, height: 800))
         window.center()
         window.setFrameAutosaveName("BrowserWindow")
         window.delegate = self
-        window.toolbarStyle = .unified
-        window.toolbar = makeToolbar()
 
         dialogPresenter = DialogPresenter(model: model, window: window)
-        keepObserving { [weak self] in self?.update() }
+        keepObserving { [weak self] in self?.updateTitle() }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
 
+    /// Shows a new window with the sidebar's most recent tab, or a fresh tab when there isn't one.
+    func showWithTab() {
+        showWindow(nil)
+        if model.selectedItemID == nil {
+            newTab(nil)
+        }
+    }
+
     // MARK: Actions
 
     @objc func newTab(_ sender: Any?) {
-        model.openTab(url: nil)
-        addressField.stringValue = ""
+        model.newTab(url: nil)
         focusAddressBar(nil)
     }
 
     @objc func focusAddressBar(_ sender: Any?) {
-        window?.makeFirstResponder(addressField)
+        root.revealSidebarIfHidden()
+        root.sidebarController.focusAddress()
     }
 
     @objc func closeTab(_ sender: Any?) {
-        if let id = model.selectedTabID {
+        if let id = model.selectedItemID {
             model.close(id)
         } else {
             window?.performClose(nil)
@@ -69,11 +73,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     @objc func reloadTab(_ sender: Any?) { model.selectedTab?.reload() }
 
     @objc func stopTab(_ sender: Any?) { model.selectedTab?.stopLoading() }
-
-    @objc func reloadOrStop(_ sender: Any?) {
-        guard let tab = model.selectedTab else { return }
-        if tab.state.isLoading { tab.stopLoading() } else { tab.reload() }
-    }
 
     @objc func goBackInTab(_ sender: Any?) { model.selectedTab?.goBack() }
 
@@ -85,110 +84,43 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     @objc func selectTabByNumber(_ sender: NSMenuItem) { model.select(number: sender.tag) }
 
-    @objc private func addressSubmitted(_ sender: NSTextField) {
-        guard let url = AddressInput.resolve(sender.stringValue) else { return }
-        if let tab = model.selectedTab {
-            tab.load(url)
-        } else {
-            model.openTab(url: url)
-        }
-        if let content = model.selectedTab?.contentView {
-            window?.makeFirstResponder(content)
-        }
+    @objc func togglePin(_ sender: Any?) {
+        if let id = model.selectedItemID { model.togglePin(id) }
+    }
+
+    @objc func newFolder(_ sender: Any?) {
+        root.revealSidebarIfHidden()
+        root.sidebarController.newFolder()
+    }
+
+    @objc func copyURL(_ sender: Any?) {
+        guard let url = model.selectedTab?.state.url else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+    }
+
+    @objc func toggleSidebar(_ sender: Any?) { root.toggleSidebar() }
+
+    @objc func selectNextSpace(_ sender: Any?) { model.selectNextSpace() }
+
+    @objc func selectPreviousSpace(_ sender: Any?) { model.selectPreviousSpace() }
+
+    @objc func selectSpaceByNumber(_ sender: NSMenuItem) { model.selectSpace(number: sender.tag) }
+
+    @objc func newSpace(_ sender: Any?) {
+        let id = model.sidebar.addSpace(title: "New Space")
+        model.selectSpace(id)
     }
 
     // MARK: NSWindowDelegate
 
     func windowWillClose(_ notification: Notification) {
-        for tab in model.tabs {
-            model.close(tab.id)
-        }
+        model.closeAllLiveTabs()
         onClose?()
     }
 
-    // MARK: Updates
-
-    private func update() {
-        let state = model.selectedTab?.state
-        window?.title = state.map(displayTitle(for:)) ?? "Brow"
-        backButton.isEnabled = state?.canGoBack ?? false
-        forwardButton.isEnabled = state?.canGoForward ?? false
-        let isLoading = state?.isLoading ?? false
-        reloadButton.image = NSImage(systemSymbolName: isLoading ? "xmark" : "arrow.clockwise", accessibilityDescription: isLoading ? "Stop" : "Reload")
-        // Keep what the user is typing, unless they've switched to another tab.
-        let tabChanged = model.selectedTabID != addressShownForTabID
-        addressShownForTabID = model.selectedTabID
-        if addressField.currentEditor() == nil || tabChanged {
-            let url = state?.url?.absoluteString
-            addressField.stringValue = url == "about:blank" ? "" : url ?? ""
-        }
-    }
-
-    private func makeToolbar() -> NSToolbar {
-        let toolbar = NSToolbar(identifier: "BrowserToolbar")
-        toolbar.delegate = self
-        toolbar.displayMode = .iconOnly
-        toolbar.allowsUserCustomization = false
-        return toolbar
-    }
-
-    fileprivate func configure(_ button: NSButton, symbol: String, label: String, action: Selector) {
-        button.bezelStyle = .texturedRounded
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
-        button.target = self
-        button.action = action
-        button.toolTip = label
-    }
-}
-
-extension NSToolbarItem.Identifier {
-    fileprivate static let back = Self("back")
-    fileprivate static let forward = Self("forward")
-    fileprivate static let reload = Self("reload")
-    fileprivate static let address = Self("address")
-}
-
-extension BrowserWindowController: NSToolbarDelegate {
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.back, .forward, .reload, .address]
-    }
-
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        toolbarDefaultItemIdentifiers(toolbar)
-    }
-
-    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
-        let item = NSToolbarItem(itemIdentifier: identifier)
-        switch identifier {
-        case .back:
-            configure(backButton, symbol: "chevron.left", label: "Back", action: #selector(goBackInTab(_:)))
-            item.view = backButton
-            item.label = "Back"
-        case .forward:
-            configure(forwardButton, symbol: "chevron.right", label: "Forward", action: #selector(goForwardInTab(_:)))
-            item.view = forwardButton
-            item.label = "Forward"
-        case .reload:
-            configure(reloadButton, symbol: "arrow.clockwise", label: "Reload", action: #selector(reloadOrStop(_:)))
-            item.view = reloadButton
-            item.label = "Reload"
-        case .address:
-            addressField.placeholderString = "Search or enter address"
-            addressField.lineBreakMode = .byTruncatingTail
-            addressField.usesSingleLineMode = true
-            addressField.cell?.sendsActionOnEndEditing = false
-            addressField.target = self
-            addressField.action = #selector(addressSubmitted(_:))
-            addressField.widthAnchor.constraint(greaterThanOrEqualToConstant: 320).isActive = true
-            let preferred = addressField.widthAnchor.constraint(equalToConstant: 2000)
-            preferred.priority = .defaultLow
-            preferred.isActive = true
-            item.view = addressField
-            item.label = "Address"
-            item.visibilityPriority = .high
-        default:
-            return nil
-        }
-        return item
+    private func updateTitle() {
+        // Hidden in the title bar, but the Window menu and Mission Control use it.
+        window?.title = model.selectedTab.map { displayTitle(for: $0.state) } ?? "Brow"
     }
 }

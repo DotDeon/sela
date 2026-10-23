@@ -4,7 +4,7 @@
 
 Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on Chromium so Chrome extensions work, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today it opens a window that browses websites with tabs, plus the sidebar data model, an importer for Arc's sidebar, and a tool that backs up your Arc data. It runs on WebKit for now, so Chrome extensions don't work yet. Chromium replaces WebKit once Brow's Chromium build is ready.
+Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data. It runs on WebKit for now, so Chrome extensions don't work yet. Chromium replaces WebKit once Brow's Chromium build is ready.
 
 ## Folder layout
 
@@ -12,7 +12,7 @@ Brow is early. Today it opens a window that browses websites with tabs, plus the
 assets/        Brow's own icons and artwork
 docs/design/   design documents
 docs/plans/    implementation plans
-app/Brow/      the Mac app: windows, menus and toolbar
+app/Brow/      the Mac app: windows, menus and first-launch import
 app/Brow.xcodeproj  Xcode project that builds Brow.app
 app/Support/   the app's Info.plist
 app/Packages/  Swift package with one module per feature
@@ -29,7 +29,11 @@ Inside `app/Packages`:
 - `BrowserEngine`: the protocols Brow's UI uses to talk to a browser engine
 - `WebKitEngine`: those protocols built on Safari's WebKit
 - `FakeEngine`: a stand-in engine with no web content, for tests
-- `Browsing`: a window's tabs, popups and page dialogs, and address bar parsing
+- `Browsing`: a window's live tabs on top of the sidebar, popups, page dialogs, and address bar parsing
+- `Sidebar`: the shared sidebar store that saves itself, plus outline, drag and drop, and swipe logic
+- `SidebarUI`: the sidebar's views: favourites grid, space pages, space bar and address
+- `Favicons`: site icons, fetched from each site and cached on disk
+- `BrowTestSupport`: sample sidebars shared by the tests
 
 ## Running Brow
 
