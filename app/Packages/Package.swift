@@ -20,7 +20,8 @@ let package = Package(
         .target(name: "SidebarModel"),
         .testTarget(name: "SidebarModelTests", dependencies: ["SidebarModel"]),
         .target(name: "Sidebar", dependencies: ["SidebarModel"]),
-        .testTarget(name: "SidebarTests", dependencies: ["Sidebar", "SidebarModel"]),
+        .testTarget(name: "SidebarTests", dependencies: ["Sidebar", "SidebarModel", "BrowTestSupport"]),
+        .target(name: "BrowTestSupport", dependencies: ["SidebarModel"]),
         .target(name: "Favicons"),
         .testTarget(name: "FaviconsTests", dependencies: ["Favicons"]),
         .target(name: "ArcImport", dependencies: ["SidebarModel"]),
@@ -37,8 +38,8 @@ let package = Package(
         .target(name: "WebKitEngine", dependencies: ["BrowserEngine"]),
         .testTarget(name: "WebKitEngineTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
-        .target(name: "Browsing", dependencies: ["BrowserEngine"]),
-        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine"]),
+        .target(name: "Browsing", dependencies: ["BrowserEngine", "Sidebar", "SidebarModel"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "BrowTestSupport"]),
         .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )
