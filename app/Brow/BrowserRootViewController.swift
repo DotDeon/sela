@@ -188,24 +188,37 @@ final class BrowserRootViewController: NSViewController {
         sidebarController.view.layer?.shadowRadius = 12
         setWindowButtonsHidden(false)
         animate { self.sidebarLeading.animator().constant = 0 }
+        // A keyboard reveal (Cmd+L, Cmd+T) never gets a pointer exit, so start watching now.
+        scheduleHide()
     }
 
+    /// Slides the revealed sidebar back once the pointer is off it and nothing in it is being edited.
     private func scheduleHide() {
         guard isSidebarHidden, isRevealed else { return }
         hideTask?.cancel()
         hideTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(400))
-            guard !Task.isCancelled, let self, self.isSidebarHidden, self.isRevealed else { return }
-            // Keep it out while the user is typing in the address.
-            if let responder = self.view.window?.firstResponder as? NSView,
-               responder.isDescendant(of: self.sidebarController.view) {
+            while true {
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled, let self, self.isSidebarHidden, self.isRevealed else { return }
+                if self.isEditingInSidebar || self.isPointerOverSidebar { continue }
+                self.isRevealed = false
+                self.edgeZone.isHidden = false
+                self.setWindowButtonsHidden(true)
+                self.animate { self.sidebarLeading.animator().constant = -self.sidebarWidth.constant }
                 return
             }
-            self.isRevealed = false
-            self.edgeZone.isHidden = false
-            self.setWindowButtonsHidden(true)
-            self.animate { self.sidebarLeading.animator().constant = -self.sidebarWidth.constant }
         }
+    }
+
+    private var isEditingInSidebar: Bool {
+        guard let responder = view.window?.firstResponder as? NSView else { return false }
+        return responder.isDescendant(of: sidebarController.view)
+    }
+
+    private var isPointerOverSidebar: Bool {
+        guard let window = view.window else { return false }
+        let sidebar = sidebarController.view
+        return sidebar.bounds.contains(sidebar.convert(window.mouseLocationOutsideOfEventStream, from: nil))
     }
 
     private func animate(_ changes: @escaping () -> Void) {
