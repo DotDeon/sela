@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "SidebarModel", targets: ["SidebarModel"]),
+        .library(name: "Sidebar", targets: ["Sidebar"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
         .library(name: "BrowserEngine", targets: ["BrowserEngine"]),
@@ -17,6 +18,8 @@ let package = Package(
     targets: [
         .target(name: "SidebarModel"),
         .testTarget(name: "SidebarModelTests", dependencies: ["SidebarModel"]),
+        .target(name: "Sidebar", dependencies: ["SidebarModel"]),
+        .testTarget(name: "SidebarTests", dependencies: ["Sidebar", "SidebarModel"]),
         .target(name: "ArcImport", dependencies: ["SidebarModel"]),
         .testTarget(
             name: "ArcImportTests",
