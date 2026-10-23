@@ -4,7 +4,7 @@ import Foundation
 import Testing
 import WebKitEngine
 
-/// Every engine the contract runs against. The Chromium plan adds a case.
+/// Every engine the contract runs against.
 enum EngineUnderTest: CaseIterable, CustomTestStringConvertible {
     case webKit
 

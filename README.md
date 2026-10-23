@@ -2,9 +2,9 @@
 
 # Brow
 
-Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on Chromium so Chrome extensions work, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
+Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data. It runs on WebKit for now, so Chrome extensions don't work yet. Chromium replaces WebKit once Brow's Chromium build is ready.
+Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -16,7 +16,6 @@ app/Brow/      the Mac app: windows, menus and first-launch import
 app/Brow.xcodeproj  Xcode project that builds Brow.app
 app/Support/   the app's Info.plist
 app/Packages/  Swift package with one module per feature
-chromium/      Chromium patches and Brow's C++ code (coming later)
 scripts/       build, sign and release scripts (coming later)
 ```
 
