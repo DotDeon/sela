@@ -15,6 +15,7 @@ final class WebKitTab: NSObject, BrowserTab {
     @ObservationIgnored private let engine: WebKitEngine
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var reloadedAfterCrash = false
+    @ObservationIgnored private var faviconURL: URL?
 
     var contentView: NSView { webView }
 
@@ -74,15 +75,32 @@ final class WebKitTab: NSObject, BrowserTab {
     }
 
     private func syncState() {
+        if webView.url != state.url {
+            // A new page: its icon is unknown until it finishes loading.
+            faviconURL = nil
+        }
         let next = TabState(
             url: webView.url,
             title: webView.title,
             isLoading: webView.isLoading,
             estimatedProgress: webView.estimatedProgress,
             canGoBack: webView.canGoBack,
-            canGoForward: webView.canGoForward
+            canGoForward: webView.canGoForward,
+            faviconURL: faviconURL
         )
-        if next != state { state = next }
+        guard next != state else { return }
+        state = next
+        delegate?.tabStateDidChange(self)
+    }
+
+    /// Reads the page's icon link, or falls back to `/favicon.ico` for web pages.
+    private func findFavicon() async {
+        let pageURL = webView.url
+        let script = "(() => { const l = document.querySelector(\"link[rel~='icon'], link[rel='apple-touch-icon']\"); return l ? l.href : null })()"
+        let href = try? await webView.evaluateJavaScript(script) as? String
+        guard webView.url == pageURL else { return }
+        faviconURL = href.flatMap(URL.init(string:)) ?? defaultFaviconURL(for: pageURL)
+        syncState()
     }
 
     private func ask(_ dialog: JavaScriptDialog) async -> JavaScriptDialogResult {
@@ -104,6 +122,7 @@ extension WebKitTab: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         reloadedAfterCrash = false
+        Task { await findFavicon() }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
@@ -119,6 +138,17 @@ extension WebKitTab: WKNavigationDelegate {
         reloadedAfterCrash = true
         webView.reload()
     }
+}
+
+/// `<scheme>://<host>/favicon.ico` for http and https pages. Nil for anything else.
+private func defaultFaviconURL(for pageURL: URL?) -> URL? {
+    guard let pageURL, let scheme = pageURL.scheme?.lowercased(), ["http", "https"].contains(scheme),
+          var components = URLComponents(url: pageURL, resolvingAgainstBaseURL: false)
+    else { return nil }
+    components.path = "/favicon.ico"
+    components.query = nil
+    components.fragment = nil
+    return components.url
 }
 
 /// Cancelled loads, and loads WebKit handed elsewhere, aren't failures the user needs to see.

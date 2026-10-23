@@ -7,7 +7,9 @@ import Observation
 @Observable
 public final class FakeTab: BrowserTab {
     public let id = TabID.make()
-    public private(set) var state = TabState.blank
+    public private(set) var state = TabState.blank {
+        didSet { delegate?.tabStateDidChange(self) }
+    }
     public let contentView = NSView()
     @ObservationIgnored public weak var delegate: (any BrowserTabDelegate)?
 
@@ -28,6 +30,7 @@ public final class FakeTab: BrowserTab {
         history = Array(history.prefix(index + 1)) + [url]
         index = history.count - 1
         state.title = nil
+        state.faviconURL = nil
         state.isLoading = true
         state.estimatedProgress = 0
         updateHistoryState()
@@ -61,8 +64,9 @@ public final class FakeTab: BrowserTab {
 
     // MARK: Test hooks
 
-    public func finishLoading(title: String?) {
+    public func finishLoading(title: String?, faviconURL: URL? = nil) {
         state.title = title
+        state.faviconURL = faviconURL
         state.isLoading = false
         state.estimatedProgress = 1
     }

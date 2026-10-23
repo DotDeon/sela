@@ -10,6 +10,11 @@ private let c = URL(string: "https://c.example.com/")!
 @MainActor
 private final class RecordingDelegate: BrowserTabDelegate {
     var opened: [(source: TabID, newTab: TabID, disposition: NewTabDisposition)] = []
+    var stateChanges = 0
+
+    func tabStateDidChange(_ tab: any BrowserTab) {
+        stateChanges += 1
+    }
 
     func tab(_ tab: any BrowserTab, didOpen newTab: any BrowserTab, disposition: NewTabDisposition) {
         opened.append((tab.id, newTab.id, disposition))
@@ -88,4 +93,19 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     let (_, tab) = makeTab(a)
     tab.close()
     #expect(tab.isClosed)
+}
+
+@MainActor @Test func stateChangesReachDelegate() {
+    let (_, tab) = makeTab()
+    let delegate = RecordingDelegate()
+    tab.delegate = delegate
+    tab.load(a)
+    tab.finishLoading(title: "A")
+    #expect(delegate.stateChanges >= 2)
+}
+
+@MainActor @Test func finishLoadingSetsFavicon() {
+    let (_, tab) = makeTab(a)
+    tab.finishLoading(title: "A", faviconURL: URL(string: "https://a.example.com/icon.png"))
+    #expect(tab.state.faviconURL == URL(string: "https://a.example.com/icon.png"))
 }

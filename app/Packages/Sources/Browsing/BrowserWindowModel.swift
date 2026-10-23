@@ -106,6 +106,8 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         insert(newTab, at: position, select: disposition == .foreground)
     }
 
+    public func tabStateDidChange(_ tab: any BrowserTab) {}
+
     public func tabDidRequestClose(_ tab: any BrowserTab) {
         close(tab.id)
     }

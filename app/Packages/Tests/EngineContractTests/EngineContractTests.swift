@@ -111,4 +111,19 @@ struct EngineContractTests {
         try await eventually { tab.state.title == "Can’t open this page" }
         #expect(tab.state.url == unreachable)
     }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func faviconFromLinkTag(engine: EngineUnderTest) async throws {
+        let page = try site.page("icon.html", "<link rel='icon' href='icon.png'><title>I</title>")
+        let tab = try await loadedTab(engine.make(), page)
+        try await eventually { tab.state.faviconURL == site.folder.appending(path: "icon.png") }
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func stateChangesReachDelegate(engine: EngineUnderTest) async throws {
+        let a = try site.page("a.html", "<title>A</title>")
+        let delegate = RecordingDelegate()
+        _ = try await loadedTab(engine.make(), a, delegate: delegate)
+        #expect(delegate.stateChanges > 0)
+    }
 }

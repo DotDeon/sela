@@ -46,6 +46,11 @@ final class RecordingDelegate: BrowserTabDelegate {
     private(set) var opened: [(tab: any BrowserTab, disposition: NewTabDisposition)] = []
     private(set) var closeRequests: [TabID] = []
     private(set) var dialogs: [JavaScriptDialog] = []
+    private(set) var stateChanges = 0
+
+    func tabStateDidChange(_ tab: any BrowserTab) {
+        stateChanges += 1
+    }
 
     func tab(_ tab: any BrowserTab, didOpen newTab: any BrowserTab, disposition: NewTabDisposition) {
         newTab.delegate = self

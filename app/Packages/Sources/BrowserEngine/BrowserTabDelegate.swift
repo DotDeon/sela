@@ -8,6 +8,8 @@ public enum NewTabDisposition: Sendable {
 public protocol BrowserTabDelegate: AnyObject {
     /// The page opened a tab: a popup, a `target=_blank` link, or a Cmd-click.
     func tab(_ tab: any BrowserTab, didOpen newTab: any BrowserTab, disposition: NewTabDisposition)
+    /// Something in the tab's `state` changed.
+    func tabStateDidChange(_ tab: any BrowserTab)
     /// The page called `window.close()`.
     func tabDidRequestClose(_ tab: any BrowserTab)
     /// The page called `alert`, `confirm` or `prompt`. The page waits until this returns.

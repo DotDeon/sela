@@ -19,14 +19,17 @@ public struct TabState: Equatable, Sendable {
     public var estimatedProgress: Double
     public var canGoBack: Bool
     public var canGoForward: Bool
+    /// The page's icon, once the page has finished loading.
+    public var faviconURL: URL?
 
-    public init(url: URL?, title: String?, isLoading: Bool, estimatedProgress: Double, canGoBack: Bool, canGoForward: Bool) {
+    public init(url: URL?, title: String?, isLoading: Bool, estimatedProgress: Double, canGoBack: Bool, canGoForward: Bool, faviconURL: URL? = nil) {
         self.url = url
         self.title = title
         self.isLoading = isLoading
         self.estimatedProgress = estimatedProgress
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
+        self.faviconURL = faviconURL
     }
 
     public static let blank = TabState(url: nil, title: nil, isLoading: false, estimatedProgress: 0, canGoBack: false, canGoForward: false)
