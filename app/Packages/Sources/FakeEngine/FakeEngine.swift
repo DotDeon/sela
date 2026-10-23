@@ -3,13 +3,23 @@ import Foundation
 
 /// An engine with no web content, for tests and previews.
 @MainActor
-public final class FakeEngine: BrowserEngine {
+public final class FakeEngine: ContentBlockingEngine {
     public private(set) var madeTabs: [FakeTab] = []
+    /// What the last `installContentRules` call installed.
+    public private(set) var installedRuleSets: [ContentRuleSet] = []
+    public private(set) var installCount = 0
+    public var isContentBlockingEnabled: (@MainActor (URL) -> Bool)?
+    public var pageScripts: (@MainActor (URL, URL?) -> PageScripts?)?
 
     public init() {}
 
     public func makeTab(url: URL?) -> any BrowserTab {
         makeFakeTab(url: url)
+    }
+
+    public func installContentRules(_ ruleSets: [ContentRuleSet]) async throws {
+        installedRuleSets = ruleSets
+        installCount += 1
     }
 
     func makeFakeTab(url: URL?) -> FakeTab {

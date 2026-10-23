@@ -16,6 +16,8 @@ final class WebKitTab: NSObject, BrowserTab {
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var reloadedAfterCrash = false
     @ObservationIgnored private var faviconURL: URL?
+    /// Whether the page now loading or showing gets content blocking.
+    @ObservationIgnored private var isBlocking = true
 
     var contentView: NSView { webView }
 
@@ -40,6 +42,16 @@ final class WebKitTab: NSObject, BrowserTab {
     }
 
     func goBack() { webView.goBack() }
+
+    /// Puts the engine's current rules on this tab, or takes them off when the page has blocking turned off.
+    func refreshContentBlocking() {
+        engine.contentRules.apply(to: webView.configuration.userContentController, blocking: isBlocking)
+    }
+
+    private func setBlocking(_ blocking: Bool) {
+        isBlocking = blocking
+        refreshContentBlocking()
+    }
 
     func goForward() { webView.goForward() }
 
@@ -111,6 +123,10 @@ final class WebKitTab: NSObject, BrowserTab {
 
 extension WebKitTab: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        // A new top-level page decides whether this tab blocks content, before anything on it loads.
+        if navigationAction.targetFrame?.isMainFrame ?? true {
+            setBlocking(engine.blocksContent(on: navigationAction.request.url))
+        }
         guard navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url, let delegate else { return .allow }
         if let disposition = newTabDisposition(modifiers: navigationAction.modifierFlags, buttonNumber: navigationAction.buttonNumber) {
             delegate.tab(self, didOpen: engine.makeTab(url: url), disposition: disposition)
@@ -165,6 +181,7 @@ extension WebKitTab: WKUIDelegate {
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         guard let delegate else { return nil }
         let popup = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: engine)
+        engine.register(popup)
         delegate.tab(self, didOpen: popup, disposition: .foreground)
         return popup.webView
     }
