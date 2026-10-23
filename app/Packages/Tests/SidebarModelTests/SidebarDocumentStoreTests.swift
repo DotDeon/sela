@@ -31,7 +31,7 @@ private let now = Date(timeIntervalSince1970: 1_800_000_000)
     try SidebarDocumentStore(fileURL: url).save(doc)
 
     let text = try String(contentsOf: url, encoding: .utf8)
-    #expect(text.contains("\"version\" : 1"))
+    #expect(text.contains("\"version\" : \(SidebarDocument.currentVersion)"))
 
     let json = try JSONSerialization.jsonObject(with: Data(text.utf8)) as! [String: Any]
     let ids = (json["items"] as! [[String: Any]]).map { $0["id"] as! String }
@@ -55,9 +55,10 @@ private let now = Date(timeIntervalSince1970: 1_800_000_000)
 @Test func futureVersionThrowsAndLeavesFileInPlace() throws {
     let dir = try makeTempDirectory()
     let url = dir.appending(path: "Sidebar.json")
-    try Data(#"{ "version": 2, "spaces": [], "items": [] }"#.utf8).write(to: url)
+    let future = SidebarDocument.currentVersion + 1
+    try Data(#"{ "version": \#(future), "spaces": [], "items": [] }"#.utf8).write(to: url)
     let store = SidebarDocumentStore(fileURL: url)
-    #expect(throws: SidebarError.unsupportedVersion(2)) {
+    #expect(throws: SidebarError.unsupportedVersion(future)) {
         try store.load(now: now)
     }
     #expect(FileManager.default.fileExists(atPath: url.path))

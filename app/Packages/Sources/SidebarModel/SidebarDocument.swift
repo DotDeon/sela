@@ -2,7 +2,7 @@ import Foundation
 
 /// The whole sidebar: spaces in display order, the shared favourites, and every item.
 public struct SidebarDocument: Codable, Equatable, Sendable {
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     public var version: Int
     public var spaces: [Space]

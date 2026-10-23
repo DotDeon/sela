@@ -28,7 +28,7 @@ private func counts(under id: ItemID, in document: SidebarDocument) -> (tabs: In
         switch item.kind {
         case .tab: tabs += 1
         case .folder: folders += 1
-        case .container: break
+        case .split, .container: break
         }
         queue.append(contentsOf: document.children(of: item.id))
     }

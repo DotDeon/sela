@@ -30,6 +30,27 @@ extension SidebarStore {
         _ = try? change { try $0.remove(id) }
     }
 
+    /// Puts tab `id` in a split right after `anchor`, making the split if needed. Nil when that isn't allowed.
+    @discardableResult
+    public func addToSplit(_ id: ItemID, with anchor: ItemID) -> ItemID? {
+        var splitID: ItemID?
+        try? change { splitID = try $0.addToSplit(id, with: anchor) }
+        return splitID
+    }
+
+    /// Replaces a split with its tabs.
+    public func separateSplit(_ id: ItemID) {
+        try? change { try $0.separate(id) }
+    }
+
+    public func setSplitFractions(_ id: ItemID, _ fractions: [Double]) {
+        try? change { try $0.setSplitFractions(id, fractions) }
+    }
+
+    public func setSplitOrientation(_ id: ItemID, _ orientation: SplitOrientation) {
+        try? change { try $0.setSplitOrientation(id, orientation) }
+    }
+
     /// Sets a custom title. Blank text clears it, so the page's own title shows.
     public func rename(_ id: ItemID, to title: String?) {
         let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines)

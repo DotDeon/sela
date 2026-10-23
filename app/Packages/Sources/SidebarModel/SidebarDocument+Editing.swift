@@ -7,11 +7,13 @@ extension SidebarDocument {
         let parent = try requireItem(parentID)
         guard parent.canHaveChildren else { throw SidebarError.parentCannotHaveChildren(parentID) }
         try checkFavoritesHoldOnlyTabs(item, in: parent)
+        try checkSplitMembership(item, in: parent)
 
         var item = item
         item.parentID = parentID
         itemsByID[item.id] = item
         itemsByID[parentID]!.childIDs.insert(item.id, at: clamped(index, count: parent.childIDs.count))
+        evenSplitSizes(parentID)
     }
 
     /// Moves an existing item under `parentID`. Validates everything before changing anything.
@@ -24,6 +26,10 @@ extension SidebarDocument {
         let siblings = itemsByID[parentID]!.childIDs
         itemsByID[parentID]!.childIDs.insert(id, at: clamped(index, count: siblings.count))
         itemsByID[id]!.parentID = parentID
+        if let oldParentID = item.parentID, oldParentID != parentID {
+            collapseSplitIfNeeded(oldParentID)
+        }
+        evenSplitSizes(parentID)
     }
 
     /// Removes an item and everything under it. Returns the removed items, root first.
@@ -42,6 +48,7 @@ extension SidebarDocument {
         }
         if let parentID = item.parentID {
             itemsByID[parentID]?.childIDs.removeAll { $0 == id }
+            collapseSplitIfNeeded(parentID)
         }
         return removed
     }
@@ -63,6 +70,14 @@ extension SidebarDocument {
                     throw fail("\(item.id) is not listed under its parent \(parentID)")
                 }
                 guard parent.canHaveChildren else { throw fail("\(parentID) cannot have children") }
+            }
+            if case .split(let info) = item.kind {
+                guard (2...SidebarDocument.maximumSplitPanes).contains(item.childIDs.count) else { throw fail("split \(item.id) has \(item.childIDs.count) panes") }
+                guard info.fractions.count == item.childIDs.count else { throw fail("split \(item.id) has \(info.fractions.count) sizes for \(item.childIDs.count) panes") }
+                for childID in item.childIDs {
+                    guard case .tab = itemsByID[childID]?.kind else { throw fail("split \(item.id) holds \(childID), which isn't a tab") }
+                }
+                guard item.parentID != favoritesContainerID else { throw fail("split \(item.id) is in favourites") }
             }
         }
 
@@ -117,6 +132,9 @@ extension SidebarDocument {
         guard parent.canHaveChildren else { throw SidebarError.parentCannotHaveChildren(parentID) }
         guard parentID != id, !isDescendant(parentID, of: id) else { throw SidebarError.wouldCreateCycle(id) }
         try checkFavoritesHoldOnlyTabs(item, in: parent)
+        if item.parentID != parentID {
+            try checkSplitMembership(item, in: parent)
+        }
         return item
     }
 

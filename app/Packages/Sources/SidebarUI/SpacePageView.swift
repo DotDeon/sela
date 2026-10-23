@@ -327,6 +327,12 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             cell.iconView.contentTintColor = .secondaryLabelColor
             cell.showsCloseOnHover = false
             cell.showsReset = false
+        case .split:
+            cell.titleField.stringValue = item.title ?? "Split View"
+            cell.iconView.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "Split View")
+            cell.iconView.contentTintColor = .secondaryLabelColor
+            cell.showsCloseOnHover = false
+            cell.showsReset = false
         case .tab(let info):
             let live = model.liveTab(for: id)
             let state = live?.state
@@ -357,7 +363,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
               let item = document.item(id)
         else { return }
         switch item.kind {
-        case .tab: model.select(id)
+        case .tab, .split: model.select(id)
         case .folder(let info): sidebar.setExpanded(id, !info.isExpanded)
         case .container: break
         }
@@ -453,7 +459,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             menu.addItem(menuItem("New Folder Inside") { [weak self] in self?.newFolder(in: id) })
             menu.addItem(.separator())
             menu.addItem(menuItem("Delete Folder…") { [weak self] in self?.deleteFolder(id) })
-        case .container:
+        case .split, .container:
             break
         }
     }

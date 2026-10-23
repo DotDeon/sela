@@ -13,4 +13,8 @@ public enum SidebarError: Error, Equatable, Sendable {
     case cannotRemoveLastSpace
     case notATab(ItemID)
     case notAFolder(ItemID)
+    /// Only tabs outside favourites can be in a split.
+    case notAllowedInSplit(ItemID)
+    /// The split already has four panes.
+    case splitFull(ItemID)
 }

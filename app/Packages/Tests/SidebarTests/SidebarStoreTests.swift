@@ -51,10 +51,11 @@ private func makeStore(
 @MainActor @Test func newerVersionIsNeverOverwritten() throws {
     let folder = try temporaryFolder()
     let file = folder.appending(path: "Sidebar.json")
-    let original = Data(#"{ "version": 2, "spaces": [], "items": [] }"#.utf8)
+    let future = SidebarDocument.currentVersion + 1
+    let original = Data(#"{ "version": \#(future), "spaces": [], "items": [] }"#.utf8)
     try original.write(to: file)
     let (store, _) = try makeStore(folder: folder)
-    #expect(store.loadProblem == .newerVersion(2))
+    #expect(store.loadProblem == .newerVersion(future))
     store.createTab(url: nil, title: nil, in: store.document.spaces[0].unpinnedContainerID, at: 0)
     store.saveNow()
     #expect(try Data(contentsOf: file) == original)

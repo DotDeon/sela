@@ -5,6 +5,8 @@ public struct SidebarItem: Codable, Equatable, Identifiable, Sendable {
     public enum Kind: Codable, Equatable, Sendable {
         case tab(TabInfo)
         case folder(FolderInfo)
+        /// Two to four tabs shown side by side. Its children are the tabs, in order.
+        case split(SplitInfo)
         case container(ContainerRole)
     }
 
@@ -29,7 +31,7 @@ public struct SidebarItem: Codable, Equatable, Identifiable, Sendable {
     var canHaveChildren: Bool {
         switch kind {
         case .tab: false
-        case .folder, .container: true
+        case .folder, .split, .container: true
         }
     }
 
@@ -68,4 +70,27 @@ public enum ContainerRole: Codable, Equatable, Sendable {
     case pinned(SpaceID)
     case unpinned(SpaceID)
     case favorites
+}
+
+public enum SplitOrientation: String, Codable, Sendable {
+    /// Side by side.
+    case horizontal
+    /// One above the other.
+    case vertical
+}
+
+public struct SplitInfo: Codable, Equatable, Sendable {
+    public var orientation: SplitOrientation
+    /// Each pane's share of the split, in child order. They add up to 1.
+    public var fractions: [Double]
+
+    public init(orientation: SplitOrientation, fractions: [Double]) {
+        self.orientation = orientation
+        self.fractions = fractions
+    }
+
+    /// Equal shares for `count` panes.
+    public static func even(_ count: Int) -> [Double] {
+        Array(repeating: 1.0 / Double(count), count: count)
+    }
 }
