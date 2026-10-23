@@ -40,10 +40,11 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     public func select(_ id: TabID) {
         guard index(of: id) != nil else { return }
-        selectedTabID = id
+        userSelect(id)
     }
 
-    /// Closes a tab. When it was selected, selects its opener, else the tab below, else the tab above.
+    /// Closes a tab. When it was selected, selects the next tab with the same opener, else the opener,
+    /// else the tab below, else the tab above. Opener links last until the user selects an unrelated tab.
     public func close(_ id: TabID) {
         guard let index = index(of: id) else { return }
         let tab = tabs.remove(at: index)
@@ -56,7 +57,9 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         dialogs.removeAll { $0.tabID == id }
 
         if selectedTabID == id {
-            if let openerID, self.index(of: openerID) != nil {
+            if let openerID, let sibling = tabs[index...].first(where: { openerIDs[$0.id] == openerID }) {
+                selectedTabID = sibling.id
+            } else if let openerID, self.index(of: openerID) != nil {
                 selectedTabID = openerID
             } else if tabs.indices.contains(index) {
                 selectedTabID = tabs[index].id
@@ -75,9 +78,9 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// 1 to 8 select by position. 9 selects the last tab.
     public func select(number: Int) {
         if number == 9, let last = tabs.last {
-            selectedTabID = last.id
+            userSelect(last.id)
         } else if (1...8).contains(number), tabs.indices.contains(number - 1) {
-            selectedTabID = tabs[number - 1].id
+            userSelect(tabs[number - 1].id)
         }
     }
 
@@ -134,6 +137,19 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         guard !tabs.isEmpty else { return }
         let current = selectedTabID.flatMap(index(of:)) ?? 0
         let next = (current + offset + tabs.count) % tabs.count
-        selectedTabID = tabs[next].id
+        userSelect(tabs[next].id)
+    }
+
+    /// A selection the user made. Moving to a tab outside the current tab's family (its opener,
+    /// its children, or tabs with the same opener) forgets every opener link, so closing a tab
+    /// later doesn't jump back to a page the user has moved on from.
+    private func userSelect(_ id: TabID) {
+        if let current = selectedTabID, current != id {
+            let currentOpener = openerIDs[current]
+            let newOpener = openerIDs[id]
+            let related = id == currentOpener || newOpener == current || (newOpener != nil && newOpener == currentOpener)
+            if !related { openerIDs.removeAll() }
+        }
+        selectedTabID = id
     }
 }

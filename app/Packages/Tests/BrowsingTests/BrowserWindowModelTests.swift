@@ -164,3 +164,27 @@ private struct Window {
     window.model.close(tab.id)
     #expect(await answer.value == .dismissed)
 }
+
+@MainActor @Test func commandClickedTabsCloseInReadingOrder() {
+    let window = Window("a", "b")
+    window.model.select(window.tab("a").id)
+    for name in ["c1", "c2", "c3"] {
+        window.tab("a").simulateOpen(url: url(name), disposition: .background)
+    }
+    window.model.select(window.tab("c1").id)
+    window.model.close(window.tab("c1").id)
+    #expect(window.selected == "c2")
+    window.model.close(window.tab("c2").id)
+    #expect(window.selected == "c3")
+    window.model.close(window.tab("c3").id)
+    #expect(window.selected == "a")
+}
+
+@MainActor @Test func openerIsForgottenAfterSelectingAnUnrelatedTab() {
+    let window = Window("a", "b")
+    window.tab("a").simulateOpen(url: url("p"), disposition: .foreground)
+    window.model.select(window.tab("b").id)
+    window.model.select(window.tab("p").id)
+    window.model.close(window.tab("p").id)
+    #expect(window.selected == "b")
+}
