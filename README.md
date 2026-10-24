@@ -11,6 +11,7 @@ What it does today:
 - **Sidebar and spaces.** Favourites, pinned tabs and folders, and today's tabs, in spaces you swipe between. Unpinned tabs archive themselves after 12 hours and stay findable for 30 days.
 - **Command bar.** Cmd+T and Cmd+L search open tabs, archived tabs, history and commands.
 - **Split view and Peek.** Up to four tabs side by side. Links from pinned tabs and favourites to other sites open in Peek, a preview over the page.
+- **Profiles.** Each space can have its own profile, with its own cookies, logins, site data and cache, so a Work space and a Personal space can be signed in to different accounts at once. Choose or make one from a space's menu. Favourites, history and archived tabs are shared.
 - **Little Sela.** Links from other apps open in a small window of their own. Open in Sela moves the page to your tabs without reloading it, and Cmd+Shift+N opens an empty one.
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
 - **Extensions.** On macOS 15.4 or later Sela runs Web Extensions, the kind Safari and Chrome use. Add them in Settings from a folder or a .zip file, and their buttons sit at the top of the sidebar. Sela can't install from the Chrome Web Store.
@@ -19,7 +20,7 @@ What it does today:
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
 - **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit.
 
-Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking, extensions and site permission choices. The repository also holds a tool that backs up your Arc data.
+Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -36,7 +37,7 @@ scripts/       release and measuring scripts
 
 Inside `app/Packages`:
 
-- `SidebarModel`: spaces, tabs, folders and favourites, and how they're saved to disk
+- `SidebarModel`: spaces, their profiles, tabs, folders and favourites, and how they're saved to disk
 - `ArcImport`: reads Arc's `StorableSidebar.json` into Sela's sidebar
 - `ArcSnapshot`: copies Arc's data folder, minus caches, so it survives Arc shutting down
 - `sela-arc`: command-line tool for the two above
