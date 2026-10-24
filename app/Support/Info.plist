@@ -36,6 +36,12 @@
 	<string>Websites you allow can use your camera.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Websites you allow can use your microphone.</string>
+	<key>SUFeedURL</key>
+	<string>https://github.com/DotDeon/sela/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>OnmK6UavcVKZ3ZzADmMror63boHY5veD4f7+hMLiGGE=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>

@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var sweeper: ArchiveSweeper?
     private var tabSleeper: TabSleeper?
     private var settingsWindow: SettingsWindowController?
+    private lazy var updater = Updater(enabled: dataFolderOverride == nil)
     /// This session's downloads, shown in every window.
     private let downloads = DownloadList()
     /// `-SelaDataFolder <path>` keeps every Sela file in that folder instead of Application Support,
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationDidFinishLaunching(_ notification: Notification) {
         moveDataFromOldName()
         NSApp.mainMenu = MainMenu.make()
+        _ = updater
         if let dataFolderOverride {
             try? FileManager.default.createDirectory(at: dataFolderOverride, withIntermediateDirectories: true)
         }
@@ -133,6 +135,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         sweeper?.sweep()
     }
 
+    @objc func checkForUpdates(_ sender: Any?) {
+        updater.checkNow()
+    }
+
     @objc func showSettings(_ sender: Any?) {
         if settingsWindow == nil {
             settingsWindow = SettingsWindowController(contentBlocker: contentBlocker, history: history) { [weak self] in
@@ -174,7 +180,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
-        if item.action == #selector(setArchiveInterval(_:)) {
+        if item.action == #selector(checkForUpdates(_:)) {
+            return updater.canCheck
+        } else if item.action == #selector(setArchiveInterval(_:)) {
             item.state = item.tag == ArchiveSweeper.hours ? .on : .off
         } else if item.action == #selector(setSleepInterval(_:)) {
             item.state = item.tag == TabSleepSettings().minutes ? .on : .off
