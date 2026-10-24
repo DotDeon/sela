@@ -26,6 +26,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private var downloadsPopover: DownloadsPopover?
     private let extensions: ExtensionsController?
     private var pictureInPicture: PictureInPictureController?
+    private var tabOverview: TabOverviewPresenter?
 
     init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore,
          contentBlocker: ContentBlocker?, downloads: DownloadList, extensions: ExtensionsController?) {
@@ -58,6 +59,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         }
         peek = PeekPresenter(model: model, host: root.pageArea)
         pictureInPicture = PictureInPictureController(model: model, window: window)
+        tabOverview = TabOverviewPresenter(model: model, favicons: favicons, host: root.view)
         findBar = FindBarController(model: model, host: root.pageArea)
         let popover = DownloadsPopover(list: downloads)
         downloadsPopover = popover
@@ -196,8 +198,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         }
     }
 
+    /// View > Tab Overview: every tab in the space as a grid of pictures, or back to the page.
+    @objc func toggleTabOverview(_ sender: Any?) { tabOverview?.toggle() }
+
     @objc func closeTab(_ sender: Any?) {
-        if model.peekTab != nil {
+        if let tabOverview, tabOverview.isShowing {
+            tabOverview.closeHighlighted()
+        } else if model.peekTab != nil {
             model.closePeek()
         } else if let id = model.selectedItemID {
             model.close(id)
@@ -269,6 +276,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case "rotate-split": rotateSplitView(nil)
         case "toggle-site-blocking": toggleSiteBlocking(nil)
         case "toggle-reader": toggleReader(nil)
+        case "tab-overview": toggleTabOverview(nil)
         case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
         default: break
         }

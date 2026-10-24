@@ -16,6 +16,7 @@ What it does today:
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
 - **Extensions.** On macOS 15.4 or later Sela runs Web Extensions, the kind Safari and Chrome use. Add them in Settings from a folder or a .zip file, and their buttons sit at the top of the sidebar. Sela can't install from the Chrome Web Store.
 - **Reader mode.** When a page looks like an article, a button at the end of the address shows it in a quiet serif layout that follows light and dark mode. View > Reader (Cmd+Shift+R) turns it on and off.
+- **Tab overview.** View > Tab Overview (Cmd+Shift+\\) shows the space's tabs as a grid of pictures. Type to filter, click or press Return to switch, Cmd+W or a tile's close button to close a tab, and Esc to go back.
 - **Picture in picture.** A video that's playing when you switch to another tab or another app floats in its own small window, and goes back into the page when you return. Settings > General turns this off.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
