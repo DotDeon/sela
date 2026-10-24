@@ -137,6 +137,10 @@ final class WebKitExtensions: NSObject, WKWebExtensionControllerDelegate {
             guard let self, let tab, !tab.isClosed else { return }
             announcedTabs.insert(ObjectIdentifier(tab))
             controller.didOpenTab(tab)
+            // A new tab is often selected before WebKit hears of it, so its activation is passed on now.
+            if window(containing: tab)?.window?.activeExtensionTab === tab {
+                controller.didActivateTab(tab, previousActiveTab: nil)
+            }
         }
     }
 

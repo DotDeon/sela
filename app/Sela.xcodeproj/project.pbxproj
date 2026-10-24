@@ -20,6 +20,7 @@
 		B70000000000000000000023 /* CommandBar in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000026 /* CommandBar */; };
 		B70000000000000000000027 /* ContentBlocking in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000028 /* ContentBlocking */; };
 		B7000000000000000000002A /* Downloads in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000002B /* Downloads */; };
+		B7000000000000000000003A /* Extensions in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000003B /* Extensions */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 				B70000000000000000000023 /* CommandBar in Frameworks */,
 				B70000000000000000000027 /* ContentBlocking in Frameworks */,
 				B7000000000000000000002A /* Downloads in Frameworks */,
+				B7000000000000000000003A /* Extensions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +111,7 @@
 				B70000000000000000000026 /* CommandBar */,
 				B70000000000000000000028 /* ContentBlocking */,
 				B7000000000000000000002B /* Downloads */,
+				B7000000000000000000003B /* Extensions */,
 			);
 			productName = Sela;
 			productReference = B70000000000000000000005 /* Sela.app */;
@@ -340,6 +343,10 @@
 		B7000000000000000000002B /* Downloads */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Downloads;
+		};
+		B7000000000000000000003B /* Extensions */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Extensions;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
