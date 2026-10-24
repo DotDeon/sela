@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { asset } from "@/lib/site";
 import { CommandBar } from "./CommandBar";
 
 // The close ends on Sela's command bar, full size. The same bar is docked at the
@@ -7,8 +9,8 @@ export function GetSela() {
     <section id="get-sela" className="close" data-sc-act="pin" data-sc-span="1.2">
       <div data-sc-stage className="close__stage">
         <picture>
-          <source media="(max-width: 860px)" srcSet="/media/close-m.jpg" />
-          <img className="close__ground" src="/media/close.jpg" alt="" />
+          <source media="(max-width: 860px)" srcSet={asset("/media/close-m.jpg")} />
+          <img className="close__ground" src={asset("/media/close.jpg")} alt="" />
         </picture>
         <div className="close__scrim" aria-hidden />
         <div className="close__inner">
@@ -26,6 +28,10 @@ export function GetSela() {
 
         <footer className="foot">
           <p>Sela is free software under the GNU GPL, version 3.</p>
+          <p className="foot__links">
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/changelog">Changelog</Link>
+          </p>
         </footer>
       </div>
     </section>

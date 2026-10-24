@@ -1,3 +1,5 @@
+import { asset } from "@/lib/site";
+
 // Ad blocking as a change of state: the same water, first clouded and covered
 // in sample ad slots, then wiped clear.
 const slots = [
@@ -13,7 +15,7 @@ export function ClearWater() {
     <section id="clear-water" className="clear" data-sc-act="pin" data-sc-span="1.8">
       <div data-sc-stage className="clear__stage">
         <div className="clear__before" aria-hidden>
-          <img className="clear__image clear__image--murky" src="/media/clear.jpg" alt="" />
+          <img className="clear__image clear__image--murky" src={asset("/media/clear.jpg")} alt="" />
           {slots.map((s, i) => (
             <span
               key={i}
@@ -27,7 +29,7 @@ export function ClearWater() {
         <div className="clear__after" data-sc-reveal="right" data-sc-reveal-at="0.12 0.6">
           <img
             className="clear__image"
-            src="/media/clear.jpg"
+            src={asset("/media/clear.jpg")}
             alt="Clear shallow water over smooth dark pebbles"
           />
         </div>

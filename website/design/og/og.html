@@ -1,0 +1,23 @@
+<!doctype html>
+<!-- The link preview card. Render at 1200x630 with a headless browser into public/og.png. -->
+<html><head><meta charset="utf-8"><style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #070a0a; }
+  .card { position: relative; width: 1200px; height: 630px; font-family: -apple-system, "SF Pro Display", system-ui, sans-serif; color: #edf3f1; }
+  .card img.ground { position: absolute; top: -60px; right: -260px; width: 1500px; height: 780px; object-fit: cover; object-position: 50% 62%; }
+  .scrim { position: absolute; inset: 0; background: linear-gradient(90deg, rgb(5 9 9 / 0.92) 0%, rgb(5 9 9 / 0.72) 42%, rgb(5 9 9 / 0.1) 75%); }
+  .copy { position: absolute; left: 76px; top: 0; bottom: 0; width: 600px; display: flex; flex-direction: column; justify-content: center; gap: 26px; }
+  .brand { display: flex; align-items: center; gap: 16px; font-size: 34px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand img { width: 64px; height: 64px; }
+  h1 { margin: 0; font-size: 74px; line-height: 1.02; letter-spacing: -0.035em; font-weight: 650; }
+  p { margin: 0; font-size: 27px; line-height: 1.4; color: #d3dfdc; }
+</style></head><body>
+  <div class="card">
+    <img class="ground" src="../../public/media/hero-poster.jpg" alt="">
+    <div class="scrim"></div>
+    <div class="copy">
+      <div class="brand"><img src="../../public/icon.svg" alt="">Sela</div>
+      <h1>A browser that holds still.</h1>
+      <p>Free and open source, for the Mac.</p>
+    </div>
+  </div>
+</body></html>

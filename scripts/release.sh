@@ -3,7 +3,8 @@
 #
 # Needs a "Developer ID Application" certificate in your keychain, and the asc CLI logged in to
 # App Store Connect with a key that can notarize. Usage: scripts/release.sh TEAM_ID
-# The zip lands in .build/release/Build/Products/Release/Sela-<version>.zip.
+# The zips land in .build/release/Build/Products/Release: Sela-<version>.zip, and the same file as Sela.zip.
+# Upload both. The website links to releases/latest/download/Sela.zip, so every release needs it.
 set -eu
 cd "$(dirname "$0")/.."
 team="${1:?usage: scripts/release.sh TEAM_ID}"
@@ -17,11 +18,12 @@ xcodebuild -project app/Sela.xcodeproj -scheme Sela -configuration Release \
     OTHER_CODE_SIGN_FLAGS="--timestamp" build
 
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$products/Sela.app/Contents/Info.plist")
-rm -f "$products/Sela-notarize.zip" "$products/Sela-$version.zip"
+rm -f "$products/Sela-notarize.zip" "$products/Sela-$version.zip" "$products/Sela.zip"
 ditto -c -k --keepParent "$products/Sela.app" "$products/Sela-notarize.zip"
 asc notarization submit --file "$products/Sela-notarize.zip" --wait --timeout 30m --output json
 xcrun stapler staple "$products/Sela.app"
 spctl -a -t exec "$products/Sela.app"
 rm "$products/Sela-notarize.zip"
 ditto -c -k --keepParent "$products/Sela.app" "$products/Sela-$version.zip"
+cp "$products/Sela-$version.zip" "$products/Sela.zip"
 shasum -a 256 "$products/Sela-$version.zip"

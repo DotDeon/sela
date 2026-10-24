@@ -1,4 +1,5 @@
 import {
+  AppWindow,
   Download,
   Droplet,
   Hand,
@@ -18,6 +19,7 @@ const icons = {
   droplet: Droplet,
   receipt: Receipt,
   download: Download,
+  window: AppWindow,
 };
 
 export function Icon({ name, ...props }: { name: IconName } & LucideProps) {
