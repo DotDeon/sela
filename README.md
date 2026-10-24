@@ -4,9 +4,20 @@
 
 Website and download: https://dotdeon.github.io/sela
 
-Sela is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-sela-design.md`](docs/design/2026-10-23-sela-design.md).
+Sela is a free, open-source Mac browser with a calm sidebar. Favourites sit at the top, then pinned tabs and folders, then today's tabs, and you swipe between spaces. Tabs you don't pin archive themselves, so the sidebar never fills up. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-sela-design.md`](docs/design/2026-10-23-sela-design.md).
 
-Sela is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. It blocks ads and trackers, YouTube's video ads included, with AdGuard Base and EasyPrivacy, and you can turn blocking off for any site. Tabs you haven't looked at for 15 minutes go to sleep to save memory, and wake where they were. It downloads files, finds text on a page with Cmd+F, uploads files, and asks before a site uses your camera or microphone. On first launch it offers to bring in your Arc sidebar, and brings in your Arc browsing history from the last 90 days. Settings (Cmd+,) holds the default browser, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
+What it does today:
+
+- **Sidebar and spaces.** Favourites, pinned tabs and folders, and today's tabs, in spaces you swipe between. Unpinned tabs archive themselves after 12 hours and stay findable for 30 days.
+- **Command bar.** Cmd+T and Cmd+L search open tabs, archived tabs, history and commands.
+- **Split view and Peek.** Up to four tabs side by side. Links from pinned tabs and favourites to other sites open in Peek, a preview over the page.
+- **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
+- **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
+- **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
+- **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
+- **Updates.** Sela checks for new versions once a day and asks before installing them.
+
+Settings (Cmd+,) holds the default browser, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -18,7 +29,7 @@ app/Sela/      the Mac app: windows, menus and first-launch import
 app/Sela.xcodeproj  Xcode project that builds Sela.app
 app/Support/   the app's Info.plist
 app/Packages/  Swift package with one module per feature
-scripts/       build, sign and release scripts (coming later)
+scripts/       release and measuring scripts
 ```
 
 Inside `app/Packages`:
@@ -43,7 +54,7 @@ Inside `app/Packages`:
 
 ## Download
 
-Signed and notarized builds are on the [releases page](https://github.com/DotDeon/sela/releases). Sela needs macOS 15 or later.
+[Download Sela](https://github.com/DotDeon/sela/releases/latest/download/Sela.dmg), open the disk image and drag Sela to Applications. Every build is signed and notarized, and all of them are on the [releases page](https://github.com/DotDeon/sela/releases). Sela needs macOS 15 or later.
 
 ## Running Sela
 
@@ -62,7 +73,7 @@ You can also open `app/Sela.xcodeproj` in Xcode and press Cmd+R. The first time,
 
 To measure how much memory Sela uses with 10 real sites open, before and after tabs sleep, quit Sela, Safari and Mail and run `scripts/measure-memory.sh`. It uses a throwaway profile, so your sidebar isn't touched.
 
-To build a signed, notarized release zip, run `scripts/release.sh TEAM_ID`. It needs a Developer ID Application certificate and the `asc` command-line tool logged in to App Store Connect.
+To build a release, run `scripts/release.sh TEAM_ID`. It makes a signed, notarized disk image, the zip Sparkle updates from, and the signed update feed, `appcast.xml`. It needs a Developer ID Application certificate, the `asc` command-line tool logged in to App Store Connect, and Sela's update signing key in your login keychain.
 
 ## Running the tests
 
@@ -101,6 +112,7 @@ Sela is free software under the GNU General Public License, version 3. See [`LIC
 
 ## Third-party code
 
+- [Sparkle](https://sparkle-project.org) (MIT) checks for and installs updates.
 - [SafariConverterLib](https://github.com/AdguardTeam/SafariConverterLib) by AdGuard (GPL-3.0) converts ad blocking filter lists into WebKit's content blocking rules.
 - [@adguard/safari-extension](https://github.com/AdguardTeam/SafariConverterLib/tree/master/Extension), [@adguard/extended-css](https://github.com/AdguardTeam/ExtendedCss) and [@adguard/scriptlets](https://github.com/AdguardTeam/Scriptlets) by AdGuard (GPL-3.0) apply the rules WebKit can't, inside each page.
 - [PunycodeSwift](https://github.com/gumob/PunycodeSwift) (MIT) and [swift-psl](https://github.com/ameshkov/swift-psl) (MIT) come with SafariConverterLib.
