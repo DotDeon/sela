@@ -1,0 +1,72 @@
+{
+   "checksum": "00000000000000000000000000000000",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13370000000000000",
+            "guid": "00000000-0000-4000-8000-000000000001",
+            "id": "1",
+            "name": "Example",
+            "type": "url",
+            "url": "https://example.com/"
+         }, {
+            "children": [ {
+               "guid": "00000000-0000-4000-8000-000000000003",
+               "id": "3",
+               "name": "Docs",
+               "type": "url",
+               "url": "https://docs.example.com/start"
+            }, {
+               "children": [ {
+                  "guid": "00000000-0000-4000-8000-000000000005",
+                  "id": "5",
+                  "name": "",
+                  "type": "url",
+                  "url": "https://deep.example.com/"
+               } ],
+               "guid": "00000000-0000-4000-8000-000000000004",
+               "id": "4",
+               "name": "Nested",
+               "type": "folder"
+            } ],
+            "guid": "00000000-0000-4000-8000-000000000002",
+            "id": "2",
+            "name": "Work",
+            "type": "folder"
+         }, {
+            "guid": "00000000-0000-4000-8000-000000000006",
+            "id": "6",
+            "name": "Settings",
+            "type": "url",
+            "url": "chrome://settings/"
+         }, {
+            "guid": "00000000-0000-4000-8000-000000000007",
+            "id": "7",
+            "name": "Example again",
+            "type": "url",
+            "url": "https://example.com/"
+         } ],
+         "id": "8",
+         "name": "Bookmarks bar",
+         "type": "folder"
+      },
+      "other": {
+         "children": [ {
+            "id": "9",
+            "name": "Recipes",
+            "type": "url",
+            "url": "https://recipes.example.org/"
+         } ],
+         "id": "10",
+         "name": "Other bookmarks",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [ ],
+         "id": "11",
+         "name": "Mobile bookmarks",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}
