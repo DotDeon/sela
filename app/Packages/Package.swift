@@ -20,6 +20,7 @@ let package = Package(
         .library(name: "Browsing", targets: ["Browsing"]),
         .library(name: "ContentBlocking", targets: ["ContentBlocking"]),
         .library(name: "Downloads", targets: ["Downloads"]),
+        .library(name: "Extensions", targets: ["Extensions"]),
         .executable(name: "sela-arc", targets: ["sela-arc"]),
     ],
     dependencies: [
@@ -73,6 +74,8 @@ let package = Package(
             ]
         ),
         .testTarget(name: "ContentBlockingTests", dependencies: ["ContentBlocking", "BrowserEngine", "FakeEngine"]),
+        .target(name: "Extensions", dependencies: ["BrowserEngine"]),
+        .testTarget(name: "ExtensionsTests", dependencies: ["Extensions", "BrowserEngine", "FakeEngine"]),
         .target(name: "Downloads", dependencies: ["BrowserEngine"]),
         .testTarget(name: "DownloadsTests", dependencies: ["Downloads", "BrowserEngine"]),
         .executableTarget(name: "sela-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
