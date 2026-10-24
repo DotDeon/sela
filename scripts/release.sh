@@ -8,6 +8,10 @@
 # the key from a file, when these are set:
 #   NOTARY_KEY_PATH, NOTARY_KEY_ID, NOTARY_ISSUER  an App Store Connect API key
 #   SPARKLE_KEY_FILE                               the update signing key, from generate_keys -x
+# With these set, Sela is signed with the browser passkey entitlement, so websites can use passkeys.
+# It needs Apple to have granted the team that entitlement. See docs/plans/2026-10-24-passkeys.md.
+#   SELA_PASSKEYS=1                                sign with app/Support/Sela-Passkeys.entitlements
+#   SELA_PROFILE                                   the Developer ID provisioning profile that allows it
 # Usage: scripts/release.sh TEAM_ID
 #
 # Everything lands in .build/release/Build/Products/Release. Upload these to the release:
@@ -20,6 +24,12 @@ cd "$(dirname "$0")/.."
 team="${1:?usage: scripts/release.sh TEAM_ID}"
 products=.build/release/Build/Products/Release
 sparkle=.build/release/SourcePackages/artifacts/sparkle/Sparkle/bin
+entitlements=app/Support/Sela.entitlements
+passkeys="${SELA_PASSKEYS:-}"
+if [ "$passkeys" = 1 ]; then
+    profile="${SELA_PROFILE:?SELA_PASSKEYS=1 needs SELA_PROFILE, the path to the Developer ID provisioning profile}"
+    [ -f "$profile" ] || { echo "No provisioning profile at $profile"; exit 1; }
+fi
 
 xcodebuild -project app/Sela.xcodeproj -scheme Sela -configuration Release \
     -derivedDataPath .build/release -skipPackagePluginValidation \
@@ -38,7 +48,27 @@ sign --preserve-metadata=entitlements "$framework/XPCServices/Downloader.xpc"
 sign "$framework/Autoupdate"
 sign "$framework/Updater.app"
 sign "$products/Sela.app/Contents/Frameworks/Sparkle.framework"
-sign --entitlements app/Support/Sela.entitlements "$products/Sela.app"
+
+# A restricted entitlement needs a profile that allows it inside the app, or macOS refuses to open Sela.
+# So check the profile matches this team and app and carries the entitlement before using it.
+if [ "$passkeys" = 1 ]; then
+    bundle=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$products/Sela.app/Contents/Info.plist")
+    decoded=.build/release/profile.plist
+    security cms -D -i "$profile" > "$decoded"
+    field() { /usr/libexec/PlistBuddy -c "Print $1" "$decoded" 2>/dev/null || true; }
+    [ "$(field :Entitlements:com.apple.developer.web-browser.public-key-credential)" = true ] \
+        || { echo "The profile doesn't allow com.apple.developer.web-browser.public-key-credential"; exit 1; }
+    [ "$(field :Entitlements:com.apple.application-identifier)" = "$team.$bundle" ] \
+        || { echo "The profile isn't for $team.$bundle"; exit 1; }
+    [ "$(field :ProvisionsAllDevices)" = true ] \
+        || { echo "The profile isn't a Developer ID profile"; exit 1; }
+    rm "$decoded"
+    entitlements=.build/release/Sela-Passkeys.entitlements
+    sed -e "s/\$(TeamIdentifierPrefix)/$team./g" -e "s/\$(PRODUCT_BUNDLE_IDENTIFIER)/$bundle/g" -e "s/\$(DEVELOPMENT_TEAM)/$team/g" \
+        app/Support/Sela-Passkeys.entitlements > "$entitlements"
+    cp "$profile" "$products/Sela.app/Contents/embedded.provisionprofile"
+fi
+sign --entitlements "$entitlements" "$products/Sela.app"
 codesign --verify --deep --strict "$products/Sela.app"
 
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$products/Sela.app/Contents/Info.plist")
