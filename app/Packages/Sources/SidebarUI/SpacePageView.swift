@@ -335,10 +335,10 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
         case .split:
             let panes = item.childIDs
             (cell as? SplitCellView)?.configure(panes: panes.map { pane in
-                let state = model.liveTab(for: pane)?.state
+                let shown = model.pageForDisplay(for: pane)
                 let saved: URL? = if case .tab(let info) = document.item(pane)?.kind { info.savedURL } else { nil }
-                let title = document.item(pane).map { sidebarTitle(for: $0, liveState: state.map { ($0.url, displayTitle(for: $0)) }) } ?? ""
-                let page = state?.url ?? saved
+                let title = document.item(pane).map { sidebarTitle(for: $0, liveState: shown) } ?? ""
+                let page = shown?.url ?? saved
                 let icon = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 16)
                 return (title, icon, pane == model.selectedItemID)
             })
@@ -352,11 +352,12 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
         case .tab(let info):
             let live = model.liveTab(for: id)
             let state = live?.state
-            cell.titleField.stringValue = sidebarTitle(for: item, liveState: state.map { ($0.url, displayTitle(for: $0)) })
+            let shown = model.pageForDisplay(for: id)
+            cell.titleField.stringValue = sidebarTitle(for: item, liveState: shown)
             if let icon = state?.faviconURL, let page = state?.url {
                 favicons.remember(iconURL: icon, forPage: page)
             }
-            let page = state?.url ?? info.savedURL
+            let page = shown?.url ?? info.savedURL
             cell.iconView.image = favicons.image(forPage: page)
                 ?? letterImage(for: page?.host() ?? cell.titleField.stringValue, size: 16)
             cell.iconView.contentTintColor = nil
@@ -468,7 +469,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             if case .pinned = document.containerRole(of: id) { pinned = true } else { pinned = false }
             menu.addItem(menuItem(pinned ? "Unpin" : "Pin") { [weak self] in self?.model.togglePin(id) })
             menu.addItem(menuItem("Add to Favourites") { [weak self] in self?.sidebar.addToFavorites(id) })
-            let url = model.liveTab(for: id)?.state.url ?? info.savedURL
+            let url = model.currentPage(for: id)?.url ?? info.savedURL
             menu.addItem(menuItem("Copy URL") {
                 guard let url else { return }
                 NSPasteboard.general.clearContents()

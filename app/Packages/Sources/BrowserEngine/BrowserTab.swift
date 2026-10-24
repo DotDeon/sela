@@ -52,6 +52,9 @@ public protocol BrowserTab: AnyObject, Observable {
     func snapshot() -> TabSnapshot
     /// True while the page plays audio or video.
     func isPlayingMedia() async -> Bool
+    /// True when unloading would lose something: edited form fields, or a page that came from a submitted form,
+    /// which waking would send again.
+    func hasUnsavedState() async -> Bool
     func goBack()
     func goForward()
     func reload()

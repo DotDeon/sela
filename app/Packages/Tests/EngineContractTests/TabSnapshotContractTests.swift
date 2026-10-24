@@ -45,3 +45,17 @@ struct TabSnapshotContractTests {
         #expect(tab.state.isUsingCameraOrMicrophone == false)
     }
 }
+
+extension TabSnapshotContractTests {
+    @Test(arguments: EngineUnderTest.allCases)
+    func editedFormsCountAsUnsaved(engine: EngineUnderTest) async throws {
+        let clean = try await loadedTab(engine.make(), try site.page("clean.html", "<textarea>hello</textarea>"))
+        #expect(await clean.hasUnsavedState() == false)
+        let edited = try await loadedTab(engine.make(), try site.page("edited.html", """
+            <textarea id="t">hello</textarea>
+            <script>document.getElementById('t').value = 'a reply in progress'; document.title = 'edited'</script>
+            """))
+        try await eventually { edited.state.title == "edited" }
+        #expect(await edited.hasUnsavedState())
+    }
+}

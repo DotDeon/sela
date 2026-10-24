@@ -11,7 +11,10 @@ import WebKitEngine
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
-    private let engine = WebKitEngine()
+    /// With `-BrowDataFolder`, cookies, caches and compiled ad blocking rules stay in memory, away from your own.
+    private let engine = WebKitEngine(configuration: .init(
+        storage: UserDefaults.standard.string(forKey: "BrowDataFolder") == nil ? .persistent : .ephemeral
+    ))
     private var sidebar: SidebarStore!
     private var favicons: FaviconStore!
     private var archive: ArchiveStore!

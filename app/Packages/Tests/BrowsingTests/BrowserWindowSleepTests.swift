@@ -150,3 +150,39 @@ private struct Harness {
     #expect(h.live("u1") != nil && h.live("u2") != nil)
     #expect(Set(h.engine.restoredSnapshots.compactMap(\.url)) == [URL(string: "https://u1.example.com/")!, URL(string: "https://u2.example.com/")!])
 }
+
+@MainActor @Test func pagesWithUnsavedWorkNeverSleep() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    h.live("u1")?.hasUnsavedStateForTesting = true
+    h.model.select("u2")
+    h.clock.jump(20 * minute)
+    await h.model.sleepTabs(unusedFor: 15 * minute)
+    #expect(h.live("u1") != nil)
+}
+
+@MainActor @Test func aSleepingPinnedTabStillShowsWhereItWas() async throws {
+    let h = try Harness()
+    h.model.select("p1")
+    h.live("p1")?.load(other)
+    h.live("p1")?.finishLoading(title: "Elsewhere")
+    h.model.select("u1")
+    h.clock.jump(20 * minute)
+    await h.model.sleepTabs(unusedFor: 15 * minute)
+    #expect(h.model.isSleeping("p1"))
+    #expect(h.model.currentPage(for: "p1")?.url == other)
+    #expect(h.model.currentPage(for: "p1")?.title == "Elsewhere")
+    #expect(h.model.isAwayFromSavedURL("p1"))
+}
+
+@MainActor @Test func resettingASleepingTabWakesItOnItsSavedAddress() async throws {
+    let h = try Harness()
+    h.model.select("p1")
+    h.live("p1")?.load(other)
+    h.model.select("u1")
+    h.clock.jump(20 * minute)
+    await h.model.sleepTabs(unusedFor: 15 * minute)
+    h.model.resetToSavedURL("p1")
+    #expect(h.live("p1")?.loadedURLs.first == URL(string: "https://p1.example.com/"))
+    #expect(!h.model.isSleeping("p1"))
+}

@@ -95,9 +95,9 @@ final class FavoritesGridView: NSView, NSCollectionViewDataSource, NSCollectionV
         guard favoriteIDs.indices.contains(index), let item = document.item(favoriteIDs[index]),
               case .tab(let info) = item.kind
         else { return }
-        let state = model.liveTab(for: item.id)?.state
-        let page = state?.url ?? info.savedURL
-        let title = sidebarTitle(for: item, liveState: state.map { ($0.url, displayTitle(for: $0)) })
+        let shown = model.pageForDisplay(for: item.id)
+        let page = shown?.url ?? info.savedURL
+        let title = sidebarTitle(for: item, liveState: shown)
         tile.imageView?.image = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 22)
         tile.view.toolTip = title
     }

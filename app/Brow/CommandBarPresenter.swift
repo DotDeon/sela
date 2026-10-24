@@ -159,9 +159,9 @@ final class CommandBarPresenter {
         let containers = [document.favoritesContainerID] + document.spaces.flatMap { [$0.pinnedContainerID, $0.unpinnedContainerID] }
         return containers.flatMap { document.tabIDs(under: $0) }.compactMap { id in
             guard let item = document.item(id), case .tab(let info) = item.kind else { return nil }
-            let state = model.liveTab(for: id)?.state
-            let title = sidebarTitle(for: item, liveState: state.map { ($0.url, displayTitle(for: $0)) })
-            return TabCandidate(id: id, title: title, url: state?.url ?? info.savedURL, lastActiveAt: info.lastActiveAt)
+            let page = model.pageForDisplay(for: id)
+            let title = sidebarTitle(for: item, liveState: page)
+            return TabCandidate(id: id, title: title, url: page?.url ?? info.savedURL, lastActiveAt: info.lastActiveAt)
         }
     }
 

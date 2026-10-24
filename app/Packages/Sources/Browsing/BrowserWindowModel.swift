@@ -291,6 +291,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         for id in liveTabs.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
             guard let tab = liveTabs[id], maySleep(id, unusedFor: interval) else { continue }
             if await tab.isPlayingMedia() { continue }
+            if await tab.hasUnsavedState() { continue }
             // The selection may have moved while the page answered.
             guard liveTabs[id] === tab, maySleep(id, unusedFor: interval) else { continue }
             snapshots[id] = tab.snapshot()
@@ -306,6 +307,20 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         else { return false }
         let lastShown = tabInfo(id)?.lastActiveAt ?? document.item(id)?.createdAt ?? .distantPast
         return now().timeIntervalSince(lastShown) >= interval
+    }
+
+    /// The page a tab is on: its live page, or for a sleeping tab the page it will wake on. Nil when neither.
+    public func currentPage(for id: ItemID) -> (url: URL?, title: String?)? {
+        if let tab = liveTabs[id] { return (tab.state.url, tab.state.title) }
+        return snapshots[id].map { ($0.url, $0.title) }
+    }
+
+    /// `currentPage` with the title the sidebar shows, for rows, tiles and the command bar.
+    public func pageForDisplay(for id: ItemID) -> (url: URL?, title: String)? {
+        if let tab = liveTabs[id] { return (tab.state.url, displayTitle(for: tab.state)) }
+        return snapshots[id].map { snapshot in
+            (snapshot.url, displayTitle(for: TabState(url: snapshot.url, title: snapshot.title, isLoading: false, estimatedProgress: 1, canGoBack: false, canGoForward: false)))
+        }
     }
 
     /// A new page for a tab: woken from its snapshot when it was asleep, otherwise loading its saved address.
@@ -347,6 +362,8 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         if let tab = liveTabs[id] {
             tab.load(saved)
         } else {
+            // A sleeping tab wakes on its saved address, not where it was.
+            snapshots[id] = nil
             select(id)
         }
     }
@@ -357,7 +374,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         case .pinned, .favorites: break
         default: return false
         }
-        guard let saved = tabInfo(id)?.savedURL, let current = liveTabs[id]?.state.url else { return false }
+        guard let saved = tabInfo(id)?.savedURL, let current = currentPage(for: id)?.url else { return false }
         return !sameAddress(saved, current)
     }
 

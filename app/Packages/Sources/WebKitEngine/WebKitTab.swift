@@ -18,6 +18,9 @@ final class WebKitTab: NSObject, BrowserTab {
     @ObservationIgnored private var faviconURL: URL?
     /// Whether the page now loading or showing gets content blocking.
     @ObservationIgnored private var isBlocking = true
+    /// Whether the navigation now under way, and the page now shown, came from submitting a form.
+    @ObservationIgnored private var loadingFromForm = false
+    @ObservationIgnored private var showingFormResult = false
 
     var contentView: NSView { webView }
 
@@ -43,6 +46,27 @@ final class WebKitTab: NSObject, BrowserTab {
 
     func snapshot() -> TabSnapshot {
         TabSnapshot(url: webView.url, title: webView.title, sessionState: webView.interactionState as? Data)
+    }
+
+    /// A page from a submitted form would be sent again on waking, and edited fields or a focused editor would be lost.
+    func hasUnsavedState() async -> Bool {
+        if showingFormResult { return true }
+        let script = """
+            (() => {
+                for (const field of document.querySelectorAll('input, textarea, select')) {
+                    if (field.type === 'hidden') continue;
+                    if (field.type === 'checkbox' || field.type === 'radio') {
+                        if (field.checked !== field.defaultChecked) return true;
+                    } else if (field.tagName === 'SELECT') {
+                        if ([...field.options].some(o => o.selected !== o.defaultSelected)) return true;
+                    } else if (field.value !== field.defaultValue) {
+                        return true;
+                    }
+                }
+                return !!(document.activeElement && document.activeElement.isContentEditable);
+            })()
+            """
+        return (try? await webView.evaluateJavaScript(script) as? Bool) ?? false
     }
 
     func isPlayingMedia() async -> Bool {
@@ -155,6 +179,7 @@ extension WebKitTab: WKNavigationDelegate {
         // Links that open elsewhere, or that the window takes for Peek, leave the page here as it is.
         if policy == .allow, navigationAction.targetFrame?.isMainFrame == true {
             setBlocking(engine.blocksContent(on: navigationAction.request.url))
+            loadingFromForm = navigationAction.request.httpMethod?.uppercased() == "POST"
         }
         return policy
     }
@@ -162,6 +187,7 @@ extension WebKitTab: WKNavigationDelegate {
     /// Committing settles the page's address after any redirects, so blocking follows the page actually shown.
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         setBlocking(engine.blocksContent(on: webView.url))
+        showingFormResult = loadingFromForm
     }
 
     /// Where a link goes: here, or somewhere else, in which case this tab cancels it.
