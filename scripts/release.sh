@@ -23,6 +23,19 @@ xcodebuild -project app/Sela.xcodeproj -scheme Sela -configuration Release \
     ENABLE_HARDENED_RUNTIME=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
     OTHER_CODE_SIGN_FLAGS="--timestamp" build
 
+# Xcode signs Sparkle's framework but not the helpers inside it, and notarization refuses those.
+# Sign them inside out with Developer ID, a secure timestamp and the hardened runtime, then sign
+# Sela again so its signature covers them.
+sign() { codesign --force --sign "Developer ID Application" --options runtime --timestamp "$@"; }
+framework="$products/Sela.app/Contents/Frameworks/Sparkle.framework/Versions/B"
+sign "$framework/XPCServices/Installer.xpc"
+sign --preserve-metadata=entitlements "$framework/XPCServices/Downloader.xpc"
+sign "$framework/Autoupdate"
+sign "$framework/Updater.app"
+sign "$products/Sela.app/Contents/Frameworks/Sparkle.framework"
+sign --entitlements app/Support/Sela.entitlements "$products/Sela.app"
+codesign --verify --deep --strict "$products/Sela.app"
+
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$products/Sela.app/Contents/Info.plist")
 zip="$products/Sela-$version.zip"
 dmg="$products/Sela.dmg"
