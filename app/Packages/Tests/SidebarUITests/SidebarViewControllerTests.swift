@@ -239,3 +239,18 @@ private func fakeExtension(named name: String) async throws -> FakeExtension {
     h.controller.view.layoutSubtreeIfNeeded()
     #expect(!(h.controller.extensionAnchor(for: "quiet") is ExtensionButton))
 }
+
+@MainActor @Test func theSpaceMenuChoosesAProfile() throws {
+    let h = try Harness()
+    let work = h.model.sidebar.addProfile(name: "Work")
+    let profiles = try #require(h.controller.spaceBar.spaceMenu(for: "S").items.first { $0.title == "Profile" }?.submenu)
+    #expect(profiles.items.map(\.title) == ["Default", "Work", "", "New Profile…"])
+    #expect(profiles.items[0].state == .on)
+    #expect(profiles.items[1].state == .off)
+
+    let choice = profiles.items[1]
+    _ = (choice.target as? NSObject)?.perform(choice.action)
+    #expect(h.model.sidebar.document.profileID(of: "S") == work)
+    let updated = try #require(h.controller.spaceBar.spaceMenu(for: "S").items.first { $0.title == "Profile" }?.submenu)
+    #expect(updated.items[1].state == .on)
+}
