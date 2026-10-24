@@ -21,6 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
     private var windowControllers: [BrowserWindowController] = []
+    /// Links that arrived before launch finished, opened once the first window exists.
+    private var pendingURLs: [URL] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make()
@@ -41,6 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         newWindow(nil)
         NSApp.activate()
         reportLoadProblem()
+        if !pendingURLs.isEmpty {
+            application(NSApp, open: pendingURLs)
+            pendingURLs = []
+        }
 
         sweeper = ArchiveSweeper(sidebar: sidebar, archive: archive) { [weak self] in
             Set(self?.windowControllers.compactMap(\.model.selectedItemID) ?? [])
@@ -60,6 +66,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { newWindow(nil) }
         return true
+    }
+
+    /// Links and HTML files from other apps, for example when Brow is the default browser.
+    /// Each opens in a new tab in the frontmost window, or in a new window when none is open.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let pages = urls.filter { ["http", "https", "file"].contains($0.scheme?.lowercased() ?? "") }
+        guard !pages.isEmpty else { return }
+        guard sidebar != nil else {
+            pendingURLs += pages
+            return
+        }
+        let target = windowControllers.first { $0.window?.isMainWindow == true } ?? windowControllers.last ?? {
+            newWindow(nil)
+            return windowControllers.last!
+        }()
+        for page in pages { target.model.newTab(url: page) }
+        target.showWindow(nil)
+        NSApp.activate()
     }
 
     @objc func newWindow(_ sender: Any?) {
