@@ -195,6 +195,7 @@ final class WebKitTab: NSObject, BrowserTab {
 
 extension WebKitTab: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        if navigationAction.shouldPerformDownload { return .download }
         let policy = linkPolicy(for: navigationAction)
         // A new top-level page in this tab decides whether it blocks content, before anything on it loads.
         // Links that open elsewhere, or that the window takes for Peek, leave the page here as it is.
@@ -204,6 +205,21 @@ extension WebKitTab: WKNavigationDelegate {
             loadingFromForm = navigationAction.request.httpMethod?.uppercased() == "POST"
         }
         return policy
+    }
+
+    /// Files the page can't show, or that the server sends as attachments, are downloaded.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
+        let disposition = (navigationResponse.response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition") ?? ""
+        let isAttachment = disposition.lowercased().hasPrefix("attachment")
+        return navigationResponse.isForMainFrame && (isAttachment || !navigationResponse.canShowMIMEType) ? .download : .allow
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        engine.track(WebKitDownload(download: download, tab: self))
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        engine.track(WebKitDownload(download: download, tab: self))
     }
 
     /// Committing settles the page's address after any redirects, so blocking follows the page actually shown.

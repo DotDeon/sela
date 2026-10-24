@@ -19,6 +19,7 @@ let package = Package(
         .library(name: "WebKitEngine", targets: ["WebKitEngine"]),
         .library(name: "Browsing", targets: ["Browsing"]),
         .library(name: "ContentBlocking", targets: ["ContentBlocking"]),
+        .library(name: "Downloads", targets: ["Downloads"]),
         .executable(name: "brow-arc", targets: ["brow-arc"]),
     ],
     dependencies: [
@@ -72,6 +73,8 @@ let package = Package(
             ]
         ),
         .testTarget(name: "ContentBlockingTests", dependencies: ["ContentBlocking", "BrowserEngine", "FakeEngine"]),
+        .target(name: "Downloads", dependencies: ["BrowserEngine"]),
+        .testTarget(name: "DownloadsTests", dependencies: ["Downloads", "BrowserEngine"]),
         .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )

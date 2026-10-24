@@ -30,6 +30,9 @@ public final class WebKitEngine: ContentBlockingEngine {
     /// Every tab still open, so new rules reach pages that are already showing.
     private let tabs = NSHashTable<WebKitTab>.weakObjects()
 
+    /// Downloads still running, kept alive until they end.
+    private var activeDownloads: [UUID: WebKitDownload] = [:]
+
     public var isContentBlockingEnabled: (@MainActor (URL) -> Bool)?
     public var pageScripts: (@MainActor (URL, URL?) -> PageScripts?)?
 
@@ -73,6 +76,17 @@ public final class WebKitEngine: ContentBlockingEngine {
         contentRules.apply(to: controller, blocking: true)
         PageScriptInjection.install(on: controller, bridge: bridge)
         return controller
+    }
+
+    func track(_ download: WebKitDownload) {
+        activeDownloads[download.id] = download
+        download.onEnd = { [weak self] in self?.activeDownloads[$0.id] = nil }
+    }
+
+    /// Stops every download and removes its unfinished file. For quitting.
+    public func discardActiveDownloads() {
+        for download in activeDownloads.values { download.discard() }
+        activeDownloads.removeAll()
     }
 
     /// Tracks a tab so rule changes reach it.
