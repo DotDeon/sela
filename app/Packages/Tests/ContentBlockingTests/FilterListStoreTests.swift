@@ -88,7 +88,7 @@ private struct Offline: Error {}
     Result<(Data, Int), Error>.success((Data(goodText.utf8), 503)),
     .success((Data(), 200)),
     .success((Data("<!DOCTYPE html><html><body>Sign in to Wi-Fi</body></html>".utf8), 200)),
-    .success((Data("! Title: something else\n||x.example.com^\n".utf8), 200)),
+    .success((Data("! something else\n||x.example.com^\n".utf8), 200)),
     .failure(Offline()),
 ])
 func badDownloadsKeepTheOldList(bad: Result<(Data, Int), Error>) async throws {
@@ -100,4 +100,16 @@ func badDownloadsKeepTheOldList(bad: Result<(Data, Int), Error>) async throws {
     server.next = bad
     #expect(await store.refresh([list]) == false)
     #expect(store.text(for: list) == goodText)
+}
+
+@MainActor @Test func adGuardStyleListsAreAccepted() async throws {
+    let server = FakeServer()
+    server.next = .success((Data("! Checksum: x\n! Title: AdGuard Base filter\n||ads.example.com^\n".utf8), 200))
+    let (store, _) = try makeStore(server, clock: Clock())
+    #expect(await store.refresh([list]))
+    #expect(store.text(for: list)?.contains("AdGuard Base") == true)
+}
+
+@Test func defaultsUseAdGuardBase() {
+    #expect(FilterList.defaults.map(\.id) == ["adguard-base", "easyprivacy"])
 }

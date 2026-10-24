@@ -44,10 +44,12 @@ public final class FilterListStore {
         return changed
     }
 
-    /// Adblock-style lists start with a header such as `[Adblock Plus 2.0]`.
+    /// Adblock Plus lists start with a header such as `[Adblock Plus 2.0]`. AdGuard's start with `!` comments,
+    /// including a `! Title:` line near the top.
     static func looksLikeFilterList(_ text: String) -> Bool {
-        let firstLine = text.split(whereSeparator: \.isNewline).first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-        return firstLine?.trimmingCharacters(in: .whitespaces).hasPrefix("[Adblock") ?? false
+        let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if lines.first?.hasPrefix("[Adblock") == true { return true }
+        return lines.prefix(30).contains { $0.hasPrefix("! Title:") }
     }
 
     private func fileURL(for list: FilterList) -> URL {
