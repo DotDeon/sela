@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Sela: a browser that holds still",
   description:
     "Sela is a free, open-source Mac browser. Your tabs rest in a calm sidebar while the web rushes past.",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/apple-icon.png" },
 };
 
 export const viewport: Viewport = {
