@@ -1,4 +1,5 @@
 import BrowserEngine
+import CryptoKit
 import Foundation
 import WebKit
 
@@ -24,7 +25,10 @@ public final class WebKitEngine: ContentBlockingEngine {
     }
 
     private let configuration: Configuration
+    /// The default profile's store, which extensions' background pages use too.
     private let dataStore: WKWebsiteDataStore
+    /// Every other profile's store, made the first time a tab uses the profile.
+    private var profileDataStores: [ProfileIdentifier: WKWebsiteDataStore] = [:]
     private let applicationName: String
     let contentRules: WebKitContentRules
     /// Every tab still open, so new rules reach pages that are already showing.
@@ -62,29 +66,71 @@ public final class WebKitEngine: ContentBlockingEngine {
     @available(macOS 15.4, *)
     var extensions: WebKitExtensions? { extensionsStorage as? WebKitExtensions }
 
-    public func makeTab(url: URL?) -> any BrowserTab {
+    public func makeTab(url: URL?, profile: ProfileIdentifier) -> any BrowserTab {
         // An extension's own pages run in the extension's configuration, without content blocking.
         if #available(macOS 15.4, *), let url, let configuration = extensions?.webViewConfiguration(for: url) {
-            let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: self, isExtensionPage: true)
+            let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: self, profile: profile, isExtensionPage: true)
             register(tab)
             tab.load(url)
             return tab
         }
         let bridge = PageScriptBridge()
-        let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: makeWebViewConfiguration(bridge: bridge)), engine: self)
+        let webView = WKWebView(frame: .zero, configuration: makeWebViewConfiguration(bridge: bridge, profile: profile))
+        let tab = WebKitTab(webView: webView, engine: self, profile: profile)
         bridge.tab = tab
         register(tab)
         if let url { tab.load(url) }
         return tab
     }
 
-    public func makeTab(restoring snapshot: TabSnapshot) -> any BrowserTab {
+    public func makeTab(restoring snapshot: TabSnapshot, profile: ProfileIdentifier) -> any BrowserTab {
         if #available(macOS 15.4, *), let url = snapshot.url, extensions?.webViewConfiguration(for: url) != nil {
-            return makeTab(url: url)
+            return makeTab(url: url, profile: profile)
         }
-        let tab = makeTab(url: nil) as! WebKitTab
+        let tab = makeTab(url: nil, profile: profile) as! WebKitTab
         tab.restore(snapshot)
         return tab
+    }
+
+    /// The store for a profile's cookies, logins, site storage and cache. Default uses WebKit's own default store,
+    /// so Sela keeps what it stored before it had profiles.
+    func dataStore(for profile: ProfileIdentifier) -> WKWebsiteDataStore {
+        guard profile != .default else { return dataStore }
+        if let existing = profileDataStores[profile] { return existing }
+        let made: WKWebsiteDataStore = switch configuration.storage {
+        case .persistent: WKWebsiteDataStore(forIdentifier: Self.storeIdentifier(for: profile))
+        case .ephemeral: .nonPersistent()
+        }
+        profileDataStores[profile] = made
+        return made
+    }
+
+    /// Empties the profile's store, then deletes it from disk. WebKit refuses to delete a store a web view still
+    /// holds, and closed tabs can take a moment to let go, so deleting is tried a few times.
+    public func removeWebsiteData(of profile: ProfileIdentifier) async {
+        guard profile != .default else { return }
+        let store = profileDataStores.removeValue(forKey: profile)
+            ?? (configuration.storage == .persistent ? WKWebsiteDataStore(forIdentifier: Self.storeIdentifier(for: profile)) : nil)
+        await store?.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast)
+        guard configuration.storage == .persistent else { return }
+        for attempt in 0..<5 {
+            do {
+                try await WKWebsiteDataStore.remove(forIdentifier: Self.storeIdentifier(for: profile))
+                return
+            } catch {
+                guard attempt < 4 else { return }
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    /// WebKit names stores by UUID. Sela's profile IDs are UUIDs, and anything else maps to a UUID made from its text.
+    nonisolated static func storeIdentifier(for profile: ProfileIdentifier) -> UUID {
+        if let uuid = UUID(uuidString: profile.rawValue) { return uuid }
+        var bytes = Array(Insecure.MD5.hash(data: Data(profile.rawValue.utf8)))
+        bytes[6] = (bytes[6] & 0x0F) | 0x30
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return NSUUID(uuidBytes: bytes) as UUID
     }
 
     public func installContentRules(_ ruleSets: [ContentRuleSet]) async throws {
@@ -131,9 +177,10 @@ public final class WebKitEngine: ContentBlockingEngine {
         return isContentBlockingEnabled?(url) ?? true
     }
 
-    func makeWebViewConfiguration(bridge: PageScriptBridge) -> WKWebViewConfiguration {
+    /// Every profile shares the content rules, the extension controller and download handling. Only the data store differs.
+    func makeWebViewConfiguration(bridge: PageScriptBridge, profile: ProfileIdentifier) -> WKWebViewConfiguration {
         let webConfiguration = WKWebViewConfiguration()
-        webConfiguration.websiteDataStore = dataStore
+        webConfiguration.websiteDataStore = dataStore(for: profile)
         webConfiguration.applicationNameForUserAgent = applicationName
         webConfiguration.preferences.isElementFullscreenEnabled = true
         webConfiguration.preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture

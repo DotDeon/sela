@@ -7,6 +7,7 @@ import Observation
 @Observable
 public final class FakeTab: BrowserTab {
     public let id = TabID.make()
+    public let profile: ProfileIdentifier
     public private(set) var state = TabState.blank {
         didSet { delegate?.tabStateDidChange(self) }
     }
@@ -28,8 +29,9 @@ public final class FakeTab: BrowserTab {
     private var history: [URL] = []
     private var index = -1
 
-    init(engine: FakeEngine) {
+    init(engine: FakeEngine, profile: ProfileIdentifier) {
         self.engine = engine
+        self.profile = profile
     }
 
     public func load(_ url: URL) {
@@ -111,7 +113,7 @@ public final class FakeTab: BrowserTab {
 
     @discardableResult
     public func simulateOpen(url: URL?, disposition: NewTabDisposition) -> FakeTab {
-        let newTab = engine.makeFakeTab(url: url)
+        let newTab = engine.makeFakeTab(url: url, profile: profile)
         delegate?.tab(self, didOpen: newTab, disposition: disposition)
         return newTab
     }

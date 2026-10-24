@@ -178,3 +178,15 @@ private final class AnsweringDelegate: BrowserTabDelegate {
     #expect(await tab.simulateChooseFiles(multiple: false, directories: false) == nil)
     #expect(await tab.simulateCaptureRequest(.cameraAndMicrophone, origin: a) == false)
 }
+
+@MainActor @Test func tabsKeepTheProfileTheyWereMadeIn() async {
+    let engine = FakeEngine()
+    let work = ProfileIdentifier(rawValue: "work")
+    let tab = engine.makeTab(url: a, profile: work) as! FakeTab
+    #expect(tab.profile == work)
+    #expect(engine.makeTab(url: a).profile == .default)
+    #expect(tab.simulateOpen(url: b, disposition: .foreground).profile == work)
+    await engine.removeWebsiteData(of: work)
+    await engine.removeWebsiteData(of: .default)
+    #expect(engine.removedProfiles == [work])
+}

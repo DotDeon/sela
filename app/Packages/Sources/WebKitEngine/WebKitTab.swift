@@ -13,6 +13,8 @@ final class WebKitTab: NSObject, BrowserTab {
 
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored let engine: WebKitEngine
+    /// Matches the web view's data store, which WebKit fixes when the web view is made.
+    @ObservationIgnored let profile: ProfileIdentifier
     /// True for an extension's own page, such as its options, which gets no content blocking.
     @ObservationIgnored let isExtensionPage: Bool
     @ObservationIgnored private(set) var isClosed = false
@@ -29,7 +31,8 @@ final class WebKitTab: NSObject, BrowserTab {
 
     var contentView: NSView { webView }
 
-    init(webView: WKWebView, engine: WebKitEngine, isExtensionPage: Bool = false) {
+    init(webView: WKWebView, engine: WebKitEngine, profile: ProfileIdentifier, isExtensionPage: Bool = false) {
+        self.profile = profile
         self.webView = webView
         self.engine = engine
         self.isExtensionPage = isExtensionPage
@@ -246,7 +249,7 @@ extension WebKitTab: WKNavigationDelegate {
     private func linkPolicy(for navigationAction: WKNavigationAction) -> WKNavigationActionPolicy {
         guard navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url, let delegate else { return .allow }
         if let disposition = newTabDisposition(modifiers: navigationAction.modifierFlags, buttonNumber: navigationAction.buttonNumber) {
-            delegate.tab(self, didOpen: engine.makeTab(url: url), disposition: disposition)
+            delegate.tab(self, didOpen: engine.makeTab(url: url, profile: profile), disposition: disposition)
             return .cancel
         }
         // A plain or Shift-click in the page itself. The window may send it to Peek instead.
@@ -300,7 +303,8 @@ extension WebKitTab: WKUIDelegate {
         // A popup gets its own rules and page script, so blocking can differ between it and the page that opened it.
         let bridge = PageScriptBridge()
         configuration.userContentController = engine.makeContentController(bridge: bridge)
-        let popup = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: engine)
+        // WebKit hands over the opener's configuration, so the popup shares its data store and profile.
+        let popup = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: engine, profile: profile)
         bridge.tab = popup
         engine.register(popup)
         delegate.tab(self, didOpen: popup, disposition: .foreground)
