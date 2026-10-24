@@ -17,10 +17,6 @@ public final class SidebarViewController: NSViewController {
     }
 
     /// Shows or hides the downloads button in the space bar.
-    public var showsDownloadsButton: Bool {
-        get { !spaceBar.downloadsButton.isHidden }
-        set { spaceBar.downloadsButton.isHidden = !newValue }
-    }
 
     /// The downloads button, for anchoring the downloads popover. Its action is `onDownloadsClicked`.
     public var downloadsButton: NSView { spaceBar.downloadsButton }
@@ -36,6 +32,17 @@ public final class SidebarViewController: NSViewController {
 
     /// When set, the sidebar's New Tab button calls this instead of adding a blank tab.
     public var onNewTabClicked: (() -> Void)?
+
+    /// The button that hides the sidebar, or docks it again while it's hidden and slid out.
+    public var onToggleSidebarClicked: (() -> Void)?
+    @objc private func toggleSidebarClicked() { onToggleSidebarClicked?() }
+
+    /// Names the sidebar button for what a click does now.
+    public func showSidebarHidden(_ hidden: Bool) {
+        let label = hidden ? "Keep Sidebar Open" : "Hide Sidebar"
+        sidebarButton.setSymbol("sidebar.left", label: label, pointSize: 14)
+        sidebarButton.toolTip = label
+    }
 
     /// The extensions whose buttons show beside back and forward.
     public var extensions: [any BrowserExtension] {
@@ -65,6 +72,7 @@ public final class SidebarViewController: NSViewController {
     private let tint = NSView()
     private let addressPill = AddressPill()
     let spaceBar: SpaceBarView
+    private let sidebarButton = HoverButton(symbol: "sidebar.left", label: "Hide Sidebar", pointSize: 14)
     private let backButton = HoverButton(symbol: "chevron.left", label: "Back", pointSize: 14)
     private let forwardButton = HoverButton(symbol: "chevron.right", label: "Forward", pointSize: 14)
     private let reloadButton = HoverButton(symbol: "arrow.clockwise", label: "Reload")
@@ -91,11 +99,11 @@ public final class SidebarViewController: NSViewController {
 
         tint.wantsLayer = true
         let controls = WindowDragView()
-        for (button, action) in [(backButton, #selector(goBack)), (forwardButton, #selector(goForward)), (reloadButton, #selector(reloadOrStop))] {
+        for (button, action) in [(sidebarButton, #selector(toggleSidebarClicked)), (backButton, #selector(goBack)), (forwardButton, #selector(goForward)), (reloadButton, #selector(reloadOrStop))] {
             button.target = self
             button.action = action
         }
-        let navigation = NSStackView(views: [backButton, forwardButton, reloadButton])
+        let navigation = NSStackView(views: [sidebarButton, backButton, forwardButton, reloadButton])
         navigation.spacing = 0
 
         addressPill.onSubmit = { [weak self] text in self?.submitAddress(text) }

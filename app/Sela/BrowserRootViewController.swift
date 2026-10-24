@@ -157,6 +157,7 @@ final class BrowserRootViewController: NSViewController {
         resizeHandle.isHidden = hidden
         sidebarController.view.layer?.shadowOpacity = 0
         setWindowButtonsHidden(hidden)
+        sidebarController.showSidebarHidden(hidden)
     }
 
     /// Shows the sidebar, sliding it out when it's hidden. Returns once it's on screen.

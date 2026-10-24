@@ -9,7 +9,7 @@ final class SpaceBarView: NSView {
     private let model: BrowserWindowModel
     private let stack = NSStackView()
     private let addButton = HoverButton(symbol: "plus", label: "New Space", pointSize: 13)
-    /// Shown while this session has downloads.
+    /// Opens this session's downloads.
     let downloadsButton = HoverButton(symbol: "arrow.down.circle", label: "Downloads", pointSize: 13)
     private var buttons: [SpaceButton] = []
 
@@ -23,7 +23,6 @@ final class SpaceBarView: NSView {
         addButton.target = self
         addButton.action = #selector(addSpace)
 
-        downloadsButton.isHidden = true
         for view in [stack, addButton, downloadsButton] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
@@ -32,7 +31,7 @@ final class SpaceBarView: NSView {
             heightAnchor.constraint(equalToConstant: 36),
             stack.centerXAnchor.constraint(equalTo: centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 8),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: downloadsButton.trailingAnchor, constant: 4),
             stack.trailingAnchor.constraint(lessThanOrEqualTo: addButton.leadingAnchor, constant: -4),
             addButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             downloadsButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),

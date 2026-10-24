@@ -66,7 +66,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         keepObserving { [weak self] in
             guard let self else { return }
             let count = downloads.downloads.count
-            root.sidebarController.showsDownloadsButton = count > 0
             // A new download opens the list, so you see it start.
             if count > shownCount, self.window?.isKeyWindow == true {
                 DispatchQueue.main.async { self.showDownloads(nil) }
@@ -75,6 +74,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         }
         root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
         root.sidebarController.onNewTabClicked = { [weak self] in self?.newTab(nil) }
+        root.sidebarController.onToggleSidebarClicked = { [weak self] in self?.toggleSidebar(nil) }
+        if SidebarSettings().isHidden { root.toggleSidebar() }
         keepObserving { [weak self] in self?.updateTitle() }
         if let extensions { connect(extensions) }
     }
@@ -229,7 +230,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         NSPasteboard.general.setString(url.absoluteString, forType: .string)
     }
 
-    @objc func toggleSidebar(_ sender: Any?) { root.toggleSidebar() }
+    /// Hides or docks the sidebar, and remembers the choice for new windows and the next launch.
+    @objc func toggleSidebar(_ sender: Any?) {
+        root.toggleSidebar()
+        SidebarSettings().isHidden = root.isSidebarHidden
+    }
 
     @objc func selectNextSpace(_ sender: Any?) { model.selectNextSpace() }
 
