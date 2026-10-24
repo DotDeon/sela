@@ -3,6 +3,7 @@
 import { Bug, CodeXml, Download, Heart, PanelLeft, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { downloadLabel, links, sections } from "@/lib/site";
+import { CommandBar } from "./CommandBar";
 import { Favicon } from "./Icon";
 
 const favourites = [
@@ -13,7 +14,7 @@ const favourites = [
 ];
 
 // The page's navigation is a browser sidebar: favourites, pinned tabs for the
-// sections, and a space bar. Rows for sections that climb out of the river
+// sections, the command bar docked at the foot, and a space bar. Rows for sections that climb out of the river
 // carry data-slot so the flight can find them and mark them landed.
 export function Chrome() {
   const [current, setCurrent] = useState(sections[0].id);
@@ -115,6 +116,10 @@ export function Chrome() {
             ))}
           </ul>
         </nav>
+
+        <div className="sidebar__command">
+          <CommandBar docked />
+        </div>
 
         <div className="spacebar" aria-label="Spaces">
           <span className="space space--current" title="Sela" />
