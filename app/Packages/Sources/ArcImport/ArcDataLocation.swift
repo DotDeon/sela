@@ -17,4 +17,15 @@ public struct ArcDataLocation: Sendable {
     public var sidebarFileURL: URL {
         root.appending(path: "StorableSidebar.json")
     }
+
+    /// The `History` database of the default profile and of every `Profile N`, where they exist.
+    public var historyFileURLs: [URL] {
+        let userData = root.appending(path: "User Data", directoryHint: .isDirectory)
+        let folders = (try? FileManager.default.contentsOfDirectory(atPath: userData.path)) ?? []
+        return folders
+            .filter { $0 == "Default" || $0.hasPrefix("Profile ") }
+            .sorted()
+            .map { userData.appending(path: "\($0)/History") }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
 }
