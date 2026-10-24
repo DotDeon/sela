@@ -1,6 +1,8 @@
 import Foundation
 import Testing
 import Browsing
+import SelaTestSupport
+import SidebarModel
 @testable import CommandBar
 
 @Test(arguments: [
@@ -82,6 +84,27 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
 @Test func hostsStillMakeATopHit() {
     let results = commandBarResults(query: "github", tabs: [tab("Pull requests", "github")], commands: [], archived: [], history: [])
     #expect(kinds(results).first == "tab")
+}
+
+@Test func folderNamesFindTheirTabs() {
+    var inFolder = tab("Roadmap", "roadmap")
+    inFolder.location = "Work / Planning"
+    let results = commandBarResults(query: "planning", tabs: [inFolder, tab("Recipes", "recipes")], commands: [], archived: [], history: [])
+    #expect(results.contains(.tab(inFolder)))
+    #expect(!results.contains(.tab(tab("Recipes", "recipes"))))
+}
+
+@Test func locationsNameFavouritesAndFolders() throws {
+    var document = fixtureDocument()
+    try document.setTitle("fold", "Work")
+    let inner = fixtureItem("inner", parent: "fold", kind: .folder(FolderInfo(icon: nil, isExpanded: false)))
+    try document.insert(inner, into: "fold", at: nil)
+    try document.insert(fixtureTab("deep", parent: "inner"), into: "inner", at: nil)
+    #expect(tabLocation(of: "p2", in: document) == "Work")
+    #expect(tabLocation(of: "deep", in: document) == "Work / Folder")
+    #expect(tabLocation(of: "f1", in: document) == "Favourites")
+    #expect(tabLocation(of: "p1", in: document) == nil)
+    #expect(tabLocation(of: "u1", in: document) == nil)
 }
 
 @Test func searchesUseTheChosenEngine() {

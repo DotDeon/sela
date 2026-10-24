@@ -40,6 +40,16 @@ import Testing
     #expect(doc.canMove("t1", to: "F"))
 }
 
+@Test func folderPathListsFoldersOutermostFirst() throws {
+    var doc = fixtureDocument()
+    try doc.setTitle("folder", "Work")
+    #expect(doc.folderIDs(containing: "t3") == ["folder", "sub"])
+    #expect(doc.folderPath(of: "t3") == ["Work", "Folder"])
+    #expect(doc.folderPath(of: "t1").isEmpty)
+    #expect(doc.folderPath(of: "f1").isEmpty)
+    #expect(doc.folderPath(of: "nope").isEmpty)
+}
+
 @Test func validateRequiresASpace() {
     let doc = SidebarDocument(version: 1, spaces: [], favoritesContainerID: "F", items: [fixtureItem("F", parent: nil, kind: .container(.favorites))])
     #expect {

@@ -22,7 +22,8 @@ public func matchScore(_ query: String, _ text: String) -> Int? {
 }
 
 /// Command bar rows for a query, in display order:
-/// the typed address or search (after a tab that matches every word as a word start), then up to 5 tabs,
+/// the typed address or search (after a tab that matches every word as a word start), then up to 5 tabs
+/// (favourites and tabs in folders too, found by title, address or folder name),
 /// 3 commands, 3 archived tabs and 5 history pages. An empty query shows the 6 most recently active tabs.
 public func commandBarResults(
     query: String,
@@ -37,7 +38,7 @@ public func commandBarResults(
         return tabs.sorted(by: moreRecent).prefix(6).map(CommandBarResult.tab)
     }
 
-    let rankedTabs = ranked(tabs, by: { "\($0.title) \($0.url?.absoluteString ?? "")" }, query: query, tieBreak: moreRecent)
+    let rankedTabs = ranked(tabs, by: { "\($0.title) \($0.url?.absoluteString ?? "") \($0.location ?? "")" }, query: query, tieBreak: moreRecent)
     let openURLs = Set(tabs.compactMap(\.url))
     let rankedCommands = ranked(commands, by: { ([$0.title] + $0.keywords).joined(separator: " ") }, query: query)
     let rankedArchived = ranked(archived.filter { $0.url.map { !openURLs.contains($0) } ?? true }, by: { "\($0.title) \($0.url?.absoluteString ?? "")" }, query: query)

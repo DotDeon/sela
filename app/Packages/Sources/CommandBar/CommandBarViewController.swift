@@ -185,7 +185,7 @@ public final class CommandBarViewController: NSViewController, NSTextFieldDelega
             let path = url.path() == "/" ? "" : url.path()
             return ("Open \(url.host() ?? url.absoluteString)\(path)", "", "globe")
         case .tab(let tab):
-            return (tab.title, "Switch to Tab", "square.on.square")
+            return (tab.title, tab.location ?? "Switch to Tab", "square.on.square")
         case .command(let command):
             return (command.title, "", "command")
         case .archived(let entry):

@@ -8,13 +8,27 @@ public struct TabCandidate: Equatable, Sendable {
     public var title: String
     public var url: URL?
     public var lastActiveAt: Date?
+    /// Where the tab sits, such as "Favourites" or "Work / Projects", for tabs in a folder or among favourites.
+    /// Nil for tabs at the top of a space. Its words find the tab too.
+    public var location: String?
 
-    public init(id: ItemID, title: String, url: URL?, lastActiveAt: Date?) {
+    public init(id: ItemID, title: String, url: URL?, lastActiveAt: Date?, location: String? = nil) {
         self.id = id
         self.title = title
         self.url = url
         self.lastActiveAt = lastActiveAt
+        self.location = location
     }
+}
+
+/// The location a tab's command bar row shows: "Favourites" for favourites, the folders it sits in for a tab
+/// in a folder, outermost first, and nil for a tab at the top of its space.
+public func tabLocation(of id: ItemID, in document: SidebarDocument) -> String? {
+    var parts = document.folderPath(of: id)
+    if document.containerRole(of: id) == .favorites {
+        parts.insert("Favourites", at: 0)
+    }
+    return parts.isEmpty ? nil : parts.joined(separator: " / ")
 }
 
 /// Something the command bar can do, like "New Space".
