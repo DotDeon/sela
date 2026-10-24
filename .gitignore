@@ -5,3 +5,4 @@ DerivedData/
 xcuserdata/
 *.xcuserstate
 node_modules/
+app/Support/Signing.local.xcconfig

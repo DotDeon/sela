@@ -23,6 +23,7 @@
 
 /* Begin PBXFileReference section */
 		B70000000000000000000005 /* Brow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Brow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B70000000000000000000029 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Support/Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				B70000000000000000000004 /* Brow */,
+				B70000000000000000000029 /* Signing.xcconfig */,
 				B70000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -204,9 +206,8 @@
 		};
 		B7000000000000000000000E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B70000000000000000000029 /* Signing.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
@@ -229,9 +230,8 @@
 		};
 		B7000000000000000000000F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B70000000000000000000029 /* Signing.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
