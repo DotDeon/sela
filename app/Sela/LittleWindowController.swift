@@ -35,10 +35,10 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
     private var findBar: FindBarController?
 
     /// A window showing `url`, or an empty one with the address field ready when `url` is nil.
-    /// It opens clear of the frames in `occupied`, the other Little Sela windows.
-    init(engine: any BrowserEngine, url: URL?, archive: ArchiveStore?, history: HistoryStore?, contentBlocker: ContentBlocker?,
+    /// It opens clear of the frames in `occupied`, the other Little Sela windows, and uses `profile`'s website data.
+    init(engine: any BrowserEngine, url: URL?, profile: ProfileIdentifier, archive: ArchiveStore?, history: HistoryStore?, contentBlocker: ContentBlocker?,
          downloads: DownloadList, occupied: [CGRect]) {
-        model = LittleWindowModel(engine: engine, url: url, archive: archive, downloads: downloads)
+        model = LittleWindowModel(engine: engine, url: url, profile: profile, archive: archive, downloads: downloads)
         self.contentBlocker = contentBlocker
         let visible = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let frame = LittleWindowFrame().frameForNewWindow(visible: visible, occupied: occupied)
@@ -170,6 +170,8 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
     }
 
     private func update() {
+        // The page is replaced when its profile is deleted.
+        if let page = model.tab?.contentView { card.show(page) }
         let state = model.tab?.state ?? .blank
         let host = state.url.flatMap { $0.isFileURL ? nil : $0.host() }.map(Self.withoutWWW)
         let title = displayTitle(for: state)

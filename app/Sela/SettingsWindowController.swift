@@ -8,19 +8,22 @@ import Sidebar
 import SidebarModel
 import SwiftUI
 
-/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Permissions and Import.
+/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Profiles, Permissions and Import.
 @MainActor
 final class SettingsWindowController: NSWindowController {
     /// `currentSpace` names the space imported bookmarks go into: the one shown in the frontmost browser window.
+    /// `onDeleteProfile` deletes a profile the user has confirmed deleting, and its website data.
     init(
         contentBlocker: ContentBlocker?,
         history: HistoryStore?,
         sidebar: SidebarStore,
         extensions: ExtensionsController?,
         currentSpace: @escaping () -> SpaceID?,
+        onDeleteProfile: @escaping (ProfileID) -> Void,
         onSettingsChanged: @escaping () -> Void
     ) {
-        let view = SettingsView(contentBlocker: contentBlocker, history: history, sidebar: sidebar, currentSpace: currentSpace, extensions: extensions, onSettingsChanged: onSettingsChanged)
+        let view = SettingsView(contentBlocker: contentBlocker, history: history, sidebar: sidebar, currentSpace: currentSpace, extensions: extensions,
+                                onDeleteProfile: onDeleteProfile, onSettingsChanged: onSettingsChanged)
         let window = NSWindow(contentViewController: NSHostingController(rootView: view))
         window.title = "Settings"
         window.styleMask = [.titled, .closable]
@@ -39,6 +42,7 @@ private struct SettingsView: View {
     let sidebar: SidebarStore
     let currentSpace: () -> SpaceID?
     let extensions: ExtensionsController?
+    let onDeleteProfile: (ProfileID) -> Void
     let onSettingsChanged: () -> Void
 
     var body: some View {
@@ -50,6 +54,7 @@ private struct SettingsView: View {
             if let extensions {
                 ExtensionSettings(controller: extensions).tabItem { Label("Extensions", systemImage: "puzzlepiece.extension") }
             }
+            ProfileSettings(sidebar: sidebar, onDelete: onDeleteProfile).tabItem { Label("Profiles", systemImage: "person.2") }
             PermissionSettings().tabItem { Label("Permissions", systemImage: "video") }
             ImportSettings(history: history, sidebar: sidebar, currentSpace: currentSpace).tabItem { Label("Import", systemImage: "square.and.arrow.down") }
         }
@@ -217,6 +222,75 @@ private struct ExtensionSettings: View {
             .toggleStyle(.switch)
             .labelsHidden()
         }
+    }
+}
+
+/// Every profile, the spaces using each, and renaming and deleting them.
+private struct ProfileSettings: View {
+    let sidebar: SidebarStore
+    let onDelete: (ProfileID) -> Void
+
+    var body: some View {
+        Form {
+            Section("Profiles") {
+                ForEach(sidebar.document.profiles) { profile in
+                    row(profile)
+                }
+            }
+            Text("Each profile keeps its own cookies, logins, site data and cache, so spaces with different profiles can be signed in to different accounts. Choose a space's profile from its menu in the space bar. Favourites use the profile of the space you're in. History and archived tabs are shared.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        .formStyle(.grouped)
+    }
+
+    private func row(_ profile: Profile) -> some View {
+        let spaces = sidebar.document.spaces(using: profile.id)
+        return HStack {
+            VStack(alignment: .leading) {
+                Text(profile.name)
+                Text(describe(spaces)).font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Rename") { rename(profile) }
+            if !profile.isDefault {
+                Button("Delete") { confirmDelete(profile, spaceCount: spaces.count) }
+            }
+        }
+    }
+
+    private func describe(_ spaces: [Space]) -> String {
+        guard !spaces.isEmpty else { return "No spaces use it" }
+        let names = spaces.map { $0.title ?? "Untitled space" }
+        return "Used by " + ListFormatter.localizedString(byJoining: names)
+    }
+
+    private func rename(_ profile: Profile) {
+        let alert = NSAlert()
+        alert.messageText = "Rename Profile"
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(string: profile.name)
+        field.frame = NSRect(x: 0, y: 0, width: 240, height: 24)
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        sidebar.renameProfile(profile.id, to: field.stringValue)
+    }
+
+    private func confirmDelete(_ profile: Profile, spaceCount: Int) {
+        let alert = NSAlert()
+        alert.messageText = "Delete the profile \(profile.name)?"
+        let moving = switch spaceCount {
+        case 0: ""
+        case 1: " Its space moves to Default."
+        default: " Its \(spaceCount) spaces move to Default."
+        }
+        alert.informativeText = "Sela deletes its cookies, logins, site data and cache, which signs you out of every site in it.\(moving) This can't be undone."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons.first?.hasDestructiveAction = true
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        onDelete(profile.id)
     }
 }
 
