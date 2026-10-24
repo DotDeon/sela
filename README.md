@@ -38,6 +38,10 @@ Inside `app/Packages`:
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
 - `BrowTestSupport`: sample sidebars shared by the tests
 
+## Download
+
+Signed and notarized builds are on the [releases page](https://github.com/DotDeon/brow/releases). Brow needs macOS 15 or later.
+
 ## Running Brow
 
 You need Xcode 27.
@@ -52,6 +56,8 @@ open .build/xcode/Build/Products/Debug/Brow.app
 Brow is signed ad hoc by default. To sign it with your own Apple team, copy `app/Support/Signing.local.xcconfig.example` to `app/Support/Signing.local.xcconfig` and fill in your team ID and profile name. Git ignores that file.
 
 You can also open `app/Brow.xcodeproj` in Xcode and press Cmd+R. The first time, Xcode asks you to trust the `GenerateVersion` plugin from `safariconverterlib`.
+
+To build a signed, notarized release zip, run `scripts/release.sh TEAM_ID`. It needs a Developer ID Application certificate and the `asc` command-line tool logged in to App Store Connect.
 
 ## Running the tests
 
