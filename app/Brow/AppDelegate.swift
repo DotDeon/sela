@@ -1,5 +1,6 @@
 import AppKit
 import Archive
+import Browsing
 import ContentBlocking
 import Favicons
 import History
@@ -16,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var archive: ArchiveStore!
     private var history: HistoryStore?
     private var sweeper: ArchiveSweeper?
+    private var tabSleeper: TabSleeper?
+    /// `-BrowDataFolder <path>` keeps every Brow file in that folder instead of Application Support,
+    /// and skips the Arc import. For measuring runs that mustn't touch your own sidebar.
+    private let dataFolderOverride: URL? = UserDefaults.standard.string(forKey: "BrowDataFolder").map { URL(fileURLWithPath: $0, isDirectory: true) }
     private var contentBlocker: ContentBlocker!
     private var listRefreshTimer: Timer?
     private var missingListTimer: Timer?
@@ -26,11 +31,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make()
-        sidebar = SidebarStore(fileStore: SidebarDocumentStore(fileURL: sidebarFileURL()), firstRunDocument: FirstRunImport.document)
-        favicons = FaviconStore(cacheFolder: (try? FaviconStore.defaultCacheFolder()) ?? FileManager.default.temporaryDirectory)
-        archive = ArchiveStore(fileURL: (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Brow-Archive.json"))
+        if let dataFolderOverride {
+            try? FileManager.default.createDirectory(at: dataFolderOverride, withIntermediateDirectories: true)
+        }
+        sidebar = SidebarStore(
+            fileStore: SidebarDocumentStore(fileURL: dataFile("Sidebar.json") ?? sidebarFileURL()),
+            firstRunDocument: dataFolderOverride == nil ? FirstRunImport.document : { nil }
+        )
+        favicons = FaviconStore(cacheFolder: dataFile("Favicons") ?? (try? FaviconStore.defaultCacheFolder()) ?? FileManager.default.temporaryDirectory)
+        archive = ArchiveStore(fileURL: dataFile("Archive.json") ?? (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Brow-Archive.json"))
         // Brow works without history if the database can't open.
-        history = (try? HistoryStore.defaultFileURL()).flatMap { try? HistoryStore(fileURL: $0) }
+        history = (dataFile("History.sqlite") ?? (try? HistoryStore.defaultFileURL())).flatMap { try? HistoryStore(fileURL: $0) }
         startContentBlocking()
 
         // Another window may have removed a tab or space this window shows.
@@ -52,6 +63,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             Set(self?.windowControllers.compactMap(\.model.selectedItemID) ?? [])
         }
         sweeper?.start()
+
+        tabSleeper = TabSleeper { [weak self] in self?.windowControllers.map(\.model) ?? [] }
+        tabSleeper?.start()
+
+        if let pagesFile = UserDefaults.standard.string(forKey: "BrowOpenPages") {
+            openPagesForMeasuring(listedIn: URL(fileURLWithPath: pagesFile))
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -101,6 +119,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         sweeper?.sweep()
     }
 
+    /// The "Sleep Unused Tabs After" menu. The item's tag is the number of minutes, 0 for never.
+    @objc func setSleepInterval(_ sender: NSMenuItem) {
+        TabSleepSettings().minutes = sender.tag
+        Task { await tabSleeper?.sleepUnusedTabs() }
+    }
+
+    /// `-BrowOpenPages <file>`: opens each address in the file as a new tab, one every 4 seconds. For measuring runs.
+    private func openPagesForMeasuring(listedIn file: URL) {
+        let pages = ((try? String(contentsOf: file, encoding: .utf8)) ?? "")
+            .split(whereSeparator: \.isNewline)
+            .compactMap { URL(string: $0.trimmingCharacters(in: .whitespaces)) }
+        Task { @MainActor [weak self] in
+            for page in pages {
+                self?.windowControllers.first?.model.newTab(url: page)
+                try? await Task.sleep(for: .seconds(4))
+            }
+        }
+    }
+
     /// Brow > Block Ads and Trackers. Reloads each window's page so the change shows at once.
     @objc func toggleContentBlocking(_ sender: Any?) {
         contentBlocker.setEnabled(!contentBlocker.isEnabled)
@@ -110,6 +147,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         if item.action == #selector(setArchiveInterval(_:)) {
             item.state = item.tag == ArchiveSweeper.hours ? .on : .off
+        } else if item.action == #selector(setSleepInterval(_:)) {
+            item.state = item.tag == TabSleepSettings().minutes ? .on : .off
         } else if item.action == #selector(toggleContentBlocking(_:)) {
             item.state = contentBlocker.isEnabled ? .on : .off
         }
@@ -121,8 +160,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// Installs the lists already downloaded, then checks for new ones now, every 6 hours and after waking,
     /// and every 2 minutes while a list has never downloaded, such as after a first launch with no network.
     private func startContentBlocking() {
-        let folder = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
-            .map { $0.appending(path: "Brow/ContentBlocking", directoryHint: .isDirectory) }
+        let folder = dataFile("ContentBlocking")
+            ?? (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+                .map { $0.appending(path: "Brow/ContentBlocking", directoryHint: .isDirectory) }
             ?? FileManager.default.temporaryDirectory.appending(path: "Brow-ContentBlocking")
         let store = FilterListStore(folder: folder, fetch: { url in
             let (data, response) = try await URLSession.shared.data(from: url)
@@ -143,6 +183,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }
         }
+    }
+
+    /// A file in the measuring folder from `-BrowDataFolder`, or nil for Brow's usual place.
+    private func dataFile(_ name: String) -> URL? {
+        dataFolderOverride?.appending(path: name)
     }
 
     private func sidebarFileURL() -> URL {

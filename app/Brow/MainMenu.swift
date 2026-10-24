@@ -1,4 +1,5 @@
 import AppKit
+import Browsing
 
 /// The menu bar, built in code. Items without a target go to the first responder.
 @MainActor
@@ -94,6 +95,20 @@ enum MainMenu {
         }
         archiveAfter.submenu = choices
         menu.addItem(archiveAfter)
+        let sleepAfter = NSMenuItem(title: "Sleep Unused Tabs After", action: nil, keyEquivalent: "")
+        let sleepChoices = NSMenu(title: "Sleep Unused Tabs After")
+        for minutes in TabSleepSettings.choices {
+            let title = switch minutes {
+            case 0: "Never"
+            case 60: "1 Hour"
+            default: "\(minutes) Minutes"
+            }
+            let choice = item(title, #selector(AppDelegate.setSleepInterval(_:)))
+            choice.tag = minutes
+            sleepChoices.addItem(choice)
+        }
+        sleepAfter.submenu = sleepChoices
+        menu.addItem(sleepAfter)
         return menu
     }
 

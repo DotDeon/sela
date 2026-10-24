@@ -4,7 +4,7 @@
 
 Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. It blocks ads and trackers with EasyList and EasyPrivacy, and you can turn blocking off for any site. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
+Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. It blocks ads and trackers with EasyList and EasyPrivacy, and you can turn blocking off for any site. Tabs you haven't looked at for 15 minutes go to sleep to save memory, and wake where they were. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -56,6 +56,8 @@ open .build/xcode/Build/Products/Debug/Brow.app
 Brow is signed ad hoc by default. To sign it with your own Apple team, copy `app/Support/Signing.local.xcconfig.example` to `app/Support/Signing.local.xcconfig` and fill in your team ID and profile name. Git ignores that file.
 
 You can also open `app/Brow.xcodeproj` in Xcode and press Cmd+R. The first time, Xcode asks you to trust the `GenerateVersion` plugin from `safariconverterlib`.
+
+To measure how much memory Brow uses with 10 real sites open, before and after tabs sleep, quit Brow, Safari and Mail and run `scripts/measure-memory.sh`. It uses a throwaway profile, so your sidebar isn't touched.
 
 To build a signed, notarized release zip, run `scripts/release.sh TEAM_ID`. It needs a Developer ID Application certificate and the `asc` command-line tool logged in to App Store Connect.
 
