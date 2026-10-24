@@ -164,5 +164,40 @@ struct ContentBlockingContractTests {
         tab.load(try probe("b.html"))
         try await eventually { tab.state.url?.lastPathComponent == "b.html" && tab.state.title == "undefined" }
     }
+
+    /// Like YouTube: scripts need a nonce, and Trusted Types are required.
+    @Test(arguments: EngineUnderTest.allCases)
+    func scriptletsRunUnderAStrictContentSecurityPolicy(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        let rules = flagScriptlet
+        browser.pageScripts = { _, _ in rules }
+        let page = try site.page("strict.html", """
+            <meta http-equiv="Content-Security-Policy" content="script-src 'nonce-n'; require-trusted-types-for 'script'">
+            <script nonce="n">document.title = String(window.browTestFlag)</script>
+            """)
+        let tab = try await loadedTab(browser, page)
+        try await eventually { tab.state.title == "true" || tab.state.title == "undefined" }
+        #expect(tab.state.title == "true")
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func earlyRulesFollowRedirectsBackAndReload(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        let rules = flagScriptlet
+        browser.pageScripts = { page, _ in page.lastPathComponent == "a.html" ? rules : nil }
+        _ = try probe("b.html")
+        let hop = try site.page("hop.html", "<script>location.replace('b.html')</script>")
+        let tab = try await loadedTab(browser, try probe("a.html"))
+        try await eventually { tab.state.title == "true" }
+        tab.load(hop)
+        try await eventually { tab.state.url?.lastPathComponent == "b.html" && tab.state.title == "undefined" }
+        tab.goBack()
+        try await eventually { tab.state.url?.lastPathComponent == "a.html" && tab.state.title == "true" }
+        tab.reload()
+        try await Task.sleep(for: .milliseconds(500))
+        try await eventually { tab.state.title == "true" }
+        let restored = browser.makeTab(restoring: tab.snapshot())
+        try await eventually { restored.state.url?.lastPathComponent == "a.html" && restored.state.title == "true" }
+    }
 }
 
