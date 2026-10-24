@@ -15,6 +15,8 @@ public final class FakeTab: BrowserTab {
 
     public private(set) var loadedURLs: [URL] = []
     public private(set) var isClosed = false
+    /// What `isPlayingMedia()` answers.
+    @ObservationIgnored public var isPlayingMediaForTesting = false
 
     /// Strong on purpose: tests often keep only the tab. The cycle with `FakeEngine.madeTabs` is fine for a test double.
     @ObservationIgnored private let engine: FakeEngine
@@ -34,6 +36,18 @@ public final class FakeTab: BrowserTab {
         state.isLoading = true
         state.estimatedProgress = 0
         updateHistoryState()
+    }
+
+    public func snapshot() -> TabSnapshot {
+        TabSnapshot(url: state.url, title: state.title, sessionState: nil)
+    }
+
+    public func isPlayingMedia() async -> Bool {
+        isPlayingMediaForTesting
+    }
+
+    public func setUsingCameraOrMicrophone(_ on: Bool) {
+        state.isUsingCameraOrMicrophone = on
     }
 
     public func goBack() {

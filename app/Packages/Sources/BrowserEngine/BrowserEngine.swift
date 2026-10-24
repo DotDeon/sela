@@ -5,4 +5,6 @@ import Foundation
 public protocol BrowserEngine: AnyObject {
     /// A new tab, loading `url` when it isn't nil.
     func makeTab(url: URL?) -> any BrowserTab
+    /// A tab that picks up where a snapshot left off: same address, history and scroll position where the engine can.
+    func makeTab(restoring snapshot: TabSnapshot) -> any BrowserTab
 }

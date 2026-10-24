@@ -56,6 +56,12 @@ public final class WebKitEngine: ContentBlockingEngine {
         return tab
     }
 
+    public func makeTab(restoring snapshot: TabSnapshot) -> any BrowserTab {
+        let tab = makeTab(url: nil) as! WebKitTab
+        tab.restore(snapshot)
+        return tab
+    }
+
     public func installContentRules(_ ruleSets: [ContentRuleSet]) async throws {
         try await contentRules.install(ruleSets)
         for tab in tabs.allObjects { tab.refreshContentBlocking() }

@@ -8,6 +8,8 @@ public final class FakeEngine: ContentBlockingEngine {
     /// What the last `installContentRules` call installed.
     public private(set) var installedRuleSets: [ContentRuleSet] = []
     public private(set) var installCount = 0
+    /// Every snapshot a tab was restored from, oldest first.
+    public private(set) var restoredSnapshots: [TabSnapshot] = []
     public var isContentBlockingEnabled: (@MainActor (URL) -> Bool)?
     public var pageScripts: (@MainActor (URL, URL?) -> PageScripts?)?
 
@@ -20,6 +22,11 @@ public final class FakeEngine: ContentBlockingEngine {
     public func installContentRules(_ ruleSets: [ContentRuleSet]) async throws {
         installedRuleSets = ruleSets
         installCount += 1
+    }
+
+    public func makeTab(restoring snapshot: TabSnapshot) -> any BrowserTab {
+        restoredSnapshots.append(snapshot)
+        return makeFakeTab(url: snapshot.url)
     }
 
     func makeFakeTab(url: URL?) -> FakeTab {

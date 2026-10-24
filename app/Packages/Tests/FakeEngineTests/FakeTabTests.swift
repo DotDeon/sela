@@ -130,3 +130,24 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     tab.simulateLinkClick(to: c)
     #expect(tab.loadedURLs == [a, c])
 }
+
+@MainActor @Test func fakeRestoreLoadsTheSnapshotAddress() {
+    let engine = FakeEngine()
+    let snap = TabSnapshot(url: b, title: "B", sessionState: Data([1, 2]))
+    let tab = engine.makeTab(restoring: snap) as! FakeTab
+    #expect(tab.loadedURLs == [b])
+    #expect(engine.restoredSnapshots == [snap])
+}
+
+@MainActor @Test func fakeMediaHooks() async {
+    let (_, tab) = makeTab(a)
+    let delegate = RecordingDelegate()
+    tab.delegate = delegate
+    #expect(await tab.isPlayingMedia() == false)
+    tab.isPlayingMediaForTesting = true
+    #expect(await tab.isPlayingMedia())
+    let changes = delegate.stateChanges
+    tab.setUsingCameraOrMicrophone(true)
+    #expect(tab.state.isUsingCameraOrMicrophone)
+    #expect(delegate.stateChanges == changes + 1)
+}

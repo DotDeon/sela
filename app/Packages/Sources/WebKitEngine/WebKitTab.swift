@@ -41,6 +41,23 @@ final class WebKitTab: NSObject, BrowserTab {
         }
     }
 
+    func snapshot() -> TabSnapshot {
+        TabSnapshot(url: webView.url, title: webView.title, sessionState: webView.interactionState as? Data)
+    }
+
+    func isPlayingMedia() async -> Bool {
+        await webView.requestMediaPlaybackState() == .playing
+    }
+
+    /// Picks up from a snapshot: WebKit's own history and scroll position when there is one, otherwise the address.
+    func restore(_ snapshot: TabSnapshot) {
+        if let sessionState = snapshot.sessionState {
+            webView.interactionState = sessionState
+        } else if let url = snapshot.url {
+            load(url)
+        }
+    }
+
     func goBack() { webView.goBack() }
 
     /// Puts the engine's current rules on this tab, or takes them off when the page has blocking turned off.
@@ -89,6 +106,8 @@ final class WebKitTab: NSObject, BrowserTab {
             webView.observe(\.estimatedProgress) { webView, _ in update(webView) },
             webView.observe(\.canGoBack) { webView, _ in update(webView) },
             webView.observe(\.canGoForward) { webView, _ in update(webView) },
+            webView.observe(\.cameraCaptureState) { webView, _ in update(webView) },
+            webView.observe(\.microphoneCaptureState) { webView, _ in update(webView) },
         ]
         syncState()
     }
@@ -105,7 +124,8 @@ final class WebKitTab: NSObject, BrowserTab {
             estimatedProgress: webView.estimatedProgress,
             canGoBack: webView.canGoBack,
             canGoForward: webView.canGoForward,
-            faviconURL: faviconURL
+            faviconURL: faviconURL,
+            isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none
         )
         guard next != state else { return }
         state = next
