@@ -15,6 +15,10 @@ enum MainMenu {
         let window = windowMenu()
         menu.addItem(submenu(window))
         NSApp.windowsMenu = window
+        let help = helpMenu()
+        menu.addItem(submenu(help))
+        // macOS adds its search field to this menu.
+        NSApp.helpMenu = help
         return menu
     }
 
@@ -155,6 +159,15 @@ enum MainMenu {
             numbered.tag = number
             menu.addItem(numbered)
         }
+        return menu
+    }
+
+    private static func helpMenu() -> NSMenu {
+        let menu = NSMenu(title: "Help")
+        menu.addItem(item("Report a Problem…", #selector(AppDelegate.reportProblem(_:))))
+        menu.addItem(.separator())
+        menu.addItem(item("Sela Website", #selector(AppDelegate.openWebsite(_:))))
+        menu.addItem(item("Sela on GitHub", #selector(AppDelegate.openGitHub(_:))))
         return menu
     }
 
