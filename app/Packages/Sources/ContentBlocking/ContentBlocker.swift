@@ -2,7 +2,7 @@ import BrowserEngine
 import Foundation
 import Observation
 
-/// Brow's ad and tracker blocking: the settings, the downloaded lists, and the rules the engine applies.
+/// Sela's ad and tracker blocking: the settings, the downloaded lists, and the rules the engine applies.
 /// Blocking is on by default and can be turned off everywhere or for one site at a time.
 @MainActor
 @Observable

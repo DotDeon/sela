@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "BrowKit",
+    name: "SelaKit",
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "SidebarModel", targets: ["SidebarModel"]),
@@ -20,7 +20,7 @@ let package = Package(
         .library(name: "Browsing", targets: ["Browsing"]),
         .library(name: "ContentBlocking", targets: ["ContentBlocking"]),
         .library(name: "Downloads", targets: ["Downloads"]),
-        .executable(name: "brow-arc", targets: ["brow-arc"]),
+        .executable(name: "sela-arc", targets: ["sela-arc"]),
     ],
     dependencies: [
         .package(url: "https://github.com/AdguardTeam/SafariConverterLib", exact: "4.3.1"),
@@ -30,17 +30,17 @@ let package = Package(
         .target(name: "SidebarModel"),
         .testTarget(name: "SidebarModelTests", dependencies: ["SidebarModel"]),
         .target(name: "Sidebar", dependencies: ["SidebarModel"]),
-        .testTarget(name: "SidebarTests", dependencies: ["Sidebar", "SidebarModel", "BrowTestSupport"]),
-        .target(name: "BrowTestSupport", dependencies: ["SidebarModel"]),
+        .testTarget(name: "SidebarTests", dependencies: ["Sidebar", "SidebarModel", "SelaTestSupport"]),
+        .target(name: "SelaTestSupport", dependencies: ["SidebarModel"]),
         .target(name: "Favicons"),
         .testTarget(name: "FaviconsTests", dependencies: ["Favicons"]),
         .target(name: "SidebarUI", dependencies: ["Browsing", "Sidebar", "SidebarModel", "Favicons", "BrowserEngine"]),
         .testTarget(
             name: "SidebarUITests",
-            dependencies: ["SidebarUI", "Browsing", "Sidebar", "SidebarModel", "Favicons", "FakeEngine", "BrowTestSupport"]
+            dependencies: ["SidebarUI", "Browsing", "Sidebar", "SidebarModel", "Favicons", "FakeEngine", "SelaTestSupport"]
         ),
         .target(name: "Archive", dependencies: ["Sidebar", "SidebarModel"]),
-        .testTarget(name: "ArchiveTests", dependencies: ["Archive", "Sidebar", "SidebarModel", "BrowTestSupport"]),
+        .testTarget(name: "ArchiveTests", dependencies: ["Archive", "Sidebar", "SidebarModel", "SelaTestSupport"]),
         .target(name: "History", linkerSettings: [.linkedLibrary("sqlite3")]),
         .testTarget(name: "HistoryTests", dependencies: ["History"]),
         .target(name: "CommandBar", dependencies: ["Browsing", "SidebarModel", "SidebarUI"]),
@@ -63,7 +63,7 @@ let package = Package(
             name: "Browsing",
             dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", .product(name: "PublicSuffixList", package: "swift-psl")]
         ),
-        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "BrowTestSupport"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "SelaTestSupport"]),
         .target(
             name: "ContentBlocking",
             dependencies: [
@@ -75,6 +75,6 @@ let package = Package(
         .testTarget(name: "ContentBlockingTests", dependencies: ["ContentBlocking", "BrowserEngine", "FakeEngine"]),
         .target(name: "Downloads", dependencies: ["BrowserEngine"]),
         .testTarget(name: "DownloadsTests", dependencies: ["Downloads", "BrowserEngine"]),
-        .executableTarget(name: "brow-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
+        .executableTarget(name: "sela-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
     ]
 )

@@ -33,7 +33,7 @@ private final class Clock {
 @MainActor
 private func makeStore(_ server: FakeServer, clock: Clock, folder: URL? = nil) throws -> (FilterListStore, URL) {
     let folder = try folder ?? {
-        let url = FileManager.default.temporaryDirectory.appending(path: "brow-lists-\(UUID().uuidString)")
+        let url = FileManager.default.temporaryDirectory.appending(path: "sela-lists-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
     }()

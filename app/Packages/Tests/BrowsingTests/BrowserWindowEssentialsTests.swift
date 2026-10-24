@@ -4,7 +4,7 @@ import FakeEngine
 import Foundation
 import Observation
 import Testing
-import BrowTestSupport
+import SelaTestSupport
 import Browsing
 import Sidebar
 import SidebarModel
@@ -27,7 +27,7 @@ private func makeModel(permissions: SitePermissions, downloads: DownloadList = D
 }
 
 private func freshPermissions() -> SitePermissions {
-    SitePermissions(defaults: UserDefaults(suiteName: "brow-ess-\(UUID().uuidString)")!)
+    SitePermissions(defaults: UserDefaults(suiteName: "sela-ess-\(UUID().uuidString)")!)
 }
 
 @MainActor @Test func fileChoicesGoThroughTheWindow() async throws {

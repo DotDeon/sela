@@ -5,7 +5,7 @@ import Testing
 
 private let pixel = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")!
 private let blockBanner = ContentRuleSet(
-    identifier: "brow-test-banner",
+    identifier: "sela-test-banner",
     json: #"[{"trigger":{"url-filter":"ad-banner\\.png"},"action":{"type":"block"}}]"#
 )
 
@@ -92,7 +92,7 @@ struct ContentBlockingContractTests {
     func pagesCantReachTheBridge(engine: EngineUnderTest) async throws {
         let browser = try blocking(engine)
         browser.pageScripts = { _, _ in PageScripts(css: [], extendedCss: [], js: [], scriptlets: []) }
-        let page = try site.page("probe.html", "<script>document.title = typeof window.webkit?.messageHandlers?.browContentBlocking</script>")
+        let page = try site.page("probe.html", "<script>document.title = typeof window.webkit?.messageHandlers?.selaContentBlocking</script>")
         let tab = try await loadedTab(browser, page)
         try await eventually { tab.state.title == "undefined" }
     }
@@ -128,11 +128,11 @@ struct ContentBlockingContractTests {
     }
 
     private var flagScriptlet: PageScripts {
-        PageScripts(css: [], extendedCss: [], js: [], scriptlets: [PageScriptlet(name: "set-constant", args: ["browTestFlag", "true"])])
+        PageScripts(css: [], extendedCss: [], js: [], scriptlets: [PageScriptlet(name: "set-constant", args: ["selaTestFlag", "true"])])
     }
 
     private func probe(_ name: String) throws -> URL {
-        try site.page(name, "<script>document.title = String(window.browTestFlag)</script>")
+        try site.page(name, "<script>document.title = String(window.selaTestFlag)</script>")
     }
 
     @Test(arguments: EngineUnderTest.allCases)
@@ -173,7 +173,7 @@ struct ContentBlockingContractTests {
         browser.pageScripts = { _, _ in rules }
         let page = try site.page("strict.html", """
             <meta http-equiv="Content-Security-Policy" content="script-src 'nonce-n'; require-trusted-types-for 'script'">
-            <script nonce="n">document.title = String(window.browTestFlag)</script>
+            <script nonce="n">document.title = String(window.selaTestFlag)</script>
             """)
         let tab = try await loadedTab(browser, page)
         try await eventually { tab.state.title == "true" || tab.state.title == "undefined" }

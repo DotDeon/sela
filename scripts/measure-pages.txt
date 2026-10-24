@@ -1,5 +1,5 @@
 https://en.wikipedia.org/wiki/Web_browser
-https://github.com/DotDeon/brow
+https://github.com/DotDeon/sela
 https://www.bbc.com/news
 https://www.theverge.com
 https://www.apple.com/macbook-air/

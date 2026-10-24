@@ -4,7 +4,7 @@ import SidebarModel
 
 /// Unpinned tabs in every space that haven't been selected for `interval`. Inactivity counts from
 /// `lastActiveAt`, or from `createdAt` for a tab that was never selected, but never from before `notBefore`:
-/// the moment Brow started archiving, so tabs imported from Arc or kept from before get a full interval first.
+/// the moment Sela started archiving, so tabs imported from Arc or kept from before get a full interval first.
 /// Protected tabs are skipped.
 public func inactiveTabs(in document: SidebarDocument, now: Date, after interval: TimeInterval, protecting: Set<ItemID>, notBefore: Date? = nil) -> [ItemID] {
     let cutoff = now.addingTimeInterval(-interval)

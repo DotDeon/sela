@@ -23,14 +23,14 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		B70000000000000000000005 /* Brow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Brow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B70000000000000000000005 /* Sela.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sela.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B70000000000000000000029 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Support/Signing.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B70000000000000000000004 /* Brow */ = {
+		B70000000000000000000004 /* Sela */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Brow;
+			path = Sela;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -62,7 +62,7 @@
 		B70000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
-				B70000000000000000000004 /* Brow */,
+				B70000000000000000000004 /* Sela */,
 				B70000000000000000000029 /* Signing.xcconfig */,
 				B70000000000000000000003 /* Products */,
 			);
@@ -71,7 +71,7 @@
 		B70000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B70000000000000000000005 /* Brow.app */,
+				B70000000000000000000005 /* Sela.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -79,9 +79,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B70000000000000000000006 /* Brow */ = {
+		B70000000000000000000006 /* Sela */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B7000000000000000000000B /* Build configuration list for PBXNativeTarget "Brow" */;
+			buildConfigurationList = B7000000000000000000000B /* Build configuration list for PBXNativeTarget "Sela" */;
 			buildPhases = (
 				B70000000000000000000007 /* Sources */,
 				B70000000000000000000008 /* Frameworks */,
@@ -92,9 +92,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B70000000000000000000004 /* Brow */,
+				B70000000000000000000004 /* Sela */,
 			);
-			name = Brow;
+			name = Sela;
 			packageProductDependencies = (
 				B70000000000000000000011 /* BrowserEngine */,
 				B70000000000000000000012 /* Browsing */,
@@ -110,8 +110,8 @@
 				B70000000000000000000028 /* ContentBlocking */,
 				B7000000000000000000002B /* Downloads */,
 			);
-			productName = Brow;
-			productReference = B70000000000000000000005 /* Brow.app */;
+			productName = Sela;
+			productReference = B70000000000000000000005 /* Sela.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -129,7 +129,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B7000000000000000000000A /* Build configuration list for PBXProject "Brow" */;
+			buildConfigurationList = B7000000000000000000000A /* Build configuration list for PBXProject "Sela" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -146,7 +146,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B70000000000000000000006 /* Brow */,
+				B70000000000000000000006 /* Sela */,
 			);
 		};
 /* End PBXProject section */
@@ -217,7 +217,7 @@
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Brow;
+				INFOPLIST_KEY_CFBundleDisplayName = Sela;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -226,7 +226,7 @@
 				);
 				MARKETING_VERSION = 0.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = app.brow.Brow;
-				PRODUCT_NAME = Brow;
+				PRODUCT_NAME = Sela;
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
@@ -235,14 +235,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = B70000000000000000000029 /* Signing.xcconfig */;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Support/Brow.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Support/Sela.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Brow;
+				INFOPLIST_KEY_CFBundleDisplayName = Sela;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -251,7 +251,7 @@
 				);
 				MARKETING_VERSION = 0.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = app.brow.Brow;
-				PRODUCT_NAME = Brow;
+				PRODUCT_NAME = Sela;
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
@@ -259,7 +259,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B7000000000000000000000A /* Build configuration list for PBXProject "Brow" */ = {
+		B7000000000000000000000A /* Build configuration list for PBXProject "Sela" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B7000000000000000000000C /* Debug */,
@@ -268,7 +268,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B7000000000000000000000B /* Build configuration list for PBXNativeTarget "Brow" */ = {
+		B7000000000000000000000B /* Build configuration list for PBXNativeTarget "Sela" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B7000000000000000000000E /* Debug */,

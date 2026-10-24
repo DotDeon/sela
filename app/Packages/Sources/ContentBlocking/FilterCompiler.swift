@@ -16,7 +16,7 @@ public struct CompiledFilters: Sendable {
 }
 
 /// Converts each list with AdGuard's converter. Takes up to a few seconds for big lists, so run it off the main actor.
-/// Each rule set's identifier is `brow-<id>-` and the first 16 hex characters of its JSON's SHA-256.
+/// Each rule set's identifier is `sela-<id>-` and the first 16 hex characters of its JSON's SHA-256.
 public func compileFilters(_ lists: [(id: String, text: String)]) -> CompiledFilters {
     var ruleSets: [ContentRuleSet] = []
     var advanced: [String] = []
@@ -25,7 +25,7 @@ public func compileFilters(_ lists: [(id: String, text: String)]) -> CompiledFil
         let lines = list.text.components(separatedBy: .newlines)
         let result = ContentBlockerConverter().convertArray(rules: lines, safariVersion: .autodetect(), advancedBlocking: true)
         let digest = SHA256.hash(data: Data(result.safariRulesJSON.utf8)).map { String(format: "%02x", $0) }.joined()
-        ruleSets.append(ContentRuleSet(identifier: "brow-\(list.id)-\(digest.prefix(16))", json: result.safariRulesJSON))
+        ruleSets.append(ContentRuleSet(identifier: "sela-\(list.id)-\(digest.prefix(16))", json: result.safariRulesJSON))
         // A rule in more than one list would otherwise run twice on a page.
         for rule in (result.advancedRulesText ?? "").components(separatedBy: .newlines) where !rule.isEmpty && seen.insert(rule).inserted {
             advanced.append(rule)

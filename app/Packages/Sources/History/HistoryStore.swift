@@ -48,10 +48,10 @@ public final class HistoryStore {
         sqlite3_close(db)
     }
 
-    /// `~/Library/Application Support/Brow/History.sqlite`. Creates the `Brow` folder if needed.
+    /// `~/Library/Application Support/Sela/History.sqlite`. Creates the `Sela` folder if needed.
     public static func defaultFileURL() throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let folder = support.appending(path: "Brow", directoryHint: .isDirectory)
+        let folder = support.appending(path: "Sela", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appending(path: "History.sqlite")
     }
@@ -72,7 +72,7 @@ public final class HistoryStore {
     /// A blank query returns the most recent.
     public func search(_ query: String, limit: Int) -> [HistoryEntry] {
         let words = Self.fold(query).split(whereSeparator: \.isWhitespace).map(String.init)
-        let conditions = words.map { _ in "brow_fold(url || ' ' || COALESCE(title, '')) LIKE ? ESCAPE '\\'" }
+        let conditions = words.map { _ in "sela_fold(url || ' ' || COALESCE(title, '')) LIKE ? ESCAPE '\\'" }
         let whereClause = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
         let sql = "SELECT url, title, visit_count, last_visited FROM visits \(whereClause) ORDER BY last_visited DESC LIMIT ?"
         let values = words.map { Value.text("%\(escapeLike($0))%") } + [.int(limit)]
@@ -136,10 +136,10 @@ public final class HistoryStore {
         text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     }
 
-    /// Adds `brow_fold(text)` to SQL, which lowercases and strips accents the same way as `fold`.
+    /// Adds `sela_fold(text)` to SQL, which lowercases and strips accents the same way as `fold`.
     /// SQLite's own `LIKE` only ignores case for ASCII letters.
     private func registerFold() throws {
-        let result = sqlite3_create_function_v2(db, "brow_fold", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil, { context, _, arguments in
+        let result = sqlite3_create_function_v2(db, "sela_fold", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil, { context, _, arguments in
             guard let argument = arguments?[0], let text = sqlite3_value_text(argument) else {
                 sqlite3_result_null(context)
                 return

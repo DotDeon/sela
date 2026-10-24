@@ -19,18 +19,18 @@ enum MainMenu {
     }
 
     private static func appMenu() -> NSMenu {
-        let menu = NSMenu(title: "Brow")
-        menu.addItem(item("About Brow", #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
+        let menu = NSMenu(title: "Sela")
+        menu.addItem(item("About Sela", #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
         menu.addItem(.separator())
         menu.addItem(item("Settings…", #selector(AppDelegate.showSettings(_:)), ","))
         menu.addItem(.separator())
         menu.addItem(item("Block Ads and Trackers", #selector(AppDelegate.toggleContentBlocking(_:))))
         menu.addItem(.separator())
-        menu.addItem(item("Hide Brow", #selector(NSApplication.hide(_:)), "h"))
+        menu.addItem(item("Hide Sela", #selector(NSApplication.hide(_:)), "h"))
         menu.addItem(item("Hide Others", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]))
         menu.addItem(item("Show All", #selector(NSApplication.unhideAllApplications(_:))))
         menu.addItem(.separator())
-        menu.addItem(item("Quit Brow", #selector(NSApplication.terminate(_:)), "q"))
+        menu.addItem(item("Quit Sela", #selector(NSApplication.terminate(_:)), "q"))
         return menu
     }
 

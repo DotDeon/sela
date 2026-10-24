@@ -3,7 +3,7 @@ import Testing
 @testable import WebKitEngine
 
 @Test func applicationNameUsesSafariVersion() throws {
-    let folder = FileManager.default.temporaryDirectory.appending(path: "brow-ua-\(UUID().uuidString)")
+    let folder = FileManager.default.temporaryDirectory.appending(path: "sela-ua-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     let plist = folder.appending(path: "Info.plist")
     try PropertyListSerialization.data(fromPropertyList: ["CFBundleShortVersionString": "27.0"], format: .xml, options: 0).write(to: plist)

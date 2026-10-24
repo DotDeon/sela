@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import Testing
-import BrowTestSupport
+import SelaTestSupport
 import Browsing
 import FakeEngine
 import Favicons

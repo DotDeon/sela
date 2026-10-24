@@ -3,7 +3,7 @@ import Testing
 @testable import SidebarModel
 
 private func makeTempDirectory() throws -> URL {
-    let url = FileManager.default.temporaryDirectory.appending(path: "brow-store-\(UUID().uuidString)")
+    let url = FileManager.default.temporaryDirectory.appending(path: "sela-store-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }

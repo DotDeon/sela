@@ -8,16 +8,16 @@ public struct SidebarDocumentStore: Sendable {
         self.fileURL = fileURL
     }
 
-    /// `~/Library/Application Support/Brow/Sidebar.json`. Creates the `Brow` folder if needed.
+    /// `~/Library/Application Support/Sela/Sidebar.json`. Creates the `Sela` folder if needed.
     public static func defaultFileURL() throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let folder = support.appending(path: "Brow", directoryHint: .isDirectory)
+        let folder = support.appending(path: "Sela", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appending(path: "Sidebar.json")
     }
 
     /// Returns nil when no file exists yet.
-    /// Throws `unsupportedVersion` for files from a newer Brow, leaving them in place.
+    /// Throws `unsupportedVersion` for files from a newer Sela, leaving them in place.
     /// Throws `corruptFile` after moving an unreadable or inconsistent file aside.
     public func load(now: Date = .now) throws -> SidebarDocument? {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }

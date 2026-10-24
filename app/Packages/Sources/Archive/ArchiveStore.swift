@@ -19,10 +19,10 @@ public final class ArchiveStore {
         load()
     }
 
-    /// `~/Library/Application Support/Brow/Archive.json`. Creates the `Brow` folder if needed.
+    /// `~/Library/Application Support/Sela/Archive.json`. Creates the `Sela` folder if needed.
     public static func defaultFileURL() throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let folder = support.appending(path: "Brow", directoryHint: .isDirectory)
+        let folder = support.appending(path: "Sela", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appending(path: "Archive.json")
     }

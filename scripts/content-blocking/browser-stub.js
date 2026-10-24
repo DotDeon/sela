@@ -1,2 +1,2 @@
-// Only AdGuard's background script uses the WebExtension polyfill, and Brow never runs it.
+// Only AdGuard's background script uses the WebExtension polyfill, and Sela never runs it.
 export default {};

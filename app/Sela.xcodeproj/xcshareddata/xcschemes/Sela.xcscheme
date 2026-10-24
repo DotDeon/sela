@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "B70000000000000000000006"
-               BuildableName = "Brow.app"
-               BlueprintName = "Brow"
-               ReferencedContainer = "container:Brow.xcodeproj">
+               BuildableName = "Sela.app"
+               BlueprintName = "Sela"
+               ReferencedContainer = "container:Sela.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "B70000000000000000000006"
-            BuildableName = "Brow.app"
-            BlueprintName = "Brow"
-            ReferencedContainer = "container:Brow.xcodeproj">
+            BuildableName = "Sela.app"
+            BlueprintName = "Sela"
+            ReferencedContainer = "container:Sela.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>

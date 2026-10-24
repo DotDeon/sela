@@ -3,7 +3,7 @@ import Testing
 import Browsing
 
 private func freshDefaults() -> UserDefaults {
-    UserDefaults(suiteName: "brow-sleep-\(UUID().uuidString)")!
+    UserDefaults(suiteName: "sela-sleep-\(UUID().uuidString)")!
 }
 
 @Test func defaultsToFifteenMinutes() {

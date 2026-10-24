@@ -44,7 +44,7 @@ public final class WebKitEngine: ContentBlockingEngine {
         }
         let ruleStore: WKContentRuleListStore = switch configuration.storage {
         case .persistent: .default()
-        case .ephemeral: WKContentRuleListStore(url: FileManager.default.temporaryDirectory.appending(path: "brow-rules-\(UUID().uuidString)"))
+        case .ephemeral: WKContentRuleListStore(url: FileManager.default.temporaryDirectory.appending(path: "sela-rules-\(UUID().uuidString)"))
         }
         contentRules = WebKitContentRules(store: ruleStore)
         applicationName = safariApplicationName(infoPlistURL: URL(fileURLWithPath: "/Applications/Safari.app/Contents/Info.plist"))

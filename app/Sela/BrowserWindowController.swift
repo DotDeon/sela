@@ -133,7 +133,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         }
         let alert = NSAlert()
         alert.messageText = "Allow \(origin.host() ?? "this site") to use your \(what)?"
-        alert.informativeText = "Brow remembers your choice for this site."
+        alert.informativeText = "Sela remembers your choice for this site."
         alert.addButton(withTitle: "Allow")
         alert.addButton(withTitle: "Don't Allow")
         return await alert.beginSheetModal(for: window) == .alertFirstButtonReturn
@@ -257,7 +257,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         guard let window else { return }
         let alert = NSAlert()
         alert.messageText = "Clear your browsing history?"
-        alert.informativeText = "This removes every page Brow remembers you visiting. Your sidebar and archive aren't affected."
+        alert.informativeText = "This removes every page Sela remembers you visiting. Your sidebar and archive aren't affected."
         alert.addButton(withTitle: "Clear History")
         alert.addButton(withTitle: "Cancel")
         alert.buttons.first?.hasDestructiveAction = true
@@ -275,6 +275,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
 
     private func updateTitle() {
         // Hidden in the title bar, but the Window menu and Mission Control use it.
-        window?.title = model.selectedTab.map { displayTitle(for: $0.state) } ?? "Brow"
+        window?.title = model.selectedTab.map { displayTitle(for: $0.state) } ?? "Sela"
     }
 }

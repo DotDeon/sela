@@ -4,7 +4,7 @@ import ContentBlocking
 import History
 import SwiftUI
 
-/// Brow > Settings… (Cmd+,): General, Ad Blocking, Permissions and Import.
+/// Sela > Settings… (Cmd+,): General, Ad Blocking, Permissions and Import.
 @MainActor
 final class SettingsWindowController: NSWindowController {
     init(contentBlocker: ContentBlocker?, history: HistoryStore?, onSettingsChanged: @escaping () -> Void) {
@@ -49,7 +49,7 @@ private struct GeneralSettings: View {
     var body: some View {
         Form {
             HStack {
-                Text(isDefault ? "Brow is your default browser" : "Brow isn't your default browser")
+                Text(isDefault ? "Sela is your default browser" : "Sela isn't your default browser")
                 Spacer()
                 if !isDefault {
                     Button("Make Default") { makeDefault() }
@@ -172,7 +172,7 @@ private struct ImportSettings: View {
                     Spacer()
                     Button("Import History") { HistoryImport.runAndReport(into: history, window: NSApp.keyWindow) }
                 }
-                Text("Your Arc sidebar is imported the first time Brow opens. Importing again would replace your Brow sidebar, so it isn't offered here.")
+                Text("Your Arc sidebar is imported the first time Sela opens. Importing again would replace your Sela sidebar, so it isn't offered here.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }

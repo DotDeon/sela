@@ -1,12 +1,12 @@
-# Brow design
+# Sela design
 
 Status: draft, 2026-10-23. The engine changed from a Chromium fork to WebKit for good on 2026-10-23. See Decisions.
 
-## Why Brow exists
+## Why Sela exists
 
-The Browser Company is shutting down Arc in December 2026. Brow is an open-source replacement for people who live in Arc and don't want to give up how it works. The owner uses Arc every day and has tried the vertical tab and sidebar options in other browsers. None of them feel the same.
+The Browser Company is shutting down Arc in December 2026. Sela is an open-source replacement for people who live in Arc and don't want to give up how it works. The owner uses Arc every day and has tried the vertical tab and sidebar options in other browsers. None of them feel the same.
 
-Success means the owner switches from Arc to Brow and doesn't miss Arc. Other Arc users can do the same by downloading Brow and importing their Arc setup.
+Success means the owner switches from Arc to Sela and doesn't miss Arc. Other Arc users can do the same by downloading Sela and importing their Arc setup.
 
 ## What makes Arc's sidebar different
 
@@ -24,15 +24,15 @@ All five of these are required. Together they are the product.
 - **Command bar.** Cmd+T opens one search box that finds open tabs, pinned tabs, history and web results, and runs commands.
 - **Split view.** Two or more tabs side by side in one window.
 - **Peek.** Links opened from a pinned tab show in a preview window over the current page, which can be expanded into a full tab.
-- **WebKit, the engine Safari uses.** It ships with macOS, so Brow has no engine to build, patch or keep up to date.
+- **WebKit, the engine Safari uses.** It ships with macOS, so Sela has no engine to build, patch or keep up to date.
 - **Import from Arc on first launch.** Spaces, pinned tabs, folders, favourites and history come across, so switching takes seconds.
-- **iCloud sync.** Spaces, pinned tabs, folders and favourites sync across the user's Macs through CloudKit. Sync is built last in the first version. Brow must be fully usable on one Mac without it.
-- **Signed, notarized and self-updating.** Users download a DMG that opens without a Gatekeeper warning, and Brow updates itself.
+- **iCloud sync.** Spaces, pinned tabs, folders and favourites sync across the user's Macs through CloudKit. Sync is built last in the first version. Sela must be fully usable on one Mac without it.
+- **Signed, notarized and self-updating.** Users download a DMG that opens without a Gatekeeper warning, and Sela updates itself.
 
 ## Non-goals
 
 - **Little Arc** (the small floating window for links from other apps). Maybe later, not in the first version.
-- **Windows and Linux.** Brow is Mac-only because the UI is native AppKit.
+- **Windows and Linux.** Sela is Mac-only because the UI is native AppKit.
 - **A phone app** or anything like Arc Search.
 - **Chrome extensions.** WebKit can't run them. Password managers work through their own Mac apps instead.
 - **A built-in password manager.** Passwords live in the user's password manager or Apple's Passwords app.
@@ -41,13 +41,13 @@ All five of these are required. Together they are the product.
 
 ## Anti-goals
 
-These would make Brow a failure even if it technically works.
+These would make Sela a failure even if it technically works.
 
 - **Boosts.** No custom CSS or JS site restyling, ever.
 - **A web-drawn browser UI.** If the sidebar is HTML inside a web view, it won't feel like Arc. The browser UI must be native.
-- **Running a server.** Brow must never need a backend operated by the project. No accounts and no hosting bills that grow with users.
+- **Running a server.** Sela must never need a backend operated by the project. No accounts and no hosting bills that grow with users.
 - **Telemetry.** No analytics, usage statistics or crash uploads.
-- **Copying Arc.** No Arc code, icons, sounds, animation files, fonts or other assets go into Brow. Brow behaves like Arc but everything in it is written or drawn from scratch. "Arc" appears only where Brow names the browser it imports from.
+- **Copying Arc.** No Arc code, icons, sounds, animation files, fonts or other assets go into Sela. Sela behaves like Arc but everything in it is written or drawn from scratch. "Arc" appears only where Sela names the browser it imports from.
 
 ## Constraints
 
@@ -69,9 +69,9 @@ A static teardown of Arc 1.169.0 (built 14 October 2026) shaped the decisions be
 
 ## Architecture
 
-Brow copies the shape of Arc's app: a native Swift app drawing all the browser UI on top of a browser engine. Arc wraps Chromium in its own framework. Brow uses WebKit through `WKWebView`, so there is no engine to build or patch.
+Sela copies the shape of Arc's app: a native Swift app drawing all the browser UI on top of a browser engine. Arc wraps Chromium in its own framework. Sela uses WebKit through `WKWebView`, so there is no engine to build or patch.
 
-### The Brow app
+### The Sela app
 
 - Swift, with the sidebar, command bar, split view and Peek in AppKit, and smaller panels and settings screens in SwiftUI hosted inside AppKit. This matches how Arc gets its feel: table view rows for sidebar items and native drag and drop.
 - Feature code lives in Swift packages, one module per feature, so features stay isolated and each can be tested on its own.
@@ -79,9 +79,9 @@ Brow copies the shape of Arc's app: a native Swift app drawing all the browser U
 
 ### Browser engines
 
-Brow's UI depends only on a set of Swift protocols in the `BrowserEngine` module: create and close tabs, show a tab's content view, navigate, observe title, URL, favicon, loading and audio state, back/forward, find in page, handle new-window requests, downloads, permission prompts and JavaScript dialogs. Two implementations sit behind them:
+Sela's UI depends only on a set of Swift protocols in the `BrowserEngine` module: create and close tabs, show a tab's content view, navigate, observe title, URL, favicon, loading and audio state, back/forward, find in page, handle new-window requests, downloads, permission prompts and JavaScript dialogs. Two implementations sit behind them:
 
-1. **`WebKitEngine`.** Built on `WKWebView`, which ships with macOS. The only engine Brow ships.
+1. **`WebKitEngine`.** Built on `WKWebView`, which ships with macOS. The only engine Sela ships.
 2. **`FakeEngine`, for tests and previews only.** No web content.
 
 Rules that keep the UI independent of WebKit, so another engine could still be added one day:
@@ -91,7 +91,7 @@ Rules that keep the UI independent of WebKit, so another engine could still be a
 
 ### Sidebar data model
 
-Brow uses the same shape Arc uses, because it's proven and makes import a straight mapping.
+Sela uses the same shape Arc uses, because it's proven and makes import a straight mapping.
 
 - A flat list of items, each with `id`, `parentID`, `childrenIds`, `title`, `createdAt`, and a `data` payload that is one of:
   - `tab`: saved URL, saved title, last active time, mute status
@@ -99,11 +99,11 @@ Brow uses the same shape Arc uses, because it's proven and makes import a straig
   - `itemContainer`: the root container for a space's pinned items, unpinned items, or the favourites grid
 - Spaces reference their containers, a colour theme, an icon and a profile.
 - An ordered list of space IDs and the favourites container ID sit at the top level.
-- The whole sidebar is stored as one JSON file in Brow's Application Support folder, written atomically. Archived tabs go in a separate JSON file, like Arc's `StorableArchive`.
+- The whole sidebar is stored as one JSON file in Sela's Application Support folder, written atomically. Archived tabs go in a separate JSON file, like Arc's `StorableArchive`.
 
 ### Import from Arc
 
-Arc stores its sidebar in `~/Library/Application Support/Arc/StorableSidebar.json`. Its top level has `sidebar.containers`, where the second container holds `items`, `spaces` and `topAppsContainerIDs`. Item and space shapes match the model above. The importer reads this file read-only and builds Brow's sidebar from it.
+Arc stores its sidebar in `~/Library/Application Support/Arc/StorableSidebar.json`. Its top level has `sidebar.containers`, where the second container holds `items`, `spaces` and `topAppsContainerIDs`. Item and space shapes match the model above. The importer reads this file read-only and builds Sela's sidebar from it.
 
 History comes from the `History` SQLite database in Arc's Chromium profile in `~/Library/Application Support/Arc/User Data/`, read directly. Arc must be closed during import because it locks that database while it runs. Passwords and cookies stay with Arc: the owner exports passwords from Arc into a password manager, and signs in to websites again once.
 
@@ -116,16 +116,16 @@ CloudKit private database, one record per sidebar item and space, with each user
 ## Repository layout
 
 ```
-brow/
-  README.md              what Brow is, how to build it, what each folder holds
+sela/
+  README.md              what Sela is, how to build it, what each folder holds
   LICENSE
-  assets/                Brow's own icons and artwork
+  assets/                Sela's own icons and artwork
   docs/
     design/              design documents like this one
     building.md          building, signing and releasing
   app/
-    Brow.xcodeproj       the macOS app target
-    Brow/                app entry point, window management, menus
+    Sela.xcodeproj       the macOS app target
+    Sela/                app entry point, window management, menus
     Packages/            one Swift package per feature: Sidebar, Spaces,
                          CommandBar, SplitView, Peek, Archive, ArcImport,
                          Sync, Settings, BrowserEngine (engine protocols),
@@ -139,9 +139,9 @@ brow/
 Made by the owner:
 
 - Use as few resources as possible, decided 2026-10-24. Unused tabs sleep after 15 minutes and wake where they were, and memory warnings from macOS sleep every background tab.
-- Content blocking, decided 2026-10-23. Brow blocks ads and trackers by default with EasyList and EasyPrivacy, converted by AdGuard's SafariConverterLib into WebKit content rules, with a switch per site.
-- Brow is licensed GPL-3.0, decided 2026-10-23, because AdGuard's library is GPL-3.0.
-- WebKit for good, decided 2026-10-23. This replaces the earlier plan of a Chromium fork. Brow stays small and builds on any Mac, needs no Widevine licence and has no engine to update every 4 weeks. It gives up Chrome extensions.
+- Content blocking, decided 2026-10-23. Sela blocks ads and trackers by default with EasyList and EasyPrivacy, converted by AdGuard's SafariConverterLib into WebKit content rules, with a switch per site.
+- Sela is licensed GPL-3.0, decided 2026-10-23, because AdGuard's library is GPL-3.0.
+- WebKit for good, decided 2026-10-23. This replaces the earlier plan of a Chromium fork. Sela stays small and builds on any Mac, needs no Widevine licence and has no engine to update every 4 weeks. It gives up Chrome extensions.
 - Native Mac UI in Swift and AppKit. Not web-drawn.
 - Mac only.
 - First version: sidebar, command bar, split view, Peek, Arc import, CloudKit sync. Little Arc later. Boosts never.
@@ -152,7 +152,7 @@ Made as calls during design. The owner can override any of these:
 
 - Sync is built last in the first version.
 - The JSON storage format mirrors Arc's.
-- Sparkle for self-updates, as Arc uses. Release builds and the update feed are hosted on GitHub Releases, which keeps Brow free of a server.
+- Sparkle for self-updates, as Arc uses. Release builds and the update feed are hosted on GitHub Releases, which keeps Sela free of a server.
 - No crash reporting service by default.
 - One profile for all spaces in the first version.
 - Feature state uses Swift's Observation framework (`@Observable` stores per feature) instead of The Composable Architecture. It's simpler for a small team and doesn't fight AppKit.

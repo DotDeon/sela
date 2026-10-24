@@ -1,23 +1,23 @@
 #!/bin/sh
-# Measures how much memory Brow uses with the pages in scripts/measure-pages.txt loaded,
+# Measures how much memory Sela uses with the pages in scripts/measure-pages.txt loaded,
 # then again after unused tabs have gone to sleep.
 #
 # Runs a Release build with a throwaway data folder, so your own sidebar isn't touched.
-# Quit Brow, Safari and Mail first: their WebKit processes would be counted too.
+# Quit Sela, Safari and Mail first: their WebKit processes would be counted too.
 set -eu
 cd "$(dirname "$0")/.."
 
-if pgrep -x Brow >/dev/null; then
-    echo "Quit Brow first." >&2
+if pgrep -x Sela >/dev/null; then
+    echo "Quit Sela first." >&2
     exit 1
 fi
 
 pages="$PWD/scripts/measure-pages.txt"
 count=$(grep -c . "$pages")
-data=$(mktemp -d "${TMPDIR:-/tmp}/brow-measure.XXXXXX")
-app=.build/measure/Build/Products/Release/Brow.app
+data=$(mktemp -d "${TMPDIR:-/tmp}/sela-measure.XXXXXX")
+app=.build/measure/Build/Products/Release/Sela.app
 
-xcodebuild -project app/Brow.xcodeproj -scheme Brow -configuration Release \
+xcodebuild -project app/Sela.xcodeproj -scheme Sela -configuration Release \
     -derivedDataPath .build/measure -skipPackagePluginValidation \
     CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= build >/dev/null
 
@@ -29,9 +29,9 @@ footprint_mb() {
         printf "%.0f", v; exit }'
 }
 
-# Brow plus every WebKit process that wasn't running before it started.
+# Sela plus every WebKit process that wasn't running before it started.
 total_mb() {
-    sum=$(footprint_mb "$brow")
+    sum=$(footprint_mb "$sela")
     for pid in $(pgrep -f "com.apple.WebKit"); do
         case " $before " in *" $pid "*) continue ;; esac
         sum=$((sum + $(footprint_mb "$pid")))
@@ -40,14 +40,14 @@ total_mb() {
 }
 
 before=$(pgrep -f "com.apple.WebKit" | tr '\n' ' ')
-"$app/Contents/MacOS/Brow" -BrowDataFolder "$data" -BrowOpenPages "$pages" -SleepTabsAfterSeconds 60 >/dev/null 2>&1 &
-brow=$!
+"$app/Contents/MacOS/Sela" -SelaDataFolder "$data" -SelaOpenPages "$pages" -SleepTabsAfterSeconds 60 >/dev/null 2>&1 &
+sela=$!
 
 sleep $((count * 4 + 20))
 echo "Loaded, $count pages:   $(total_mb) MB"
 sleep 90
 echo "After tabs slept:     $(total_mb) MB"
 
-kill "$brow"
-wait "$brow" 2>/dev/null || true
+kill "$sela"
+wait "$sela" 2>/dev/null || true
 rm -rf "$data"

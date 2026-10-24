@@ -12,9 +12,9 @@ import WebKitEngine
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
-    /// With `-BrowDataFolder`, cookies, caches and compiled ad blocking rules stay in memory, away from your own.
+    /// With `-SelaDataFolder`, cookies, caches and compiled ad blocking rules stay in memory, away from your own.
     private let engine = WebKitEngine(configuration: .init(
-        storage: UserDefaults.standard.string(forKey: "BrowDataFolder") == nil ? .persistent : .ephemeral
+        storage: UserDefaults.standard.string(forKey: "SelaDataFolder") == nil ? .persistent : .ephemeral
     ))
     private var sidebar: SidebarStore!
     private var favicons: FaviconStore!
@@ -25,9 +25,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var settingsWindow: SettingsWindowController?
     /// This session's downloads, shown in every window.
     private let downloads = DownloadList()
-    /// `-BrowDataFolder <path>` keeps every Brow file in that folder instead of Application Support,
+    /// `-SelaDataFolder <path>` keeps every Sela file in that folder instead of Application Support,
     /// and skips the Arc import. For measuring runs that mustn't touch your own sidebar.
-    private let dataFolderOverride: URL? = UserDefaults.standard.string(forKey: "BrowDataFolder").map { URL(fileURLWithPath: $0, isDirectory: true) }
+    private let dataFolderOverride: URL? = UserDefaults.standard.string(forKey: "SelaDataFolder").map { URL(fileURLWithPath: $0, isDirectory: true) }
     private var contentBlocker: ContentBlocker!
     private var listRefreshTimer: Timer?
     private var missingListTimer: Timer?
@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var pendingURLs: [URL] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        moveDataFromOldName()
         NSApp.mainMenu = MainMenu.make()
         if let dataFolderOverride {
             try? FileManager.default.createDirectory(at: dataFolderOverride, withIntermediateDirectories: true)
@@ -46,8 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             firstRunDocument: dataFolderOverride == nil ? FirstRunImport.document : { nil }
         )
         favicons = FaviconStore(cacheFolder: dataFile("Favicons") ?? (try? FaviconStore.defaultCacheFolder()) ?? FileManager.default.temporaryDirectory)
-        archive = ArchiveStore(fileURL: dataFile("Archive.json") ?? (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Brow-Archive.json"))
-        // Brow works without history if the database can't open.
+        archive = ArchiveStore(fileURL: dataFile("Archive.json") ?? (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Sela-Archive.json"))
+        // Sela works without history if the database can't open.
         history = (dataFile("History.sqlite") ?? (try? HistoryStore.defaultFileURL())).flatMap { try? HistoryStore(fileURL: $0) }
         startContentBlocking()
         // Start Fresh means nothing from Arc. File > Import History from Arc… still brings it in later.
@@ -78,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         tabSleeper = TabSleeper { [weak self] in self?.windowControllers.map(\.model) ?? [] }
         tabSleeper?.start()
 
-        if let pagesFile = UserDefaults.standard.string(forKey: "BrowOpenPages") {
+        if let pagesFile = UserDefaults.standard.string(forKey: "SelaOpenPages") {
             openPagesForMeasuring(listedIn: URL(fileURLWithPath: pagesFile))
         }
     }
@@ -99,7 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         return true
     }
 
-    /// Links and HTML files from other apps, for example when Brow is the default browser.
+    /// Links and HTML files from other apps, for example when Sela is the default browser.
     /// Each opens in a new tab in the frontmost window, or in a new window when none is open.
     func application(_ application: NSApplication, open urls: [URL]) {
         let pages = urls.filter { ["http", "https", "file"].contains($0.scheme?.lowercased() ?? "") }
@@ -153,7 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         Task { await tabSleeper?.sleepUnusedTabs() }
     }
 
-    /// `-BrowOpenPages <file>`: opens each address in the file as a new tab, one every 4 seconds. For measuring runs.
+    /// `-SelaOpenPages <file>`: opens each address in the file as a new tab, one every 4 seconds. For measuring runs.
     private func openPagesForMeasuring(listedIn file: URL) {
         let pages = ((try? String(contentsOf: file, encoding: .utf8)) ?? "")
             .split(whereSeparator: \.isNewline)
@@ -166,7 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
-    /// Brow > Block Ads and Trackers. Reloads each window's page so the change shows at once.
+    /// Sela > Block Ads and Trackers. Reloads each window's page so the change shows at once.
     @objc func toggleContentBlocking(_ sender: Any?) {
         contentBlocker.setEnabled(!contentBlocker.isEnabled)
         for controller in windowControllers { controller.model.selectedTab?.reload() }
@@ -190,8 +191,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func startContentBlocking() {
         let folder = dataFile("ContentBlocking")
             ?? (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
-                .map { $0.appending(path: "Brow/ContentBlocking", directoryHint: .isDirectory) }
-            ?? FileManager.default.temporaryDirectory.appending(path: "Brow-ContentBlocking")
+                .map { $0.appending(path: "Sela/ContentBlocking", directoryHint: .isDirectory) }
+            ?? FileManager.default.temporaryDirectory.appending(path: "Sela-ContentBlocking")
         let store = FilterListStore(folder: folder, fetch: { url in
             let (data, response) = try await URLSession.shared.data(from: url)
             return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
@@ -213,14 +214,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
-    /// A file in the measuring folder from `-BrowDataFolder`, or nil for Brow's usual place.
+    /// Sela was called Brow. Its files move from `Application Support/Brow` to `Application Support/Sela` once,
+    /// before anything opens them.
+    private func moveDataFromOldName() {
+        guard dataFolderOverride == nil,
+              let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        else { return }
+        let old = support.appending(path: "Brow", directoryHint: .isDirectory)
+        let new = support.appending(path: "Sela", directoryHint: .isDirectory)
+        guard FileManager.default.fileExists(atPath: old.path), !FileManager.default.fileExists(atPath: new.path) else { return }
+        try? FileManager.default.moveItem(at: old, to: new)
+    }
+
+    /// A file in the measuring folder from `-SelaDataFolder`, or nil for Sela's usual place.
     private func dataFile(_ name: String) -> URL? {
         dataFolderOverride?.appending(path: name)
     }
 
     private func sidebarFileURL() -> URL {
         (try? SidebarDocumentStore.defaultFileURL())
-            ?? FileManager.default.temporaryDirectory.appending(path: "Brow-Sidebar.json")
+            ?? FileManager.default.temporaryDirectory.appending(path: "Sela-Sidebar.json")
     }
 
     private func reportLoadProblem() {
@@ -228,14 +241,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let alert = NSAlert()
         switch problem {
         case .corrupt(let backupURL):
-            alert.messageText = "Brow couldn't read your sidebar"
-            alert.informativeText = "Brow started with an empty sidebar. The unreadable file was kept as \(backupURL.lastPathComponent) in \(backupURL.deletingLastPathComponent().path)."
+            alert.messageText = "Sela couldn't read your sidebar"
+            alert.informativeText = "Sela started with an empty sidebar. The unreadable file was kept as \(backupURL.lastPathComponent) in \(backupURL.deletingLastPathComponent().path)."
         case .newerVersion:
-            alert.messageText = "Your sidebar was saved by a newer version of Brow"
-            alert.informativeText = "This version can't read it, so it's showing an empty sidebar. Changes you make now won't be saved, and your sidebar file is left as it is. Update Brow to get it back."
+            alert.messageText = "Your sidebar was saved by a newer version of Sela"
+            alert.informativeText = "This version can't read it, so it's showing an empty sidebar. Changes you make now won't be saved, and your sidebar file is left as it is. Update Sela to get it back."
         case .unreadable(let reason):
-            alert.messageText = "Brow couldn't open your sidebar"
-            alert.informativeText = "Brow is showing an empty sidebar and won't save changes, so your sidebar file stays safe. Check the file's permissions in ~/Library/Application Support/Brow, then reopen Brow. (\(reason))"
+            alert.messageText = "Sela couldn't open your sidebar"
+            alert.informativeText = "Sela is showing an empty sidebar and won't save changes, so your sidebar file stays safe. Check the file's permissions in ~/Library/Application Support/Sela, then reopen Sela. (\(reason))"
         }
         alert.runModal()
     }

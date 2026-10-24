@@ -9,7 +9,7 @@ private struct Fixture {
     let destination: URL
 
     init() throws {
-        let base = FileManager.default.temporaryDirectory.appending(path: "brow-snapshot-\(UUID().uuidString)")
+        let base = FileManager.default.temporaryDirectory.appending(path: "sela-snapshot-\(UUID().uuidString)")
         source = base.appending(path: "Arc")
         destination = base.appending(path: "Backups")
         let fm = FileManager.default

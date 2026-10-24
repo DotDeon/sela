@@ -3,7 +3,7 @@ import Foundation
 /// Safari's version, used when the installed Safari can't be read.
 private let fallbackSafariVersion = "27.0"
 
-/// The text WebKit appends to its user agent so sites treat Brow like Safari.
+/// The text WebKit appends to its user agent so sites treat Sela like Safari.
 /// WebKit's default user agent has no `Safari/` token, and Google and others serve worse pages or block sign-in without it.
 func safariApplicationName(infoPlistURL: URL) -> String {
     let info = (try? Data(contentsOf: infoPlistURL))

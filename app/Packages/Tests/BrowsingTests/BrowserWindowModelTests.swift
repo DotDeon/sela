@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import BrowTestSupport
+import SelaTestSupport
 import BrowserEngine
 import Browsing
 import FakeEngine

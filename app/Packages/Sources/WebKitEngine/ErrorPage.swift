@@ -16,7 +16,7 @@ func errorPageHTML(for url: URL, error: NSError) -> String {
     @media (prefers-color-scheme: dark) { body { background: #1e1e1e; color: #ddd; } a { color: #5aa2ff; } }
     </style></head>
     <body><h1>Can’t open this page</h1>
-    <p>Brow couldn’t open <strong>\(escaped(address))</strong>. \(escaped(error.localizedDescription))</p>
+    <p>Sela couldn’t open <strong>\(escaped(address))</strong>. \(escaped(error.localizedDescription))</p>
     <p><a href="\(escaped(address))">Try again</a> · <a href="\(escaped(search))">Search for \(escaped(query))</a></p>
     </body></html>
     """

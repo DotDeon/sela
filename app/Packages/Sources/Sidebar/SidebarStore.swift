@@ -4,11 +4,11 @@ import SidebarModel
 
 /// Why the sidebar on disk couldn't be used at launch.
 public enum SidebarLoadProblem: Equatable, Sendable {
-    /// The file couldn't be read. It was moved to `backupURL` and Brow started with an empty sidebar.
+    /// The file couldn't be read. It was moved to `backupURL` and Sela started with an empty sidebar.
     case corrupt(backupURL: URL)
-    /// A newer Brow wrote the file. Brow runs with an empty sidebar and never saves over the file.
+    /// A newer Sela wrote the file. Sela runs with an empty sidebar and never saves over the file.
     case newerVersion(Int)
-    /// The file couldn't be opened, for example because of its permissions. Brow runs with an empty
+    /// The file couldn't be opened, for example because of its permissions. Sela runs with an empty
     /// sidebar and never saves over the file.
     case unreadable(reason: String)
 }
@@ -86,7 +86,7 @@ public final class SidebarStore {
         return result
     }
 
-    /// True when saving would destroy a sidebar file Brow couldn't read.
+    /// True when saving would destroy a sidebar file Sela couldn't read.
     private var isReadOnly: Bool {
         switch loadProblem {
         case .newerVersion, .unreadable: true

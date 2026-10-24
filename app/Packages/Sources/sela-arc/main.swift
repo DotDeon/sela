@@ -5,8 +5,8 @@ import Foundation
 
 let usage = """
 Usage:
-  brow-arc snapshot <destination-folder> [--allow-running]
-  brow-arc inspect [--root <arc-or-snapshot-folder>]
+  sela-arc snapshot <destination-folder> [--allow-running]
+  sela-arc inspect [--root <arc-or-snapshot-folder>]
 """
 
 func fail(_ message: String, status: Int32 = 1) -> Never {

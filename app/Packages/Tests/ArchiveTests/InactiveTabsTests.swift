@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import Archive
-import BrowTestSupport
+import SelaTestSupport
 import Sidebar
 import SidebarModel
 

@@ -14,7 +14,7 @@ private final class Clock {
 @MainActor
 private func makeStore(_ file: URL? = nil, clock: Clock = Clock()) throws -> (HistoryStore, URL, Clock) {
     let file = try file ?? {
-        let folder = FileManager.default.temporaryDirectory.appending(path: "brow-history-\(UUID().uuidString)")
+        let folder = FileManager.default.temporaryDirectory.appending(path: "sela-history-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appending(path: "History.sqlite")
     }()

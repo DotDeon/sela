@@ -74,9 +74,9 @@ struct EngineContractTests {
     func promptReturnsDelegateText(engine: EngineUnderTest) async throws {
         let page = try site.page("prompt.html", "<script>document.title = prompt('name?', 'x')</script>")
         let delegate = RecordingDelegate()
-        delegate.answer = .accepted(text: "Brow")
+        delegate.answer = .accepted(text: "Sela")
         let tab = try await loadedTab(engine.make(), page, delegate: delegate)
-        try await eventually { tab.state.title == "Brow" }
+        try await eventually { tab.state.title == "Sela" }
         #expect(delegate.dialogs == [.prompt(message: "name?", defaultText: "x")])
     }
 
@@ -106,7 +106,7 @@ struct EngineContractTests {
 
     @Test(arguments: EngineUnderTest.allCases)
     func failedLoadShowsErrorPage(engine: EngineUnderTest) async throws {
-        let unreachable = URL(string: "https://brow-test.invalid/")!
+        let unreachable = URL(string: "https://sela-test.invalid/")!
         let tab = engine.make().makeTab(url: unreachable)
         try await eventually { tab.state.title == "Can’t open this page" }
         #expect(tab.state.url == unreachable)

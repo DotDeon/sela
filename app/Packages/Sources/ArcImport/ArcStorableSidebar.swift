@@ -1,6 +1,6 @@
 import Foundation
 
-// Decodable mirror of the parts of Arc's StorableSidebar.json that Brow imports.
+// Decodable mirror of the parts of Arc's StorableSidebar.json that Sela imports.
 // Unknown keys are ignored. All timestamps are seconds since 1 January 2001.
 
 struct ArcStorableSidebar: Decodable {

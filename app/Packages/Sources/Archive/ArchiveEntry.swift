@@ -7,7 +7,7 @@ public struct ArchiveEntry: Codable, Equatable, Identifiable, Sendable {
     public enum Reason: String, Codable, Sendable {
         /// The user closed it, or cleared it with the rest of the unpinned tabs.
         case closed
-        /// Brow archived it after it went unused for the archive interval.
+        /// Sela archived it after it went unused for the archive interval.
         case inactive
     }
 

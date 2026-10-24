@@ -13,8 +13,8 @@ private let rules = """
 @Test func compilingMakesOneRuleSetPerList() {
     let compiled = compileFilters([(id: "a", text: rules), (id: "b", text: rules)])
     #expect(compiled.ruleSets.count == 2)
-    #expect(compiled.ruleSets[0].identifier.hasPrefix("brow-a-"))
-    #expect(compiled.ruleSets[1].identifier.hasPrefix("brow-b-"))
+    #expect(compiled.ruleSets[0].identifier.hasPrefix("sela-a-"))
+    #expect(compiled.ruleSets[1].identifier.hasPrefix("sela-b-"))
     #expect(compiled.ruleSets.allSatisfy { $0.json.contains(#"ads\\.example\\.com"#) })
 }
 
@@ -24,7 +24,7 @@ private let rules = """
     let changed = compileFilters([(id: "a", text: rules + "\n||more.example.com^")]).ruleSets[0].identifier
     #expect(first == again)
     #expect(first != changed)
-    #expect(first.count == "brow-a-".count + 16)
+    #expect(first.count == "sela-a-".count + 16)
 }
 
 @Test func scriptletsBecomeAdvancedRules() {
@@ -32,7 +32,7 @@ private let rules = """
 }
 
 @MainActor @Test func lookupFindsScriptletsForTheirSite() throws {
-    let folder = FileManager.default.temporaryDirectory.appending(path: "brow-engine-\(UUID().uuidString)")
+    let folder = FileManager.default.temporaryDirectory.appending(path: "sela-engine-\(UUID().uuidString)")
     let lookup = try PageScriptLookup(advancedRules: compileFilters([(id: "a", text: rules)]).advancedRules, folder: folder)
     #expect(lookup.scripts(page: URL(string: "https://example.com/")!, top: nil)?.scriptlets.map(\.name) == ["abort-on-property-read"])
     #expect(lookup.scripts(page: URL(string: "https://other.org/")!, top: nil) == nil)

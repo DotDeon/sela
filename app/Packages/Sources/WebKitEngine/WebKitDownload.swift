@@ -46,7 +46,7 @@ final class WebKitDownload: NSObject, BrowserDownload, WKDownloadDelegate {
         }
     }
 
-    /// Removes the unfinished file, for example when Brow quits mid-download.
+    /// Removes the unfinished file, for example when Sela quits mid-download.
     func discard() {
         cancel()
         removePartialFile()

@@ -1,6 +1,6 @@
 {
   "private": true,
-  "description": "Builds the page script Brow uses to apply AdGuard's advanced blocking rules.",
+  "description": "Builds the page script Sela uses to apply AdGuard's advanced blocking rules.",
   "license": "GPL-3.0",
   "dependencies": {
     "@adguard/safari-extension": "4.3.1"

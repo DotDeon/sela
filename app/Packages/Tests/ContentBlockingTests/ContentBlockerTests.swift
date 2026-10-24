@@ -48,8 +48,8 @@ private struct Harness {
     let defaults: UserDefaults
 
     init(defaults: UserDefaults? = nil, folder: URL? = nil) {
-        self.folder = folder ?? FileManager.default.temporaryDirectory.appending(path: "brow-blocking-\(UUID().uuidString)")
-        self.defaults = defaults ?? UserDefaults(suiteName: "brow-tests-\(UUID().uuidString)")!
+        self.folder = folder ?? FileManager.default.temporaryDirectory.appending(path: "sela-blocking-\(UUID().uuidString)")
+        self.defaults = defaults ?? UserDefaults(suiteName: "sela-tests-\(UUID().uuidString)")!
     }
 
     func makeStore() -> FilterListStore {

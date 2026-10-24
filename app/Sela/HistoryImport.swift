@@ -2,7 +2,7 @@ import AppKit
 import ArcImport
 import History
 
-/// Brings Arc's browsing history from the last 90 days into Brow's history.
+/// Brings Arc's browsing history from the last 90 days into Sela's history.
 @MainActor
 enum HistoryImport {
     static let doneKey = "ArcHistoryImported"
@@ -23,10 +23,10 @@ enum HistoryImport {
         if let history {
             let count = run(into: history)
             alert.messageText = count == 0 ? "Arc has no history to import" : "Imported \(count) pages from Arc"
-            alert.informativeText = count == 0 ? "Brow looked for Arc's history and found nothing from the last 90 days." : "They're in the command bar's history results now."
+            alert.informativeText = count == 0 ? "Sela looked for Arc's history and found nothing from the last 90 days." : "They're in the command bar's history results now."
         } else {
-            alert.messageText = "Brow's history isn't available"
-            alert.informativeText = "Brow couldn't open its history file, so there's nowhere to import Arc's history to."
+            alert.messageText = "Sela's history isn't available"
+            alert.informativeText = "Sela couldn't open its history file, so there's nowhere to import Arc's history to."
         }
         if let window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }

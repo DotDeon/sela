@@ -5,7 +5,9 @@ import WebKit
 /// The rule lists every tab uses, compiled by WebKit and kept between launches by identifier.
 @MainActor
 final class WebKitContentRules {
-    static let identifierPrefix = "brow-"
+    static let identifierPrefix = "sela-"
+    /// Rule lists saved before the rename from Brow, removed on the next install.
+    static let oldIdentifierPrefix = "brow-"
 
     private let store: WKContentRuleListStore
     private(set) var lists: [WKContentRuleList] = []
@@ -14,7 +16,7 @@ final class WebKitContentRules {
         self.store = store
     }
 
-    /// Looks each set up by identifier, compiling only the ones WebKit doesn't have, then forgets old Brow lists.
+    /// Looks each set up by identifier, compiling only the ones WebKit doesn't have, then forgets old Sela lists.
     func install(_ ruleSets: [ContentRuleSet]) async throws {
         var compiled: [WKContentRuleList] = []
         for ruleSet in ruleSets {
@@ -26,7 +28,7 @@ final class WebKitContentRules {
         }
         lists = compiled
         let wanted = Set(ruleSets.map(\.identifier))
-        for identifier in await store.availableIdentifiers() ?? [] where identifier.hasPrefix(Self.identifierPrefix) && !wanted.contains(identifier) {
+        for identifier in await store.availableIdentifiers() ?? [] where (identifier.hasPrefix(Self.identifierPrefix) || identifier.hasPrefix(Self.oldIdentifierPrefix)) && !wanted.contains(identifier) {
             try? await store.removeContentRuleList(forIdentifier: identifier)
         }
     }
@@ -42,8 +44,8 @@ final class WebKitContentRules {
 /// AdGuard's content script, bundled by `scripts/content-blocking/build.sh`, and the bridge it asks for rules.
 @MainActor
 enum PageScriptInjection {
-    static let world = WKContentWorld.world(name: "BrowContentBlocking")
-    static let handlerName = "browContentBlocking"
+    static let world = WKContentWorld.world(name: "SelaContentBlocking")
+    static let handlerName = "selaContentBlocking"
 
     static let script: WKUserScript? = {
         guard let url = Bundle.module.url(forResource: "content-blocking", withExtension: "js"),
@@ -64,7 +66,7 @@ enum PageScriptInjection {
         controller.removeAllUserScripts()
         guard let script else { return }
         if let early, let data = try? JSONEncoder().encode(early), let json = String(data: data, encoding: .utf8) {
-            controller.addUserScript(WKUserScript(source: "window.__browEarlyRules = \(json);", injectionTime: .atDocumentStart, forMainFrameOnly: true, in: world))
+            controller.addUserScript(WKUserScript(source: "window.__selaEarlyRules = \(json);", injectionTime: .atDocumentStart, forMainFrameOnly: true, in: world))
         }
         controller.addUserScript(script)
     }

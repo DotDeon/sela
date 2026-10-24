@@ -39,7 +39,7 @@ public func fixtureDocument() -> SidebarDocument {
 }
 
 public func temporaryFolder() throws -> URL {
-    let url = FileManager.default.temporaryDirectory.appending(path: "brow-test-\(UUID().uuidString)")
+    let url = FileManager.default.temporaryDirectory.appending(path: "sela-test-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }

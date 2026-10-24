@@ -1,6 +1,6 @@
-// Code signing for Brow.app.
+// Code signing for Sela.app.
 //
-// By default Brow is signed ad hoc, which runs on the Mac that built it. To sign with your own Apple team,
+// By default Sela is signed ad hoc, which runs on the Mac that built it. To sign with your own Apple team,
 // copy Signing.local.xcconfig.example to Signing.local.xcconfig next to this file and fill it in.
 // Signing.local.xcconfig is ignored by git, so your team settings stay on your Mac.
 

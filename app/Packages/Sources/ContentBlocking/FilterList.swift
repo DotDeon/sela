@@ -1,6 +1,6 @@
 import Foundation
 
-/// An ad blocking filter list Brow downloads and keeps up to date.
+/// An ad blocking filter list Sela downloads and keeps up to date.
 public struct FilterList: Equatable, Sendable {
     public let id: String
     public let title: String

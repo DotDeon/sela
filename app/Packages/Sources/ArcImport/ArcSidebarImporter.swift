@@ -20,7 +20,7 @@ public enum ArcImportError: Error, Equatable, Sendable {
     case noSpaces
 }
 
-/// Turns Arc's StorableSidebar.json into a Brow sidebar. Reads the file and never writes to it.
+/// Turns Arc's StorableSidebar.json into a Sela sidebar. Reads the file and never writes to it.
 public struct ArcSidebarImporter: Sendable {
     public init() {}
 
@@ -86,7 +86,7 @@ public struct ArcSidebarImporter: Sendable {
     }
 }
 
-/// Walks Arc's items from each root container and builds Brow items.
+/// Walks Arc's items from each root container and builds Sela items.
 private struct Builder {
     let arcItemsByID: [String: ArcItem]
     var visited: Set<String> = []

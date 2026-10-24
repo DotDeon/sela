@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import BrowTestSupport
+import SelaTestSupport
 @testable import SidebarModel
 
 private func split(_ doc: SidebarDocument, _ id: ItemID) -> SplitInfo? {

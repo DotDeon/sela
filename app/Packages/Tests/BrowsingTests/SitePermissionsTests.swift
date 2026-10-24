@@ -4,7 +4,7 @@ import Testing
 import Browsing
 
 private func fresh() -> SitePermissions {
-    SitePermissions(defaults: UserDefaults(suiteName: "brow-perm-\(UUID().uuidString)")!)
+    SitePermissions(defaults: UserDefaults(suiteName: "sela-perm-\(UUID().uuidString)")!)
 }
 private let meet = URL(string: "https://meet.google.com")!
 private let accounts = URL(string: "https://accounts.google.com")!

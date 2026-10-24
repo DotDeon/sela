@@ -3,7 +3,7 @@ import SidebarModel
 
 extension NSPasteboard.PasteboardType {
     /// A sidebar tab or folder being dragged. The value is the item's ID.
-    public static let sidebarItem = NSPasteboard.PasteboardType("app.brow.sidebar-item")
+    public static let sidebarItem = NSPasteboard.PasteboardType("app.sela.sidebar-item")
 }
 
 @MainActor

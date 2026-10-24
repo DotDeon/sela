@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@_exported import BrowTestSupport
+@_exported import SelaTestSupport
 
 /// Polls every 10 ms for up to 2 seconds.
 @MainActor

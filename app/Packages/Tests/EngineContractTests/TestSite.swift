@@ -28,7 +28,7 @@ struct TestSite {
     let folder: URL
 
     init() throws {
-        folder = FileManager.default.temporaryDirectory.appending(path: "brow-site-\(UUID().uuidString)")
+        folder = FileManager.default.temporaryDirectory.appending(path: "sela-site-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     }
 

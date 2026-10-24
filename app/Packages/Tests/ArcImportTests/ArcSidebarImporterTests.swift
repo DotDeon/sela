@@ -12,7 +12,7 @@ func importFixture() throws -> ArcImportResult {
 }
 
 private func writeTemp(_ json: String) throws -> URL {
-    let dir = FileManager.default.temporaryDirectory.appending(path: "brow-arc-\(UUID().uuidString)")
+    let dir = FileManager.default.temporaryDirectory.appending(path: "sela-arc-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     let url = dir.appending(path: "StorableSidebar.json")
     try Data(json.utf8).write(to: url)

@@ -33,7 +33,7 @@ struct EssentialsContractTests {
             <a id="d" href="data.bin">get</a>
             <script>setTimeout(() => document.getElementById('d').click(), 200)</script>
             """)
-        let target = FileManager.default.temporaryDirectory.appending(path: "brow-dl-\(UUID().uuidString)/data.bin")
+        let target = FileManager.default.temporaryDirectory.appending(path: "sela-dl-\(UUID().uuidString)/data.bin")
         try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         let delegate = DownloadingDelegate(destination: target)
         let tab = engine.make().makeTab(url: nil)
@@ -51,7 +51,7 @@ extension EssentialsContractTests {
     @Test(arguments: EngineUnderTest.allCases)
     func cancellingEndsTheDownloadAndRemovesItsFile(engine: EngineUnderTest) async throws {
         let server = try SlowServer()
-        let target = FileManager.default.temporaryDirectory.appending(path: "brow-dl-\(UUID().uuidString)/slow.bin")
+        let target = FileManager.default.temporaryDirectory.appending(path: "sela-dl-\(UUID().uuidString)/slow.bin")
         try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         let delegate = DownloadingDelegate(destination: target)
         let tab = engine.make().makeTab(url: nil)

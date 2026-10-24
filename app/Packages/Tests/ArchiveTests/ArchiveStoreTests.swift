@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 import Archive
-import BrowTestSupport
+import SelaTestSupport
 import SidebarModel
 
 private let day: TimeInterval = 24 * 60 * 60

@@ -13,7 +13,7 @@ private func chromiumTime(_ date: Date) -> Int64 {
 
 /// A folder laid out like Arc's, with a History database per profile.
 private func arcFolder(profiles: [String: [(url: String, title: String?, count: Int, date: Date, hidden: Bool)]]) throws -> ArcDataLocation {
-    let root = FileManager.default.temporaryDirectory.appending(path: "brow-arc-\(UUID().uuidString)")
+    let root = FileManager.default.temporaryDirectory.appending(path: "sela-arc-\(UUID().uuidString)")
     for (profile, rows) in profiles {
         let folder = root.appending(path: "User Data/\(profile)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -66,6 +66,6 @@ private func arcFolder(profiles: [String: [(url: String, title: String?, count: 
 }
 
 @Test func missingArcGivesNothing() {
-    let arc = ArcDataLocation(root: FileManager.default.temporaryDirectory.appending(path: "brow-no-arc-\(UUID().uuidString)"))
+    let arc = ArcDataLocation(root: FileManager.default.temporaryDirectory.appending(path: "sela-no-arc-\(UUID().uuidString)"))
     #expect(readArcHistory(from: arc, since: .distantPast).isEmpty)
 }

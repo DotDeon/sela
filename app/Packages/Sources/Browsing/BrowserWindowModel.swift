@@ -442,7 +442,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         select(id)
     }
 
-    /// Restores the tab the user closed most recently. Skips tabs Brow archived for inactivity,
+    /// Restores the tab the user closed most recently. Skips tabs Sela archived for inactivity,
     /// so a sweep in the background doesn't change what Reopen brings back. Does nothing when there's none.
     public func reopenLastArchived() {
         guard let newest = archive?.entries.first(where: { $0.reason == .closed }) else { return }
@@ -467,7 +467,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         }
     }
 
-    /// Records that the selected tab is in use right now, for example when Brow quits,
+    /// Records that the selected tab is in use right now, for example when Sela quits,
     /// so archiving counts from now rather than from when it was selected.
     public func markSelectionActive() {
         if let selected = selectedItemID {

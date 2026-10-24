@@ -16,7 +16,7 @@ public final class FaviconStore {
     @ObservationIgnored private let cacheFolder: URL
     @ObservationIgnored private let fetch: Fetch
     @ObservationIgnored private var inFlight: Set<String> = []
-    /// Hosts with no usable icon this launch. Not retried until Brow restarts.
+    /// Hosts with no usable icon this launch. Not retried until Sela restarts.
     @ObservationIgnored private var failed: Set<String> = []
     /// The icon each host's pages last declared, so repeated reports don't refetch it.
     @ObservationIgnored private var rememberedIcons: [String: URL] = [:]
@@ -26,10 +26,10 @@ public final class FaviconStore {
         self.fetch = fetch
     }
 
-    /// `~/Library/Application Support/Brow/Favicons`, created if needed.
+    /// `~/Library/Application Support/Sela/Favicons`, created if needed.
     public static func defaultCacheFolder() throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let folder = support.appending(path: "Brow/Favicons", directoryHint: .isDirectory)
+        let folder = support.appending(path: "Sela/Favicons", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder
     }
@@ -64,7 +64,7 @@ public final class FaviconStore {
     public static let urlSessionFetch: Fetch = sessionFetch(using: session)
 
     /// A fetch on `session` that streams the response and stops as soon as it passes 512 KB,
-    /// so a page can't make Brow download without limit.
+    /// so a page can't make Sela download without limit.
     public nonisolated static func sessionFetch(using session: URLSession) -> Fetch {
         { url in
             let (bytes, response) = try await session.bytes(from: url)

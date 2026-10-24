@@ -31,7 +31,7 @@ private func png(width: Int = 4) -> Data {
 }
 
 private func folder() throws -> URL {
-    let url = FileManager.default.temporaryDirectory.appending(path: "brow-favicons-\(UUID().uuidString)")
+    let url = FileManager.default.temporaryDirectory.appending(path: "sela-favicons-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }
