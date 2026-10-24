@@ -2,13 +2,18 @@
 # Builds a Developer ID signed, notarized Sela for a GitHub release: a disk image for people to
 # download, a zip for Sparkle to update from, and the update feed that points at the zip.
 #
-# Needs a "Developer ID Application" certificate in your keychain, the asc CLI logged in to
-# App Store Connect with a key that can notarize, and Sela's update signing key in your login
-# keychain (made once with Sparkle's generate_keys). Usage: scripts/release.sh TEAM_ID
+# Needs a "Developer ID Application" certificate in your keychain, the gh CLI logged in to
+# GitHub, and Sela's update signing key. On your Mac it notarizes with the asc CLI and reads the
+# signing key from your login keychain. On GitHub Actions it notarizes with notarytool and reads
+# the key from a file, when these are set:
+#   NOTARY_KEY_PATH, NOTARY_KEY_ID, NOTARY_ISSUER  an App Store Connect API key
+#   SPARKLE_KEY_FILE                               the update signing key, from generate_keys -x
+# Usage: scripts/release.sh TEAM_ID
 #
-# Everything lands in .build/release/Build/Products/Release. Upload these three to the release:
+# Everything lands in .build/release/Build/Products/Release. Upload these to the release:
 #   Sela.dmg            the website links to releases/latest/download/Sela.dmg
 #   Sela-<version>.zip  what Sparkle downloads
+#   *.delta             only what changed since recent versions, so most updates are small
 #   appcast.xml         installed apps check releases/latest/download/appcast.xml
 set -eu
 cd "$(dirname "$0")/.."
@@ -39,11 +44,19 @@ codesign --verify --deep --strict "$products/Sela.app"
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$products/Sela.app/Contents/Info.plist")
 zip="$products/Sela-$version.zip"
 dmg="$products/Sela.dmg"
-rm -rf "$products/Sela-notarize.zip" "$zip" "$dmg" "$products/appcast" "$products/appcast.xml" "$products/dmg"
+rm -rf "$products/Sela-notarize.zip" "$zip" "$dmg" "$products/appcast" "$products/appcast.xml" "$products/dmg" "$products"/*.delta
+
+notarize() {
+    if [ -n "${NOTARY_KEY_PATH:-}" ]; then
+        xcrun notarytool submit "$1" --key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER" --wait --timeout 30m
+    else
+        asc notarization submit --file "$1" --wait --timeout 30m --output json
+    fi
+}
 
 # Notarize the app and staple the ticket to it, so it opens offline too.
 ditto -c -k --keepParent "$products/Sela.app" "$products/Sela-notarize.zip"
-asc notarization submit --file "$products/Sela-notarize.zip" --wait --timeout 30m --output json
+notarize "$products/Sela-notarize.zip"
 rm "$products/Sela-notarize.zip"
 xcrun stapler staple "$products/Sela.app"
 spctl -a -t exec "$products/Sela.app"
@@ -58,17 +71,23 @@ ln -s /Applications "$products/dmg/Applications"
 hdiutil create -volname Sela -srcfolder "$products/dmg" -fs HFS+ -format UDZO -ov "$dmg"
 rm -rf "$products/dmg"
 codesign --sign "Developer ID Application" --timestamp "$dmg"
-asc notarization submit --file "$dmg" --wait --timeout 30m --output json
+notarize "$dmg"
 xcrun stapler staple "$dmg"
 spctl -a -t open --context context:primary-signature "$dmg"
 
-# The update feed, signed with the key in your keychain. It lists this release only.
+# The update feed. It lists this release only, but the current release's zip sits beside it so
+# Sparkle can make a delta from the last version to this one.
 mkdir "$products/appcast"
+gh release download --repo DotDeon/sela --pattern 'Sela-*.zip' --dir "$products/appcast" || true
 cp "$zip" "$products/appcast/"
-"$sparkle/generate_appcast" \
+key=""
+[ -n "${SPARKLE_KEY_FILE:-}" ] && key="--ed-key-file $SPARKLE_KEY_FILE"
+# shellcheck disable=SC2086
+"$sparkle/generate_appcast" $key --maximum-versions 1 \
     --download-url-prefix "https://github.com/DotDeon/sela/releases/download/v$version/" \
     --link "https://github.com/DotDeon/sela/releases" \
     -o "$products/appcast.xml" "$products/appcast"
+mv "$products/appcast"/*.delta "$products/" 2>/dev/null || true
 rm -rf "$products/appcast"
 
 shasum -a 256 "$dmg" "$zip"

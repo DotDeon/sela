@@ -76,7 +76,7 @@ You can also open `app/Sela.xcodeproj` in Xcode and press Cmd+R. The first time,
 
 To measure how much memory Sela uses with 10 real sites open, before and after tabs sleep, quit Sela, Safari and Mail and run `scripts/measure-memory.sh`. It uses a throwaway profile, so your sidebar isn't touched.
 
-To build a release, run `scripts/release.sh TEAM_ID`. It makes a signed, notarized disk image, the zip Sparkle updates from, and the signed update feed, `appcast.xml`. It needs a Developer ID Application certificate, the `asc` command-line tool logged in to App Store Connect, and Sela's update signing key in your login keychain.
+To release, run `scripts/ship.sh 0.1.4` on main. It sets the version, tags it and pushes, and the Release workflow on GitHub builds, signs and notarizes Sela, then publishes the disk image, the zip Sparkle updates from, delta updates from the last version and the signed update feed, `appcast.xml`. The workflow's header lists the secrets it needs. To build a release on your own Mac instead, run `scripts/release.sh TEAM_ID`. It needs a Developer ID Application certificate, the `asc` command-line tool logged in to App Store Connect, the `gh` tool logged in to GitHub, and Sela's update signing key in your login keychain.
 
 ## Running the tests
 
