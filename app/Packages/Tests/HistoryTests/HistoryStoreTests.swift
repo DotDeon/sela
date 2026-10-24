@@ -113,3 +113,41 @@ private func url(_ string: String) -> URL { URL(string: string)! }
     let (reopened, _, _) = try makeStore(file, clock: clock)
     #expect(reopened.search("a", limit: 10).map(\.title) == ["A"])
 }
+
+private func entry(_ address: String, _ title: String?, count: Int, at date: Date) -> HistoryEntry {
+    HistoryEntry(url: url(address), title: title, visitCount: count, lastVisitedAt: date)
+}
+
+@MainActor @Test func importAddsNewPages() throws {
+    let (store, _, _) = try makeStore()
+    #expect(store.importVisits([entry("https://a.example.com/", "A", count: 4, at: start)]) == 1)
+    let found = try #require(store.search("", limit: 10).first)
+    #expect(found.visitCount == 4)
+    #expect(found.title == "A")
+}
+
+@MainActor @Test func importTwiceDoesNotDoubleCounts() throws {
+    let (store, _, _) = try makeStore()
+    let visits = [entry("https://a.example.com/", "A", count: 4, at: start)]
+    store.importVisits(visits)
+    store.importVisits(visits)
+    #expect(store.search("", limit: 10).first?.visitCount == 4)
+}
+
+@MainActor @Test func importKeepsTheLaterVisitAndLargerCount() throws {
+    let (store, _, clock) = try makeStore()
+    for _ in 0..<6 { store.recordVisit(url: url("https://a.example.com/"), title: "Mine") }
+    let mine = clock.now
+    store.importVisits([entry("https://a.example.com/", "Theirs", count: 2, at: start.addingTimeInterval(-day))])
+    let found = try #require(store.search("", limit: 10).first)
+    #expect(found.visitCount == 6)
+    #expect(found.lastVisitedAt == mine)
+    #expect(found.title == "Mine")
+}
+
+@MainActor @Test func importFillsMissingTitles() throws {
+    let (store, _, _) = try makeStore()
+    store.recordVisit(url: url("https://a.example.com/"), title: nil)
+    store.importVisits([entry("https://a.example.com/", "From Arc", count: 1, at: start)])
+    #expect(store.search("", limit: 10).first?.title == "From Arc")
+}

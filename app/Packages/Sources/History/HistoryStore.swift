@@ -93,6 +93,29 @@ public final class HistoryStore {
         return results
     }
 
+    /// Merges visits from elsewhere, such as Arc, in one transaction. Each page keeps the larger visit count and the
+    /// later visit, so importing twice changes nothing, and an existing title wins. Returns how many rows changed.
+    @discardableResult
+    public func importVisits(_ visits: [HistoryEntry]) -> Int {
+        let before = sqlite3_total_changes(db)
+        run("BEGIN", [])
+        for visit in visits {
+            guard let scheme = visit.url.scheme?.lowercased(), ["http", "https"].contains(scheme) else { continue }
+            run("""
+                INSERT INTO visits (url, title, visit_count, last_visited) VALUES (?, ?, ?, ?)
+                ON CONFLICT(url) DO UPDATE SET
+                    title = COALESCE(visits.title, excluded.title),
+                    visit_count = max(visits.visit_count, excluded.visit_count),
+                    last_visited = max(visits.last_visited, excluded.last_visited)
+                WHERE visits.title IS NOT excluded.title AND visits.title IS NULL
+                    OR visits.visit_count < excluded.visit_count
+                    OR visits.last_visited < excluded.last_visited
+                """, [.text(visit.url.absoluteString), visit.title.map(Value.text) ?? .null, .int(visit.visitCount), .double(visit.lastVisitedAt.timeIntervalSince1970)])
+        }
+        run("COMMIT", [])
+        return Int(sqlite3_total_changes(db) - before)
+    }
+
     /// Deletes every visit and rewrites the files, so nothing of the old history stays on disk.
     public func clear() {
         run("DELETE FROM visits", [])
