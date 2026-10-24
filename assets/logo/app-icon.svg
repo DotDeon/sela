@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Sela's app icon: a river stone holding still while two currents bend
+       around it. Laid out on Apple's macOS grid: an 824 point tile at 100,100. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#15958a"/>
+      <stop offset="1" stop-color="#0a5e57"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.18" r="0.75">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="stone" cx="0.38" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#4a5755"/>
+      <stop offset="0.45" stop-color="#1c2524"/>
+      <stop offset="1" stop-color="#080c0c"/>
+    </radialGradient>
+    <radialGradient id="sheen" cx="0.36" cy="0.24" r="0.32">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="current" gradientUnits="userSpaceOnUse" x1="100" y1="0" x2="924" y2="0">
+      <stop offset="0" stop-color="#7ff0dc" stop-opacity="0"/>
+      <stop offset="0.3" stop-color="#7ff0dc"/>
+      <stop offset="0.75" stop-color="#7ff0dc" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#7ff0dc" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="tileShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.32"/>
+    </filter>
+    <filter id="soft" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+    <clipPath id="tileClip">
+      <rect x="100" y="100" width="824" height="824" rx="185"/>
+    </clipPath>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" filter="url(#tileShadow)"/>
+  <g clip-path="url(#tileClip)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+
+    <!-- The stone's shadow on the water. -->
+    <ellipse cx="520" cy="600" rx="230" ry="54" fill="#04302c" opacity="0.6" filter="url(#soft)"/>
+
+    <!-- The river: streamlines that run straight until the stone, bend
+         around it, and carry on. -->
+    <g fill="none" stroke="url(#current)" stroke-linecap="round">
+      <path d="M 250 262 C 400 254 520 266 650 258" stroke-width="12" opacity="0.45"/>
+      <path d="M 110 430 C 250 430 330 330 500 326 C 670 322 740 392 914 392" stroke-width="20"/>
+      <path d="M 110 640 C 260 640 350 712 520 712 C 690 712 760 654 914 654" stroke-width="20"/>
+      <path d="M 420 816 C 560 824 690 810 830 818" stroke-width="12" opacity="0.45"/>
+    </g>
+
+    <!-- The stone. -->
+    <g transform="rotate(-5 512 512)">
+      <path id="pebble" d="M 302 534 C 290 452 372 398 488 390 C 612 382 720 420 730 500
+               C 738 566 678 618 550 624 C 422 630 312 604 302 534 Z" fill="url(#stone)"/>
+      <use href="#pebble" fill="url(#sheen)"/>
+    </g>
+  </g>
+</svg>
