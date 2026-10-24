@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import Testing
 import SelaTestSupport
+import BrowserEngine
 import Browsing
 import FakeEngine
 import Favicons
@@ -198,4 +199,43 @@ private struct Harness {
     try await eventually { cell.showsCloseOnHover }
     let unpinned = try #require(h.firstOutline.view(atColumn: 0, row: 4, makeIfNecessary: true) as? ItemCellView)
     #expect(unpinned.showsCloseOnHover)
+}
+
+@MainActor
+private func fakeExtension(named name: String) async throws -> FakeExtension {
+    let folder = try temporaryFolder()
+    try JSONSerialization.data(withJSONObject: ["name": name, "version": "1"]).write(to: folder.appending(path: "manifest.json"))
+    return try #require(try await FakeEngine().loadExtension(id: name, at: folder, permissions: .none) as? FakeExtension)
+}
+
+@MainActor @Test func extensionsGetButtonsAndClicksReachTheWindow() async throws {
+    let h = try Harness()
+    let darkReader = try await fakeExtension(named: "dark-reader")
+    var clicked: [String] = []
+    h.controller.onExtensionClicked = { item, _ in clicked.append(item.id) }
+    h.controller.extensions = [darkReader]
+    try await eventually { h.controller.extensionAnchor(for: "dark-reader") is ExtensionButton }
+    let button = try #require(h.controller.extensionAnchor(for: "dark-reader") as? ExtensionButton)
+    button.performClick(nil)
+    #expect(clicked == ["dark-reader"])
+}
+
+@MainActor @Test func extensionBadgesFollowTheExtension() async throws {
+    let h = try Harness()
+    let blocker = try await fakeExtension(named: "blocker")
+    h.controller.extensions = [blocker]
+    try await eventually { h.controller.extensionAnchor(for: "blocker") is ExtensionButton }
+    blocker.actionState = ExtensionActionState(label: "Blocker", badgeText: "12", icon: nil, isEnabled: false)
+    let button = try #require(h.controller.extensionAnchor(for: "blocker") as? ExtensionButton)
+    try await eventually { !button.isEnabled }
+    #expect(button.toolTip == "Blocker")
+}
+
+@MainActor @Test func anExtensionWithoutAButtonUsesTheMenu() async throws {
+    let h = try Harness()
+    let quiet = try await fakeExtension(named: "quiet")
+    quiet.actionState = nil
+    h.controller.extensions = [quiet]
+    h.controller.view.layoutSubtreeIfNeeded()
+    #expect(!(h.controller.extensionAnchor(for: "quiet") is ExtensionButton))
 }

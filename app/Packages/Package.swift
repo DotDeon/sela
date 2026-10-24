@@ -38,7 +38,7 @@ let package = Package(
         .target(name: "SidebarUI", dependencies: ["Browsing", "Sidebar", "SidebarModel", "Favicons", "BrowserEngine"]),
         .testTarget(
             name: "SidebarUITests",
-            dependencies: ["SidebarUI", "Browsing", "Sidebar", "SidebarModel", "Favicons", "FakeEngine", "SelaTestSupport"]
+            dependencies: ["SidebarUI", "BrowserEngine", "Browsing", "Sidebar", "SidebarModel", "Favicons", "FakeEngine", "SelaTestSupport"]
         ),
         .target(name: "Archive", dependencies: ["Sidebar", "SidebarModel"]),
         .testTarget(name: "ArchiveTests", dependencies: ["Archive", "Sidebar", "SidebarModel", "SelaTestSupport"]),

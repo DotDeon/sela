@@ -1,6 +1,8 @@
 import AppKit
+import BrowserEngine
 import Browsing
 import Favicons
+import Observation
 import Sidebar
 import SidebarModel
 
@@ -35,6 +37,27 @@ public final class SidebarViewController: NSViewController {
     /// When set, the sidebar's New Tab button calls this instead of adding a blank tab.
     public var onNewTabClicked: (() -> Void)?
 
+    /// The extensions whose buttons show beside back and forward.
+    public var extensions: [any BrowserExtension] {
+        get { extensionList.items }
+        set { extensionList.items = newValue }
+    }
+
+    /// Called with the extension whose button was clicked, and the button to show its popup under.
+    public var onExtensionClicked: ((any BrowserExtension, NSView) -> Void)? {
+        didSet { extensionButtons.onClick = onExtensionClicked }
+    }
+
+    /// The extensions menu's Manage Extensions item.
+    public var onManageExtensions: (() -> Void)? {
+        didSet { extensionButtons.onManage = onManageExtensions }
+    }
+
+    /// Where to show an extension's popup: its button, or the extensions menu when its button doesn't fit.
+    public func extensionAnchor(for id: String) -> NSView {
+        extensionButtons.anchor(for: id)
+    }
+
     let pager: SpacePagerView
     let favoritesGrid: FavoritesGridView
     private let model: BrowserWindowModel
@@ -45,6 +68,8 @@ public final class SidebarViewController: NSViewController {
     private let backButton = HoverButton(symbol: "chevron.left", label: "Back", pointSize: 14)
     private let forwardButton = HoverButton(symbol: "chevron.right", label: "Forward", pointSize: 14)
     private let reloadButton = HoverButton(symbol: "arrow.clockwise", label: "Reload")
+    private let extensionButtons = ExtensionButtonsView()
+    private let extensionList = ExtensionList()
 
     public init(model: BrowserWindowModel, favicons: FaviconStore) {
         self.model = model
@@ -82,6 +107,8 @@ public final class SidebarViewController: NSViewController {
         }
         navigation.translatesAutoresizingMaskIntoConstraints = false
         controls.addSubview(navigation)
+        extensionButtons.translatesAutoresizingMaskIntoConstraints = false
+        controls.addSubview(extensionButtons)
 
         let inset: CGFloat = 10
         NSLayoutConstraint.activate([
@@ -97,6 +124,10 @@ public final class SidebarViewController: NSViewController {
             controls.heightAnchor.constraint(equalToConstant: 40),
             navigation.trailingAnchor.constraint(equalTo: controls.trailingAnchor, constant: -6),
             navigation.centerYAnchor.constraint(equalTo: controls.centerYAnchor, constant: 1),
+            extensionButtons.trailingAnchor.constraint(equalTo: navigation.leadingAnchor, constant: -2),
+            extensionButtons.centerYAnchor.constraint(equalTo: navigation.centerYAnchor),
+            // Clear of the window's traffic lights. Buttons that don't fit move to the extensions menu.
+            extensionButtons.leadingAnchor.constraint(greaterThanOrEqualTo: controls.leadingAnchor, constant: 78),
 
             addressPill.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 2),
             addressPill.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
@@ -121,6 +152,7 @@ public final class SidebarViewController: NSViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
         keepObserving { [weak self] in self?.update() }
+        keepObserving { [weak self] in self?.updateExtensionButtons() }
     }
 
     /// Puts the cursor in the address with the whole address selected.
@@ -151,6 +183,11 @@ public final class SidebarViewController: NSViewController {
         reloadButton.setSymbol(isLoading ? "xmark" : "arrow.clockwise", label: isLoading ? "Stop" : "Reload")
     }
 
+    /// Reads each extension's button for the selected tab, so an extension changing it updates the sidebar.
+    private func updateExtensionButtons() {
+        extensionButtons.update(extensions: extensionList.items, tab: model.selectedTab)
+    }
+
     private func submitAddress(_ text: String) {
         if let onAddressSubmitted {
             onAddressSubmitted(text)
@@ -176,6 +213,13 @@ public final class SidebarViewController: NSViewController {
         guard let tab = model.selectedTab else { return }
         if tab.state.isLoading { tab.stopLoading() } else { tab.reload() }
     }
+}
+
+/// The extensions the sidebar shows buttons for, observable so a new list redraws them.
+@MainActor
+@Observable
+private final class ExtensionList {
+    var items: [any BrowserExtension] = []
 }
 
 /// Empty space at the top of the sidebar that drags the window, like a title bar.
