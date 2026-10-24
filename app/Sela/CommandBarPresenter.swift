@@ -4,6 +4,7 @@ import Browsing
 import CommandBar
 import Favicons
 import History
+import Sidebar
 import SidebarModel
 import SidebarUI
 
@@ -32,6 +33,8 @@ final class CommandBarPresenter {
         CommandCandidate(id: "add-split", title: "Add Split View", keywords: ["side", "pane"]),
         CommandCandidate(id: "separate-split", title: "Separate Split View", keywords: ["unsplit"]),
         CommandCandidate(id: "rotate-split", title: "Rotate Split View", keywords: ["vertical", "horizontal"]),
+        CommandCandidate(id: "tab-overview", title: "Tab Overview", keywords: ["grid", "all", "thumbnails", "expose"]),
+        CommandCandidate(id: "toggle-reader", title: "Show or Hide Reader", keywords: ["article", "read"]),
         CommandCandidate(id: "toggle-site-blocking", title: "Turn Ad Blocking On or Off for This Site", keywords: ["adblock", "ads", "tracker", "shield"]),
     ]
 
@@ -161,7 +164,8 @@ final class CommandBarPresenter {
             guard let item = document.item(id), case .tab(let info) = item.kind else { return nil }
             let page = model.pageForDisplay(for: id)
             let title = sidebarTitle(for: item, liveState: page)
-            return TabCandidate(id: id, title: title, url: page?.url ?? info.savedURL, lastActiveAt: info.lastActiveAt)
+            return TabCandidate(id: id, title: title, url: page?.url ?? info.savedURL, lastActiveAt: info.lastActiveAt,
+                                location: tabLocation(of: id, in: document))
         }
     }
 
@@ -180,6 +184,8 @@ final class CommandBarPresenter {
         case .open(let url, let inNewTab):
             if inNewTab { model.newTab(url: url) } else { model.load(url) }
         case .selectTab(let id):
+            // A tab found inside a closed folder shows in the sidebar once it's selected.
+            model.sidebar.expandFolders(containing: id)
             model.select(id)
         case .restoreArchived(let id):
             model.restore(id)

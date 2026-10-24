@@ -28,6 +28,11 @@ final class WebKitTab: NSObject, BrowserTab {
     @ObservationIgnored private var showingFormResult = false
     /// The host whose early rules this tab's scripts now carry.
     @ObservationIgnored private var earlyRulesHost: String?
+    /// True when the page now showing reads like an article.
+    @ObservationIgnored private var isArticle = false
+    /// The reader's own web view, laid over the page while reader mode is on.
+    @ObservationIgnored private var readerView: WKWebView?
+    @ObservationIgnored private let readerNavigation = ReaderNavigation()
 
     var contentView: NSView { webView }
 
@@ -42,6 +47,7 @@ final class WebKitTab: NSObject, BrowserTab {
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
         webView.isInspectable = true
+        readerNavigation.tab = self
         observeWebView()
     }
 
@@ -62,11 +68,108 @@ final class WebKitTab: NSObject, BrowserTab {
         configuration.caseSensitive = false
         configuration.wraps = true
         configuration.backwards = backwards
-        return (try? await webView.find(text, configuration: configuration))?.matchFound ?? false
+        return (try? await (readerView ?? webView).find(text, configuration: configuration))?.matchFound ?? false
     }
 
     func clearFind() {
-        webView.evaluateJavaScript("window.getSelection().removeAllRanges()", completionHandler: nil)
+        (readerView ?? webView).evaluateJavaScript("window.getSelection().removeAllRanges()", completionHandler: nil)
+    }
+
+    // MARK: Reader
+
+    /// Finds the article and lays a reader over the page, in a web view that runs no scripts.
+    func showReader() async -> Bool {
+        if readerView != nil { return true }
+        guard !isClosed, !isExtensionPage, let pageURL = webView.url, let script = ReaderScripts.extract,
+              let json = try? await webView.evaluateJavaScript(script, contentWorld: ReaderScripts.world) as? String,
+              let article = try? JSONDecoder().decode(ReaderArticle.self, from: Data(json.utf8)),
+              article.textLength >= ReaderArticle.minimumLength,
+              // The page may have moved on while the script ran.
+              !isClosed, webView.url == pageURL, readerView == nil
+        else { return false }
+
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = webView.configuration.websiteDataStore
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = false
+        let reader = WKWebView(frame: webView.bounds, configuration: configuration)
+        reader.autoresizingMask = [.width, .height]
+        reader.allowsMagnification = true
+        readerNavigation.pageURL = pageURL
+        reader.navigationDelegate = readerNavigation
+        reader.loadHTMLString(readerPageHTML(for: article), baseURL: pageURL)
+        let pageHadFocus = hasFocus(webView)
+        webView.addSubview(reader)
+        readerView = reader
+        if pageHadFocus { webView.window?.makeFirstResponder(reader) }
+        syncState()
+        return true
+    }
+
+    func hideReader() {
+        guard readerView != nil else { return }
+        removeReader()
+        syncState()
+    }
+
+    /// Takes the reader away, giving keyboard focus back to the page when the reader had it.
+    private func removeReader() {
+        guard let reader = readerView else { return }
+        let readerHadFocus = hasFocus(reader)
+        reader.navigationDelegate = nil
+        reader.removeFromSuperview()
+        readerView = nil
+        if readerHadFocus { webView.window?.makeFirstResponder(webView) }
+    }
+
+    /// A link clicked in the reader: a new tab for Cmd-clicks, otherwise the page itself, out of reader mode.
+    func followReaderLink(to url: URL, modifiers: NSEvent.ModifierFlags, buttonNumber: Int) {
+        guard let delegate else { return }
+        if let disposition = newTabDisposition(modifiers: modifiers, buttonNumber: buttonNumber) {
+            delegate.tab(self, didOpen: engine.makeTab(url: url, profile: profile), disposition: disposition)
+            return
+        }
+        guard delegate.tab(self, shouldFollowLinkTo: url, shiftKey: modifiers.contains(.shift)) else { return }
+        hideReader()
+        load(url)
+    }
+
+    /// Measures the page that just loaded, and offers reader mode when it reads like an article.
+    private func detectArticle() async {
+        guard !isExtensionPage, let pageURL = webView.url, ["http", "https", "file"].contains(pageURL.scheme?.lowercased() ?? ""),
+              let script = ReaderScripts.signals,
+              let json = try? await webView.evaluateJavaScript(script, contentWorld: ReaderScripts.world) as? String,
+              let signals = try? JSONDecoder().decode(ArticleSignals.self, from: Data(json.utf8)),
+              webView.url == pageURL
+        else { return }
+        isArticle = signals.looksLikeArticle
+        syncState()
+    }
+
+    private func hasFocus(_ view: NSView) -> Bool {
+        guard let responder = view.window?.firstResponder as? NSView else { return false }
+        return responder === view || responder.isDescendant(of: view)
+    }
+
+    // MARK: Picture in picture and thumbnails
+
+    func enterPictureInPicture() async -> Bool {
+        guard !isClosed else { return false }
+        let result = try? await webView.callAsyncJavaScript(PictureInPictureScripts.enter, contentWorld: PictureInPictureScripts.world)
+        return result as? Bool ?? false
+    }
+
+    func exitPictureInPicture() {
+        guard !isClosed else { return }
+        webView.callAsyncJavaScript(PictureInPictureScripts.exit, in: nil, in: PictureInPictureScripts.world, completionHandler: nil)
+    }
+
+    /// What's on screen in the tab, the reader when it shows. WebKit can only draw a page that has a size.
+    func thumbnail(width: CGFloat) async -> NSImage? {
+        let view = readerView ?? webView
+        guard !isClosed, view.bounds.width > 0, view.bounds.height > 0 else { return nil }
+        let configuration = WKSnapshotConfiguration()
+        configuration.snapshotWidth = NSNumber(value: Double(width))
+        return try? await view.takeSnapshot(configuration: configuration)
     }
 
     /// A page from a submitted form would be sent again on waking, and edited fields or a focused editor would be lost.
@@ -139,6 +242,7 @@ final class WebKitTab: NSObject, BrowserTab {
 
     func close() {
         isClosed = true
+        removeReader()
         observations.forEach { $0.invalidate() }
         observations = []
         webView.navigationDelegate = nil
@@ -172,6 +276,12 @@ final class WebKitTab: NSObject, BrowserTab {
         if webView.url != state.url {
             // A new page: its icon is unknown until it finishes loading.
             faviconURL = nil
+            // Its article too, unless only the fragment changed, as when a page marks where you've scrolled to.
+            let onlyFragmentChanged = state.url.flatMap { old in webView.url.map { isSameDocument(old, $0) } } ?? false
+            if !onlyFragmentChanged {
+                isArticle = false
+                removeReader()
+            }
         }
         let next = TabState(
             url: webView.url,
@@ -181,7 +291,9 @@ final class WebKitTab: NSObject, BrowserTab {
             canGoBack: webView.canGoBack,
             canGoForward: webView.canGoForward,
             faviconURL: faviconURL,
-            isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none
+            isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
+            isReaderAvailable: isArticle,
+            isShowingReader: readerView != nil
         )
         guard next != state else { return }
         let previous = state
@@ -263,6 +375,7 @@ extension WebKitTab: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         reloadedAfterCrash = false
         Task { await findFavicon() }
+        Task { await detectArticle() }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {

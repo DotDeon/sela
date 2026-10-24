@@ -175,6 +175,18 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         }
     }
 
+    /// Shows the selected tab's article in reader mode, or goes back to the page. False when the page has no
+    /// article to show.
+    @discardableResult
+    public func toggleReader() async -> Bool {
+        guard let tab = selectedTab else { return false }
+        if tab.state.isShowingReader {
+            tab.hideReader()
+            return true
+        }
+        return await tab.showReader()
+    }
+
     // MARK: Split view
 
     /// The split holding the selected tab, or nil when the selected tab isn't in one.

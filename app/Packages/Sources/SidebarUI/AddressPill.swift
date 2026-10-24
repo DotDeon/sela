@@ -10,6 +10,14 @@ final class AddressPill: NSTextField {
         didSet { if currentEditor() == nil { showHost() } }
     }
 
+    /// Room kept free at the trailing end for a button that sits over the pill.
+    var trailingInset: CGFloat = 0 {
+        didSet {
+            (cell as? PaddedTextFieldCell)?.trailingInset = trailingInset
+            needsDisplay = true
+        }
+    }
+
     private var isHovered = false {
         didSet { updateBackground() }
     }
@@ -119,11 +127,14 @@ final class AddressPill: NSTextField {
 /// A text field cell that centres its single line vertically and keeps the text off the rounded edges.
 final class PaddedTextFieldCell: NSTextFieldCell {
     var horizontalPadding: CGFloat = 11
+    /// Extra room after the text, on top of the padding.
+    var trailingInset: CGFloat = 0
 
     private func textRect(_ rect: NSRect) -> NSRect {
         let font = font ?? .systemFont(ofSize: NSFont.systemFontSize)
         let lineHeight = ceil(font.ascender - font.descender + font.leading)
         var result = rect.insetBy(dx: horizontalPadding, dy: 0)
+        result.size.width = max(result.width - trailingInset, 0)
         result.origin.y += floor((rect.height - lineHeight) / 2)
         result.size.height = lineHeight
         return result

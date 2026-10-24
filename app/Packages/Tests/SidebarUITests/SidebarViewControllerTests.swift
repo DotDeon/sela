@@ -254,3 +254,15 @@ private func fakeExtension(named name: String) async throws -> FakeExtension {
     let updated = try #require(h.controller.spaceBar.spaceMenu(for: "S").items.first { $0.title == "Profile" }?.submenu)
     #expect(updated.items[1].state == .on)
 }
+
+@MainActor @Test func readerButtonShowsForArticlesAndToggles() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    let tab = try #require(h.model.liveTab(for: "u1") as? FakeTab)
+    try await eventually { h.controller.readerButton.isHidden }
+    tab.simulateArticle(true)
+    try await eventually { !h.controller.readerButton.isHidden }
+    h.controller.readerButton.performClick(nil)
+    try await eventually { tab.state.isShowingReader }
+    try await eventually { h.controller.readerButton.accessibilityLabel() == "Hide Reader" }
+}

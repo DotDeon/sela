@@ -144,6 +144,17 @@ private func makeStore(
     #expect(store.document.item("fold")?.kind == .folder(FolderInfo(icon: nil, isExpanded: false)))
 }
 
+@MainActor @Test func expandFoldersOpensEveryFolderAboveATab() throws {
+    let (store, _) = try makeStore()
+    let inner = store.createFolder(title: "Inner", in: "fold", at: nil)
+    let tab = store.createTab(url: nil, title: nil, in: inner, at: nil)
+    store.setExpanded("fold", false)
+    store.setExpanded(inner, false)
+    store.expandFolders(containing: tab)
+    #expect(store.document.item("fold")?.kind == .folder(FolderInfo(icon: nil, isExpanded: true)))
+    #expect(store.document.item(inner)?.kind == .folder(FolderInfo(icon: nil, isExpanded: true)))
+}
+
 @MainActor @Test func clearUnpinnedRemovesOnlyThatSpace() throws {
     let (store, _) = try makeStore()
     store.createTab(url: nil, title: nil, in: "U2", at: 0)

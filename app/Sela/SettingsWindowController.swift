@@ -70,6 +70,7 @@ private struct GeneralSettings: View {
     @State private var archiveHours = ArchiveSweeper.hours
     @State private var isDefault = GeneralSettings.brIsDefault()
     @State private var linkDestination = ExternalLinkSettings().destination
+    @State private var floatsVideos = PictureInPictureSettings().isEnabled
 
     var body: some View {
         Form {
@@ -93,6 +94,8 @@ private struct GeneralSettings: View {
                 Text("A new tab").tag(ExternalLinkDestination.newTab)
             }
             .onChange(of: linkDestination) { _, value in ExternalLinkSettings().destination = value }
+            Toggle("Move playing videos to picture in picture when you switch away", isOn: $floatsVideos)
+                .onChange(of: floatsVideos) { _, value in PictureInPictureSettings().isEnabled = value }
             Picker("Sleep unused tabs after", selection: $sleepMinutes) {
                 Text("5 minutes").tag(5)
                 Text("15 minutes").tag(15)
@@ -125,6 +128,7 @@ private struct GeneralSettings: View {
         archiveHours = ArchiveSweeper.hours
         isDefault = Self.brIsDefault()
         linkDestination = ExternalLinkSettings().destination
+        floatsVideos = PictureInPictureSettings().isEnabled
     }
 
     private static func brIsDefault() -> Bool {

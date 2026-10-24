@@ -9,18 +9,21 @@ Sela is a free, open-source Mac browser with a calm sidebar. Favourites sit at t
 What it does today:
 
 - **Sidebar and spaces.** Favourites, pinned tabs and folders, and today's tabs, in spaces you swipe between. The button beside back and forward, or Cmd+S, hides the sidebar until you point at the window's left edge, and Sela remembers that choice. Unpinned tabs archive themselves after 12 hours and stay findable for 30 days.
-- **Command bar.** Cmd+T and Cmd+L search open tabs, archived tabs, history and commands.
+- **Command bar.** Cmd+T and Cmd+L search open tabs, favourites, pinned tabs inside folders, archived tabs, history and commands. A tab in a folder shows the folder it sits in, and choosing it opens that folder in the sidebar.
 - **Split view and Peek.** Up to four tabs side by side. Links from pinned tabs and favourites to other sites open in Peek, a preview over the page.
 - **Profiles.** Each space can have its own profile, with its own cookies, logins, site data and cache, so a Work space and a Personal space can be signed in to different accounts at once. Choose or make one from a space's menu. Favourites, history and archived tabs are shared.
 - **Little Sela.** Links from other apps open in a small window of their own. Open in Sela moves the page to your tabs without reloading it, and Cmd+Shift+N opens an empty one.
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
 - **Extensions.** On macOS 15.4 or later Sela runs Web Extensions, the kind Safari and Chrome use. Add them in Settings from a folder or a .zip file, and their buttons sit at the top of the sidebar. Sela can't install from the Chrome Web Store.
+- **Reader mode.** When a page looks like an article, a button at the end of the address shows it in a quiet serif layout that follows light and dark mode. View > Reader (Cmd+Shift+R) turns it on and off.
+- **Tab overview.** View > Tab Overview (Cmd+Shift+\\) shows the space's tabs as a grid of pictures. Type to filter, click or press Return to switch, Cmd+W or a tile's close button to close a tab, and Esc to go back.
+- **Picture in picture.** A video that's playing when you switch to another tab or another app floats in its own small window, and goes back into the page when you return. Settings > General turns this off.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
 - **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit.
 
-Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
+Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, picture in picture, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 

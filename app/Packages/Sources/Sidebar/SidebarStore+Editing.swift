@@ -61,6 +61,18 @@ extension SidebarStore {
         try? change { try $0.setExpanded(id, isExpanded) }
     }
 
+    /// Opens every folder an item sits in, so its row shows. Folders already open stay as they are.
+    public func expandFolders(containing id: ItemID) {
+        let collapsed = document.folderIDs(containing: id).filter { folder in
+            if case .folder(let info) = document.item(folder)?.kind { return !info.isExpanded }
+            return false
+        }
+        guard !collapsed.isEmpty else { return }
+        try? change { document in
+            for folder in collapsed { try document.setExpanded(folder, true) }
+        }
+    }
+
     /// Moves an item to the end of the space's pinned section.
     public func pin(_ id: ItemID, in space: SpaceID) {
         guard let container = document.space(space)?.pinnedContainerID else { return }

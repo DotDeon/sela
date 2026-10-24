@@ -76,6 +76,8 @@ public final class SidebarViewController: NSViewController {
     private let backButton = HoverButton(symbol: "chevron.left", label: "Back", pointSize: 14)
     private let forwardButton = HoverButton(symbol: "chevron.right", label: "Forward", pointSize: 14)
     private let reloadButton = HoverButton(symbol: "arrow.clockwise", label: "Reload")
+    /// Sits at the end of the address while the page is an article or shows in reader mode.
+    let readerButton = HoverButton(symbol: "doc.plaintext", label: "Show Reader", size: 24)
     private let extensionButtons = ExtensionButtonsView()
     private let extensionList = ExtensionList()
 
@@ -108,8 +110,11 @@ public final class SidebarViewController: NSViewController {
 
         addressPill.onSubmit = { [weak self] text in self?.submitAddress(text) }
         pager.onNewTab = { [weak self] in self?.newTab() }
+        readerButton.target = self
+        readerButton.action = #selector(toggleReader)
+        readerButton.isHidden = true
 
-        for view in [tint, controls, addressPill, favoritesGrid, pager, spaceBar] {
+        for view in [tint, controls, addressPill, readerButton, favoritesGrid, pager, spaceBar] {
             view.translatesAutoresizingMaskIntoConstraints = false
             background.addSubview(view)
         }
@@ -140,6 +145,8 @@ public final class SidebarViewController: NSViewController {
             addressPill.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 2),
             addressPill.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
             addressPill.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -inset),
+            readerButton.trailingAnchor.constraint(equalTo: addressPill.trailingAnchor, constant: -5),
+            readerButton.centerYAnchor.constraint(equalTo: addressPill.centerYAnchor),
 
             favoritesGrid.topAnchor.constraint(equalTo: addressPill.bottomAnchor, constant: 12),
             favoritesGrid.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
@@ -189,6 +196,22 @@ public final class SidebarViewController: NSViewController {
         forwardButton.isEnabled = state?.canGoForward ?? false
         let isLoading = state?.isLoading ?? false
         reloadButton.setSymbol(isLoading ? "xmark" : "arrow.clockwise", label: isLoading ? "Stop" : "Reload")
+        updateReaderButton(state)
+    }
+
+    private func updateReaderButton(_ state: TabState?) {
+        let isShowing = state?.isShowingReader ?? false
+        let isOffered = isShowing || (state?.isReaderAvailable ?? false)
+        readerButton.isHidden = !isOffered
+        addressPill.trailingInset = isOffered ? 22 : 0
+        let label = isShowing ? "Hide Reader" : "Show Reader"
+        readerButton.setSymbol(isShowing ? "doc.plaintext.fill" : "doc.plaintext", label: label)
+        readerButton.toolTip = label
+        readerButton.contentTintColor = isShowing ? .controlAccentColor : .secondaryLabelColor
+    }
+
+    @objc private func toggleReader() {
+        Task { await model.toggleReader() }
     }
 
     /// Reads each extension's button for the selected tab, so an extension changing it updates the sidebar.

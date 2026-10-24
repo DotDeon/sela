@@ -23,8 +23,13 @@ public struct TabState: Equatable, Sendable {
     public var faviconURL: URL?
     /// True while the page has the camera or microphone, even muted.
     public var isUsingCameraOrMicrophone: Bool
+    /// True when the page looks like an article, so reader mode is worth offering.
+    public var isReaderAvailable: Bool
+    /// True while the tab shows its page in reader mode.
+    public var isShowingReader: Bool
 
-    public init(url: URL?, title: String?, isLoading: Bool, estimatedProgress: Double, canGoBack: Bool, canGoForward: Bool, faviconURL: URL? = nil, isUsingCameraOrMicrophone: Bool = false) {
+    public init(url: URL?, title: String?, isLoading: Bool, estimatedProgress: Double, canGoBack: Bool, canGoForward: Bool, faviconURL: URL? = nil,
+                isUsingCameraOrMicrophone: Bool = false, isReaderAvailable: Bool = false, isShowingReader: Bool = false) {
         self.url = url
         self.title = title
         self.isLoading = isLoading
@@ -33,6 +38,8 @@ public struct TabState: Equatable, Sendable {
         self.canGoForward = canGoForward
         self.faviconURL = faviconURL
         self.isUsingCameraOrMicrophone = isUsingCameraOrMicrophone
+        self.isReaderAvailable = isReaderAvailable
+        self.isShowingReader = isShowingReader
     }
 
     public static let blank = TabState(url: nil, title: nil, isLoading: false, estimatedProgress: 0, canGoBack: false, canGoForward: false)
@@ -61,6 +68,18 @@ public protocol BrowserTab: AnyObject, Observable {
     func find(_ text: String, backwards: Bool) async -> Bool
     /// Removes the selection a find left.
     func clearFind()
+    /// Shows the page's article in a plain, readable layout in the same tab. False when no article was found.
+    /// Loading another page goes back to the page itself.
+    func showReader() async -> Bool
+    /// Goes back from reader mode to the page itself.
+    func hideReader()
+    /// Moves the video playing in the page into a floating picture in picture window. False when no video is
+    /// playing, the page turned picture in picture off, or the video already floats.
+    func enterPictureInPicture() async -> Bool
+    /// Brings back a video that `enterPictureInPicture` moved. Leaves a video the user moved alone.
+    func exitPictureInPicture()
+    /// A picture of what the page shows, `width` points wide. Nil when there's nothing to draw.
+    func thumbnail(width: CGFloat) async -> NSImage?
     func goBack()
     func goForward()
     func reload()

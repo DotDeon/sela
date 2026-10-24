@@ -25,6 +25,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private var findBar: FindBarController?
     private var downloadsPopover: DownloadsPopover?
     private let extensions: ExtensionsController?
+    private var pictureInPicture: PictureInPictureController?
+    private var tabOverview: TabOverviewPresenter?
 
     init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore,
          contentBlocker: ContentBlocker?, downloads: DownloadList, extensions: ExtensionsController?) {
@@ -56,6 +58,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             self?.runCommand(id)
         }
         peek = PeekPresenter(model: model, host: root.pageArea)
+        pictureInPicture = PictureInPictureController(model: model, window: window)
+        tabOverview = TabOverviewPresenter(model: model, favicons: favicons, host: root.view)
         findBar = FindBarController(model: model, host: root.pageArea)
         let popover = DownloadsPopover(list: downloads)
         downloadsPopover = popover
@@ -179,6 +183,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             return (model.selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
         case #selector(separateSplitView(_:)), #selector(rotateSplitView(_:)):
             return model.selectedSplit != nil
+        case #selector(toggleReader(_:)):
+            let state = model.selectedTab?.state
+            item.state = state?.isShowingReader == true ? .on : .off
+            return state?.isReaderAvailable == true || state?.isShowingReader == true
         case #selector(toggleSiteBlocking(_:)):
             guard let url = blockableURL, let contentBlocker else {
                 item.state = .off
@@ -191,8 +199,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         }
     }
 
+    /// View > Tab Overview: every tab in the space as a grid of pictures, or back to the page.
+    @objc func toggleTabOverview(_ sender: Any?) { tabOverview?.toggle() }
+
     @objc func closeTab(_ sender: Any?) {
-        if model.peekTab != nil {
+        if let tabOverview, tabOverview.isShowing {
+            tabOverview.closeHighlighted()
+        } else if model.peekTab != nil {
             model.closePeek()
         } else if let id = model.selectedItemID {
             model.close(id)
@@ -202,6 +215,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     }
 
     @objc func reloadTab(_ sender: Any?) { model.selectedTab?.reload() }
+
+    /// View > Reader: the page's article in a plain layout, or back to the page.
+    @objc func toggleReader(_ sender: Any?) {
+        Task {
+            if await !model.toggleReader() { NSSound.beep() }
+        }
+    }
 
     @objc func stopTab(_ sender: Any?) { model.selectedTab?.stopLoading() }
 
@@ -260,6 +280,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case "separate-split": separateSplitView(nil)
         case "rotate-split": rotateSplitView(nil)
         case "toggle-site-blocking": toggleSiteBlocking(nil)
+        case "toggle-reader": toggleReader(nil)
+        case "tab-overview": toggleTabOverview(nil)
         case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
         default: break
         }
