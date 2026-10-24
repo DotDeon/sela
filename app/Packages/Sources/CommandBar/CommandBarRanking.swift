@@ -29,7 +29,8 @@ public func commandBarResults(
     tabs: [TabCandidate],
     commands: [CommandCandidate],
     archived: [ArchivedCandidate],
-    history: [HistoryCandidate]
+    history: [HistoryCandidate],
+    searchEngine: SearchEngine = SearchEngineSettings().engine
 ) -> [CommandBarResult] {
     let words = queryWords(query)
     guard !words.isEmpty else {
@@ -49,8 +50,8 @@ public func commandBarResults(
     if let best = rankedTabs.first, matchScore(query, "\(best.item.title) \(best.item.url?.host() ?? "")") == 2 * words.count {
         results.append(tabRows.removeFirst())
     }
-    if let url = AddressInput.resolve(query) {
-        results.append(.open(url, isSearch: url.absoluteString.hasPrefix(AddressInput.searchURLPrefix)))
+    if let url = AddressInput.resolve(query, searchEngine: searchEngine) {
+        results.append(.open(url, search: searchEngine.isSearch(url) ? searchEngine : nil))
     }
     results += tabRows
     results += rankedCommands.prefix(3).map { .command($0.item) }

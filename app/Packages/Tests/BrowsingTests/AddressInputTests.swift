@@ -25,6 +25,12 @@ func resolves(input: String, expected: String) {
     #expect(AddressInput.resolve(input)?.absoluteString == expected)
 }
 
+@Test func searchesGoToTheChosenEngine() {
+    #expect(AddressInput.resolve("what is swift", searchEngine: .kagi)?.absoluteString == "https://kagi.com/search?q=what%20is%20swift")
+    #expect(AddressInput.resolve("swift", searchEngine: .startpage)?.absoluteString == "https://www.startpage.com/sp/search?query=swift")
+    #expect(AddressInput.resolve("example.com", searchEngine: .kagi)?.absoluteString == "https://example.com")
+}
+
 @Test func blankInputResolvesToNil() {
     #expect(AddressInput.resolve("") == nil)
     #expect(AddressInput.resolve("   ") == nil)

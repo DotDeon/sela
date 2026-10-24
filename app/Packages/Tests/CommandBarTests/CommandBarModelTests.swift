@@ -15,7 +15,7 @@ private func makeModel(_ mode: CommandBarMode = .newTab) -> CommandBarModel {
 @MainActor @Test func currentTabModeStartsWithAddress() {
     let model = makeModel(.currentTab(address: "https://mail.example.com/"))
     #expect(model.query == "https://mail.example.com/")
-    #expect(model.results.first == .open(URL(string: "https://mail.example.com/")!, isSearch: false))
+    #expect(model.results.first == .open(URL(string: "https://mail.example.com/")!, search: nil))
 }
 
 @MainActor @Test func typingResetsSelection() {

@@ -35,6 +35,8 @@ public final class WebKitEngine: ContentBlockingEngine {
 
     public var isContentBlockingEnabled: (@MainActor (URL) -> Bool)?
     public var pageScripts: (@MainActor (URL, URL?) -> PageScripts?)?
+    /// A search for what was typed, linked from the page shown when a load fails. No link when nil.
+    public var searchURL: (@MainActor (String) -> URL?)?
 
     public init(configuration: Configuration = .init()) {
         self.configuration = configuration

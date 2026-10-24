@@ -2,10 +2,8 @@ import Foundation
 
 /// Turns what someone typed in the address bar into a URL to load.
 public enum AddressInput {
-    public static let searchURLPrefix = "https://www.google.com/search?q="
-
-    /// Nil for blank input. Otherwise a website, a local address, or a search.
-    public static func resolve(_ text: String) -> URL? {
+    /// Nil for blank input. Otherwise a website, a local address, or a search on `searchEngine`.
+    public static func resolve(_ text: String, searchEngine: SearchEngine = SearchEngineSettings().engine) -> URL? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
 
@@ -14,7 +12,7 @@ public enum AddressInput {
             return URL(string: text.replacingOccurrences(of: " ", with: "%20"))
         }
         if text.contains(where: \.isWhitespace) {
-            return search(text)
+            return searchEngine.searchURL(for: text)
         }
         if text.wholeMatch(of: localAddress()) != nil || isLocalNetworkHost(text) {
             return URL(string: "http://" + text)
@@ -22,7 +20,7 @@ public enum AddressInput {
         if looksLikeDomain(text) {
             return URL(string: "https://" + text)
         }
-        return search(text)
+        return searchEngine.searchURL(for: text)
     }
 
     /// `localhost` or an IPv4 address, with an optional port and path.
@@ -45,12 +43,5 @@ public enum AddressInput {
         let labels = host.split(separator: ".", omittingEmptySubsequences: false)
         guard labels.count >= 2, let last = labels.last, last.count >= 2 else { return false }
         return last.allSatisfy { $0.isASCII && $0.isLetter }
-    }
-
-    private static func search(_ query: String) -> URL? {
-        var allowed = CharacterSet.urlQueryAllowed
-        allowed.remove(charactersIn: "+&=?#")
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
-        return URL(string: searchURLPrefix + encoded)
     }
 }

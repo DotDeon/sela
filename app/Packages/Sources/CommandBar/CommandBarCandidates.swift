@@ -1,3 +1,4 @@
+import Browsing
 import Foundation
 import SidebarModel
 
@@ -56,8 +57,8 @@ public struct HistoryCandidate: Equatable, Sendable {
 
 /// A row in the command bar.
 public enum CommandBarResult: Equatable, Sendable {
-    /// Open what was typed: an address, or a search when `isSearch`.
-    case open(URL, isSearch: Bool)
+    /// Open what was typed: an address, or a search on `search` when it isn't nil.
+    case open(URL, search: SearchEngine?)
     case tab(TabCandidate)
     case command(CommandCandidate)
     case archived(ArchivedCandidate)
