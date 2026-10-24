@@ -24,12 +24,14 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private let contentBlocker: ContentBlocker?
     private var findBar: FindBarController?
     private var downloadsPopover: DownloadsPopover?
+    private let extensions: ExtensionsController?
 
     init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore,
-         contentBlocker: ContentBlocker?, downloads: DownloadList) {
+         contentBlocker: ContentBlocker?, downloads: DownloadList, extensions: ExtensionsController?) {
         model = BrowserWindowModel(engine: engine, sidebar: sidebar, archive: archive, downloads: downloads)
         self.history = history
         self.contentBlocker = contentBlocker
+        self.extensions = extensions
         root = BrowserRootViewController(model: model, favicons: favicons)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
@@ -74,6 +76,34 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
         root.sidebarController.onNewTabClicked = { [weak self] in self?.newTab(nil) }
         keepObserving { [weak self] in self?.updateTitle() }
+        if let extensions { connect(extensions) }
+    }
+
+    var sidebarController: SidebarViewController { root.sidebarController }
+
+    func revealSidebarForExtensions() { root.revealSidebarIfHidden() }
+
+    /// Shows the extensions' buttons and tells them which tab is selected.
+    private func connect(_ extensions: ExtensionsController) {
+        root.sidebarController.onExtensionClicked = { [weak self] item, anchor in
+            guard let self else { return }
+            extensions.performAction(of: item, in: self, anchor: anchor)
+        }
+        root.sidebarController.onManageExtensions = {
+            NSApp.sendAction(#selector(AppDelegate.showSettings(_:)), to: nil, from: nil)
+        }
+        keepObserving { [weak self] in
+            guard let self else { return }
+            root.sidebarController.extensions = extensions.library.running
+        }
+        var previous: (any BrowserTab)?
+        keepObserving { [weak self] in
+            guard let self else { return }
+            let tab = model.selectedTab
+            guard tab !== previous else { return }
+            if let tab { extensions.tabDidActivate(tab, previous: previous) }
+            previous = tab
+        }
     }
 
     @available(*, unavailable)
@@ -82,6 +112,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     /// Shows a new window with the sidebar's most recent tab, or a fresh tab when there isn't one.
     func showWithTab() {
         showWindow(nil)
+        extensions?.windowDidOpen(self)
         if model.selectedItemID == nil {
             newTab(nil)
         }
@@ -245,8 +276,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     // MARK: NSWindowDelegate
 
     func windowWillClose(_ notification: Notification) {
+        extensions?.windowDidClose(self)
         model.closeAllLiveTabs()
         onClose?()
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        extensions?.windowDidFocus(self)
     }
 
     private func updateTitle() {

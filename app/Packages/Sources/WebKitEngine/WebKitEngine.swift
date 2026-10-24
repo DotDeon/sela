@@ -37,6 +37,10 @@ public final class WebKitEngine: ContentBlockingEngine {
     public var pageScripts: (@MainActor (URL, URL?) -> PageScripts?)?
     /// A search for what was typed, linked from the page shown when a load fails. No link when nil.
     public var searchURL: (@MainActor (String) -> URL?)?
+    public weak var extensionHost: (any ExtensionHost)?
+    public var onExtensionPermissionsChanged: (@MainActor (String, ExtensionPermissions) -> Void)?
+    /// The `WebKitExtensions` every web view shares, on systems that have it.
+    private var extensionsStorage: AnyObject?
 
     public init(configuration: Configuration = .init()) {
         self.configuration = configuration
@@ -50,9 +54,22 @@ public final class WebKitEngine: ContentBlockingEngine {
         }
         contentRules = WebKitContentRules(store: ruleStore)
         applicationName = safariApplicationName(infoPlistURL: URL(fileURLWithPath: "/Applications/Safari.app/Contents/Info.plist"))
+        if #available(macOS 15.4, *) {
+            extensionsStorage = WebKitExtensions(engine: self, persistent: configuration.storage == .persistent, dataStore: dataStore)
+        }
     }
 
+    @available(macOS 15.4, *)
+    var extensions: WebKitExtensions? { extensionsStorage as? WebKitExtensions }
+
     public func makeTab(url: URL?) -> any BrowserTab {
+        // An extension's own pages run in the extension's configuration, without content blocking.
+        if #available(macOS 15.4, *), let url, let configuration = extensions?.webViewConfiguration(for: url) {
+            let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: self, isExtensionPage: true)
+            register(tab)
+            tab.load(url)
+            return tab
+        }
         let bridge = PageScriptBridge()
         let tab = WebKitTab(webView: WKWebView(frame: .zero, configuration: makeWebViewConfiguration(bridge: bridge)), engine: self)
         bridge.tab = tab
@@ -62,6 +79,9 @@ public final class WebKitEngine: ContentBlockingEngine {
     }
 
     public func makeTab(restoring snapshot: TabSnapshot) -> any BrowserTab {
+        if #available(macOS 15.4, *), let url = snapshot.url, extensions?.webViewConfiguration(for: url) != nil {
+            return makeTab(url: url)
+        }
         let tab = makeTab(url: nil) as! WebKitTab
         tab.restore(snapshot)
         return tab
@@ -94,6 +114,15 @@ public final class WebKitEngine: ContentBlockingEngine {
     /// Tracks a tab so rule changes reach it.
     func register(_ tab: WebKitTab) {
         tabs.add(tab)
+        if #available(macOS 15.4, *) { extensions?.tabDidOpen(tab) }
+    }
+
+    func tabDidClose(_ tab: WebKitTab) {
+        if #available(macOS 15.4, *) { extensions?.tabDidClose(tab) }
+    }
+
+    func tabStateDidChange(_ tab: WebKitTab, from previous: TabState) {
+        if #available(macOS 15.4, *) { extensions?.tabStateDidChange(tab, from: previous) }
     }
 
     /// Whether pages at `url`, and the frames in them, get blocking.
@@ -109,6 +138,9 @@ public final class WebKitEngine: ContentBlockingEngine {
         webConfiguration.preferences.isElementFullscreenEnabled = true
         webConfiguration.preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture
         webConfiguration.userContentController = makeContentController(bridge: bridge)
+        if #available(macOS 15.4, *) {
+            webConfiguration.webExtensionController = extensions?.controller
+        }
         return webConfiguration
     }
 }

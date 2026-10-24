@@ -31,6 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// and skips the Arc import. For measuring runs that mustn't touch your own sidebar.
     private let dataFolderOverride: URL? = UserDefaults.standard.string(forKey: "SelaDataFolder").map { URL(fileURLWithPath: $0, isDirectory: true) }
     private var contentBlocker: ContentBlocker!
+    /// Nil on systems too old for Web Extensions.
+    private var extensions: ExtensionsController?
     private var listRefreshTimer: Timer?
     private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
@@ -56,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Sela works without history if the database can't open.
         history = (dataFile("History.sqlite") ?? (try? HistoryStore.defaultFileURL())).flatMap { try? HistoryStore(fileURL: $0) }
         startContentBlocking()
+        startExtensions()
         // Start Fresh means nothing from Arc. File > Import History from Arc… still brings it in later.
         if dataFolderOverride == nil, !FirstRunImport.choseStartFresh {
             HistoryImport.runOnFirstLaunch(into: history)
@@ -136,11 +139,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     private func makeWindowController() -> BrowserWindowController {
-        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons, contentBlocker: contentBlocker, downloads: downloads)
+        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons,
+                                                 contentBlocker: contentBlocker, downloads: downloads,
+                                                 extensions: extensions)
         controller.onClose = { [weak self, weak controller] in
             self?.windowControllers.removeAll { $0 === controller }
         }
         windowControllers.append(controller)
+        return controller
+    }
+
+    /// A new window with a tab for each address, or the usual first tab when there are none.
+    @discardableResult
+    private func openWindow(with urls: [URL]) -> BrowserWindowController {
+        let controller = makeWindowController()
+        controller.show(opening: urls)
         return controller
     }
 
@@ -201,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 contentBlocker: contentBlocker,
                 history: history,
                 sidebar: sidebar,
+                extensions: extensions,
                 currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID }
             ) { [weak self] in
                 self?.sweeper?.sweep()
@@ -302,6 +316,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }
         }
+    }
+
+    // MARK: Extensions
+
+    /// Starts the installed Web Extensions. They need macOS 15.4, so older systems don't offer them.
+    private func startExtensions() {
+        guard engine.supportsExtensions else { return }
+        let folder = dataFile("Extensions")
+            ?? (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+                .map { $0.appending(path: "Sela/Extensions", directoryHint: .isDirectory) }
+            ?? FileManager.default.temporaryDirectory.appending(path: "Sela-Extensions")
+        extensions = ExtensionsController(engine: engine, folder: folder, windowControllers: { [weak self] in self?.windowControllers ?? [] }) { [unowned self] urls in
+            openWindow(with: urls)
+        }
+        extensions?.start()
     }
 
     /// Sela was called Brow. Its files move from `Application Support/Brow` to `Application Support/Sela` once,

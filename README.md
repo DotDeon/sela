@@ -13,12 +13,13 @@ What it does today:
 - **Split view and Peek.** Up to four tabs side by side. Links from pinned tabs and favourites to other sites open in Peek, a preview over the page.
 - **Little Sela.** Links from other apps open in a small window of their own. Open in Sela moves the page to your tabs without reloading it, and Cmd+Shift+N opens an empty one.
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
+- **Extensions.** On macOS 15.4 or later Sela runs Web Extensions, the kind Safari and Chrome use. Add them in Settings from a folder or a .zip file, and their buttons sit at the top of the sidebar. Sela can't install from the Chrome Web Store.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
 - **Updates.** Sela checks for new versions once a day and asks before installing them.
 
-Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
+Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking, extensions and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -50,6 +51,7 @@ Inside `app/Packages`:
 - `History`: pages you've visited, kept 90 days in a SQLite file on your Mac
 - `CommandBar`: the Cmd+T and Cmd+L command bar: ranking and the panel
 - `Downloads`: this session's downloads and how downloaded files are named
+- `Extensions`: the Web Extensions you installed, copied into Sela's data folder, which ones are on, and the permissions you gave them
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
 - `SelaTestSupport`: sample sidebars shared by the tests
 

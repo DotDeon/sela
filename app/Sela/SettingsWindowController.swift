@@ -2,12 +2,13 @@ import AppKit
 import BrowserImport
 import Browsing
 import ContentBlocking
+import Extensions
 import History
 import Sidebar
 import SidebarModel
 import SwiftUI
 
-/// Sela > Settings… (Cmd+,): General, Ad Blocking, Permissions and Import.
+/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Permissions and Import.
 @MainActor
 final class SettingsWindowController: NSWindowController {
     /// `currentSpace` names the space imported bookmarks go into: the one shown in the frontmost browser window.
@@ -15,10 +16,11 @@ final class SettingsWindowController: NSWindowController {
         contentBlocker: ContentBlocker?,
         history: HistoryStore?,
         sidebar: SidebarStore,
+        extensions: ExtensionsController?,
         currentSpace: @escaping () -> SpaceID?,
         onSettingsChanged: @escaping () -> Void
     ) {
-        let view = SettingsView(contentBlocker: contentBlocker, history: history, sidebar: sidebar, currentSpace: currentSpace, onSettingsChanged: onSettingsChanged)
+        let view = SettingsView(contentBlocker: contentBlocker, history: history, sidebar: sidebar, currentSpace: currentSpace, extensions: extensions, onSettingsChanged: onSettingsChanged)
         let window = NSWindow(contentViewController: NSHostingController(rootView: view))
         window.title = "Settings"
         window.styleMask = [.titled, .closable]
@@ -36,6 +38,7 @@ private struct SettingsView: View {
     let history: HistoryStore?
     let sidebar: SidebarStore
     let currentSpace: () -> SpaceID?
+    let extensions: ExtensionsController?
     let onSettingsChanged: () -> Void
 
     var body: some View {
@@ -43,6 +46,9 @@ private struct SettingsView: View {
             GeneralSettings(onSettingsChanged: onSettingsChanged).tabItem { Label("General", systemImage: "gearshape") }
             if let contentBlocker {
                 AdBlockingSettings(blocker: contentBlocker).tabItem { Label("Ad Blocking", systemImage: "shield") }
+            }
+            if let extensions {
+                ExtensionSettings(controller: extensions).tabItem { Label("Extensions", systemImage: "puzzlepiece.extension") }
             }
             PermissionSettings().tabItem { Label("Permissions", systemImage: "video") }
             ImportSettings(history: history, sidebar: sidebar, currentSpace: currentSpace).tabItem { Label("Import", systemImage: "square.and.arrow.down") }
@@ -152,6 +158,65 @@ private struct AdBlockingSettings: View {
             Text("Changes apply the next time a page on that site loads.").font(.footnote).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct ExtensionSettings: View {
+    let controller: ExtensionsController
+    private var library: ExtensionLibrary { controller.library }
+
+    var body: some View {
+        Form {
+            if library.loadProblem != nil {
+                Text("Sela couldn't read your list of extensions, so it isn't running them and won't change the list. Check the file Extensions.json in Sela's data folder.")
+                    .foregroundStyle(.red)
+            }
+            Section("Installed") {
+                if library.entries.isEmpty {
+                    Text("No extensions yet").foregroundStyle(.secondary)
+                }
+                ForEach(library.entries) { entry in
+                    row(entry)
+                }
+            }
+            HStack {
+                Spacer()
+                Button("Add Extension…") { controller.chooseAndInstall(window: NSApp.keyWindow) }
+                    .disabled(library.loadProblem != nil)
+            }
+            Text("Sela adds Web Extensions, the kind Safari and Chrome use, from a folder or a .zip file on your Mac. It can't install from the Chrome Web Store or the App Store, so download or unpack the extension first. Extensions that need a companion app, like some password managers, may not work yet.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        .formStyle(.grouped)
+    }
+
+    private func row(_ entry: ExtensionLibrary.Entry) -> some View {
+        HStack(spacing: 10) {
+            if let icon = entry.loaded?.icon(size: 32) {
+                Image(nsImage: icon).resizable().frame(width: 24, height: 24)
+            } else {
+                Image(systemName: "puzzlepiece.extension").frame(width: 24, height: 24).foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading) {
+                Text(entry.record.name)
+                if let problem = entry.problem {
+                    Text(problem).font(.footnote).foregroundStyle(.red)
+                } else if let version = entry.record.version {
+                    Text("Version \(version)").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if let options = entry.loaded?.optionsPageURL {
+                Button("Options") { controller.openOptions(options) }
+            }
+            Button("Remove") { controller.confirmRemove(entry.id, window: NSApp.keyWindow) }
+            Toggle("Turn on \(entry.record.name)", isOn: Binding(
+                get: { entry.record.isEnabled },
+                set: { on in Task { await library.setEnabled(on, for: entry.id) } }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+        }
     }
 }
 

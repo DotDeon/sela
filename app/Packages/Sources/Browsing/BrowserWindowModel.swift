@@ -134,14 +134,35 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     // MARK: Tabs
 
-    /// Adds a tab at the top of the current space's unpinned section and shows it.
+    /// Adds a tab at the top of the current space's unpinned section, and shows it unless `selecting` is false.
     @discardableResult
-    public func newTab(url: URL?) -> ItemID {
+    public func newTab(url: URL?, selecting: Bool = true) -> ItemID {
         let container = document.space(selectedSpaceID)!.unpinnedContainerID
         let id = sidebar.createTab(url: url, title: nil, in: container, at: 0)
         register(engine.makeTab(url: url), for: id)
-        select(id)
+        if selecting { select(id) }
         return id
+    }
+
+    // MARK: Live tabs
+
+    /// Every live page in the sidebar, in order: favourites, then each space's pinned and unpinned tabs.
+    public var liveTabsInOrder: [any BrowserTab] {
+        let containers = [document.favoritesContainerID] + document.spaces.flatMap { [$0.pinnedContainerID, $0.unpinnedContainerID] }
+        return containers.flatMap { document.tabIDs(under: $0) }.compactMap { liveTabs[$0] }
+    }
+
+    /// The sidebar item showing `tab`, or nil when it shows in none, as with Peek.
+    public func itemID(for tab: any BrowserTab) -> ItemID? {
+        itemIDsByTab[tab.id]
+    }
+
+    /// True for pinned tabs and favourites.
+    public func isPinned(_ tab: any BrowserTab) -> Bool {
+        switch itemIDsByTab[tab.id].flatMap(document.containerRole(of:)) {
+        case .pinned, .favorites: true
+        default: false
+        }
     }
 
     /// Loads a typed address in the selected tab, or in a new tab when nothing is selected.

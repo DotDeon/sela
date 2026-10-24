@@ -2,7 +2,7 @@ import AppKit
 
 /// A borderless symbol button that lights up a rounded square under the pointer and darkens it while pressed,
 /// like the toolbar buttons in Safari and Arc.
-public final class HoverButton: NSButton {
+public class HoverButton: NSButton {
     public static let size: CGFloat = 26
 
     private var isHovered = false {

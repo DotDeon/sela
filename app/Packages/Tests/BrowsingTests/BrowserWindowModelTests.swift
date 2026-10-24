@@ -331,3 +331,23 @@ private struct Harness {
     h.model.close("u2")
     #expect(await answer.value == .dismissed)
 }
+
+@MainActor @Test func backgroundTabsDontTakeTheSelection() throws {
+    let h = try Harness()
+    let id = h.model.newTab(url: url("quiet"), selecting: false)
+    #expect(h.unpinned.first == id)
+    #expect(h.model.selectedItemID == "u2")
+    #expect(h.live(id) != nil)
+}
+
+@MainActor @Test func liveTabsFollowTheSidebarOrder() throws {
+    let h = try Harness()
+    h.model.select("u1")
+    h.model.select("p1")
+    h.model.select("f1")
+    let order = h.model.liveTabsInOrder.compactMap { h.model.itemID(for: $0) }
+    #expect(order == ["f1", "p1", "u1", "u2"])
+    #expect(h.model.isPinned(h.live("p1")!))
+    #expect(h.model.isPinned(h.live("f1")!))
+    #expect(!h.model.isPinned(h.live("u1")!))
+}
