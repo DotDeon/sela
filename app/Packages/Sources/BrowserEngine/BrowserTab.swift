@@ -42,6 +42,8 @@ public struct TabState: Equatable, Sendable {
 @MainActor
 public protocol BrowserTab: AnyObject, Observable {
     var id: TabID { get }
+    /// Whose website data the page uses. It never changes: moving a page to another profile means a new tab.
+    var profile: ProfileIdentifier { get }
     var state: TabState { get }
     /// The view that draws the page. The UI places it; the tab owns it.
     var contentView: NSView { get }

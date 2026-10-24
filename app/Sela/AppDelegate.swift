@@ -170,10 +170,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         openLittleWindow(url: nil)
     }
 
+    /// The page signs in with the profile of the space the frontmost main window shows.
     private func openLittleWindow(url: URL?) {
         let occupied = littleWindows.compactMap { $0.window?.frame }
-        let controller = LittleWindowController(engine: engine, url: url, archive: archive, history: history, contentBlocker: contentBlocker,
-                                                downloads: downloads, occupied: occupied)
+        let profile = frontmostWindowController()?.model.selectedProfile ?? .default
+        let controller = LittleWindowController(engine: engine, url: url, profile: profile, archive: archive, history: history,
+                                                contentBlocker: contentBlocker, downloads: downloads, occupied: occupied)
         controller.onClose = { [weak self, weak controller] in
             self?.littleWindows.removeAll { $0 === controller }
         }
@@ -186,8 +188,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         controller.show()
     }
 
-    /// Makes a live page a tab in the frontmost main window's current space. A selected tab brings its window
-    /// to the front. Otherwise a window opened for it waits behind.
+    /// Makes a live page a tab in the frontmost main window's current space. A page from another profile than
+    /// that space's opens again there, in the space's profile. A selected tab brings its window to the front.
+    /// Otherwise a window opened for it waits behind.
     private func moveToMainWindow(_ tab: any BrowserTab, selecting: Bool) {
         let target = frontmostOrNewWindowController()
         target.model.adopt(tab, selecting: selecting)
@@ -215,7 +218,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 history: history,
                 sidebar: sidebar,
                 extensions: extensions,
-                currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID }
+                currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID },
+                onDeleteProfile: { [weak self] id in self?.deleteProfile(id) }
             ) { [weak self] in
                 self?.sweeper?.sweep()
                 Task { await self?.tabSleeper?.sleepUnusedTabs() }
@@ -223,6 +227,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         settingsWindow?.showWindow(nil)
         settingsWindow?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Moves the profile's spaces to Default, opens its pages again there, then deletes its website data,
+    /// once no page holds it.
+    private func deleteProfile(_ id: ProfileID) {
+        guard id != .default else { return }
+        let profile = ProfileIdentifier(id)
+        sidebar.removeProfile(id)
+        for controller in windowControllers { controller.model.reconcile() }
+        for little in littleWindows where little.model.tab?.profile == profile {
+            little.model.switchProfile(to: .default)
+        }
+        Task { await engine.removeWebsiteData(of: profile) }
     }
 
     @objc func importHistoryFromArc(_ sender: Any?) {

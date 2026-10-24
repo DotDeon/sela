@@ -23,10 +23,13 @@ public final class FakeEngine: ContentBlockingEngine {
     public var extensionHost: (any ExtensionHost)?
     public var onExtensionPermissionsChanged: (@MainActor (String, ExtensionPermissions) -> Void)?
 
+    /// Profiles whose website data was removed, oldest first.
+    public private(set) var removedProfiles: [ProfileIdentifier] = []
+
     public init() {}
 
-    public func makeTab(url: URL?) -> any BrowserTab {
-        makeFakeTab(url: url)
+    public func makeTab(url: URL?, profile: ProfileIdentifier) -> any BrowserTab {
+        makeFakeTab(url: url, profile: profile)
     }
 
     public func installContentRules(_ ruleSets: [ContentRuleSet]) async throws {
@@ -34,13 +37,18 @@ public final class FakeEngine: ContentBlockingEngine {
         installCount += 1
     }
 
-    public func makeTab(restoring snapshot: TabSnapshot) -> any BrowserTab {
+    public func makeTab(restoring snapshot: TabSnapshot, profile: ProfileIdentifier) -> any BrowserTab {
         restoredSnapshots.append(snapshot)
-        return makeFakeTab(url: snapshot.url)
+        return makeFakeTab(url: snapshot.url, profile: profile)
     }
 
-    func makeFakeTab(url: URL?) -> FakeTab {
-        let tab = FakeTab(engine: self)
+    public func removeWebsiteData(of profile: ProfileIdentifier) async {
+        guard profile != .default else { return }
+        removedProfiles.append(profile)
+    }
+
+    func makeFakeTab(url: URL?, profile: ProfileIdentifier) -> FakeTab {
+        let tab = FakeTab(engine: self, profile: profile)
         if let url { tab.load(url) }
         madeTabs.append(tab)
         return tab

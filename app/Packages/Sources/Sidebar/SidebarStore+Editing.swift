@@ -124,6 +124,29 @@ extension SidebarStore {
         try? change { try $0.updateSpace(id, title: title, icon: icon, theme: theme) }
     }
 
+    /// Adds a profile with a trimmed name, or "New Profile" when the name is blank.
+    @discardableResult
+    public func addProfile(name: String) -> ProfileID {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return change { $0.addProfile(name: trimmed.isEmpty ? "New Profile" : trimmed) }
+    }
+
+    /// Renames a profile. A blank name leaves it as it was.
+    public func renameProfile(_ id: ProfileID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let profile = document.profile(id) else { return }
+        try? change { try $0.updateProfile(id, name: trimmed, icon: profile.icon, color: profile.color) }
+    }
+
+    /// Removes a profile and moves its spaces to Default. Does nothing for Default.
+    public func removeProfile(_ id: ProfileID) {
+        _ = try? change { try $0.removeProfile(id) }
+    }
+
+    public func setProfile(_ profileID: ProfileID, of spaceID: SpaceID) {
+        try? change { try $0.setProfile(profileID, of: spaceID) }
+    }
+
     /// Makes many edits as one change with one save, such as adding a whole set of imported bookmarks.
     @discardableResult
     public func edit<Result>(_ body: (inout SidebarDocument) -> Result) -> Result {

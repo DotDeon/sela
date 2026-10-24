@@ -11,6 +11,8 @@ public enum SidebarError: Error, Equatable, Sendable {
     case corruptFile(backupURL: URL)
     case spaceNotFound(SpaceID)
     case cannotRemoveLastSpace
+    case profileNotFound(ProfileID)
+    case cannotRemoveDefaultProfile
     case notATab(ItemID)
     case notAFolder(ItemID)
     /// Only tabs outside favourites can be in a split.

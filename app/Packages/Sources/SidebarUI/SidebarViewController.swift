@@ -64,7 +64,7 @@ public final class SidebarViewController: NSViewController {
     private let favicons: FaviconStore
     private let tint = NSView()
     private let addressPill = AddressPill()
-    private let spaceBar: SpaceBarView
+    let spaceBar: SpaceBarView
     private let backButton = HoverButton(symbol: "chevron.left", label: "Back", pointSize: 14)
     private let forwardButton = HoverButton(symbol: "chevron.right", label: "Forward", pointSize: 14)
     private let reloadButton = HoverButton(symbol: "arrow.clockwise", label: "Reload")

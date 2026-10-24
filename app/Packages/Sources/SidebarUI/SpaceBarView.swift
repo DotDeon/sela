@@ -56,12 +56,13 @@ final class SpaceBarView: NSView {
                 button.target = self
                 button.action = #selector(spaceClicked(_:))
                 button.onDrop = { [weak self] id in self?.moveItem(id, to: space.id) }
-                button.menu = spaceMenu(for: space.id)
                 return button
             }
             buttons.forEach(stack.addArrangedSubview)
         }
         for (button, space) in zip(buttons, spaces) {
+            // Made again each time, so the Profile menu shows profiles added or renamed since.
+            button.menu = spaceMenu(for: space.id)
             configureSpaceIcon(button, icon: space.icon, title: space.title)
             let selected = space.id == model.selectedSpaceID
             button.contentTintColor = selected ? .labelColor : .tertiaryLabelColor
@@ -91,7 +92,7 @@ final class SpaceBarView: NSView {
         try? model.sidebar.move(id, to: container, at: 0)
     }
 
-    private func spaceMenu(for id: SpaceID) -> NSMenu {
+    func spaceMenu(for id: SpaceID) -> NSMenu {
         let menu = NSMenu()
         menu.addItem(menuItem("Rename…") { [weak self] in self?.rename(id) })
         menu.addItem(menuItem("Change Icon…") { [weak self] in self?.changeIcon(id) })
@@ -105,6 +106,7 @@ final class SpaceBarView: NSView {
         }
         colours.submenu = colourMenu
         menu.addItem(colours)
+        menu.addItem(profileItem(for: id))
         menu.addItem(.separator())
         menu.addItem(menuItem("Move Left") { [weak self] in self?.move(id, by: -1) })
         menu.addItem(menuItem("Move Right") { [weak self] in self?.move(id, by: 1) })
@@ -114,6 +116,31 @@ final class SpaceBarView: NSView {
         menu.autoenablesItems = false
         delete.isEnabled = document.spaces.count > 1
         return menu
+    }
+
+    /// Profile: every profile, with a tick by the space's, then New Profile….
+    private func profileItem(for id: SpaceID) -> NSMenuItem {
+        let item = NSMenuItem(title: "Profile", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        let current = document.profileID(of: id)
+        for profile in document.profiles {
+            let choice = menuItem(profile.name) { [weak self] in self?.model.sidebar.setProfile(profile.id, of: id) }
+            choice.state = profile.id == current ? .on : .off
+            submenu.addItem(choice)
+        }
+        submenu.addItem(.separator())
+        submenu.addItem(menuItem("New Profile…") { [weak self] in self?.newProfile(for: id) })
+        item.submenu = submenu
+        return item
+    }
+
+    /// Makes a profile, named by the user, and gives it to the space. Its tabs open again signed out.
+    private func newProfile(for id: SpaceID) {
+        guard let name = prompt("New Profile", message: "The space's tabs open again with their own cookies, logins and site data.", defaultText: ""),
+              !name.isEmpty
+        else { return }
+        let profile = model.sidebar.addProfile(name: name)
+        model.sidebar.setProfile(profile, of: id)
     }
 
     private func rename(_ id: SpaceID) {
