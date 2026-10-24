@@ -6,7 +6,7 @@ Website and download: https://dotdeon.github.io/sela
 
 Sela is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-sela-design.md`](docs/design/2026-10-23-sela-design.md).
 
-Sela is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. It blocks ads and trackers, YouTube's video ads included, with AdGuard Base and EasyPrivacy, and you can turn blocking off for any site. Tabs you haven't looked at for 15 minutes go to sleep to save memory, and wake where they were. It downloads files, finds text on a page with Cmd+F, uploads files, and asks before a site uses your camera or microphone. On first launch it offers to bring in your Arc sidebar, and brings in your Arc browsing history from the last 90 days. Settings (Cmd+,) holds the default browser, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
+Sela is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. Links from other apps open in Little Sela, a small window of their own, and Open in Sela moves the page to your tabs without reloading it. Cmd+Shift+N opens an empty one. It blocks ads and trackers, YouTube's video ads included, with AdGuard Base and EasyPrivacy, and you can turn blocking off for any site. Tabs you haven't looked at for 15 minutes go to sleep to save memory, and wake where they were. It downloads files, finds text on a page with Cmd+F, uploads files, and asks before a site uses your camera or microphone. On first launch it offers to bring in your Arc sidebar, and brings in your Arc browsing history from the last 90 days. Settings (Cmd+,) holds the default browser, where links from other apps open, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -30,7 +30,7 @@ Inside `app/Packages`:
 - `BrowserEngine`: the protocols Sela's UI uses to talk to a browser engine
 - `WebKitEngine`: those protocols built on Safari's WebKit
 - `FakeEngine`: a stand-in engine with no web content, for tests
-- `Browsing`: a window's live tabs on top of the sidebar, popups, page dialogs, and address bar parsing
+- `Browsing`: a window's live tabs on top of the sidebar, popups, page dialogs, address bar parsing, and Little Sela windows
 - `Sidebar`: the shared sidebar store that saves itself, plus outline, drag and drop, and swipe logic
 - `SidebarUI`: the sidebar's views: favourites grid, space pages, space bar and address
 - `Favicons`: site icons, fetched from each site and cached on disk
