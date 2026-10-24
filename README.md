@@ -89,6 +89,10 @@ swift run --package-path app/Packages sela-arc inspect --root "/Volumes/Backup/A
 
 Neither command changes anything in Arc's folder.
 
+## Supporting Sela
+
+Sela is free and has no ads. If it helps you, you can sponsor its development on [GitHub Sponsors](https://github.com/sponsors/DotDeon).
+
 ## Licence
 
 Sela is free software under the GNU General Public License, version 3. See [`LICENSE`](LICENSE).
