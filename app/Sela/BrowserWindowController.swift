@@ -178,6 +178,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             return (model.selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
         case #selector(separateSplitView(_:)), #selector(rotateSplitView(_:)):
             return model.selectedSplit != nil
+        case #selector(toggleReader(_:)):
+            let state = model.selectedTab?.state
+            item.state = state?.isShowingReader == true ? .on : .off
+            return state?.isReaderAvailable == true || state?.isShowingReader == true
         case #selector(toggleSiteBlocking(_:)):
             guard let url = blockableURL, let contentBlocker else {
                 item.state = .off
@@ -201,6 +205,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     }
 
     @objc func reloadTab(_ sender: Any?) { model.selectedTab?.reload() }
+
+    /// View > Reader: the page's article in a plain layout, or back to the page.
+    @objc func toggleReader(_ sender: Any?) {
+        Task {
+            if await !model.toggleReader() { NSSound.beep() }
+        }
+    }
 
     @objc func stopTab(_ sender: Any?) { model.selectedTab?.stopLoading() }
 
@@ -255,6 +266,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case "separate-split": separateSplitView(nil)
         case "rotate-split": rotateSplitView(nil)
         case "toggle-site-blocking": toggleSiteBlocking(nil)
+        case "toggle-reader": toggleReader(nil)
         case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
         default: break
         }

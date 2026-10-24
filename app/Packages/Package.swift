@@ -64,7 +64,11 @@ let package = Package(
         .target(name: "BrowserEngine"),
         .target(name: "FakeEngine", dependencies: ["BrowserEngine"]),
         .testTarget(name: "FakeEngineTests", dependencies: ["FakeEngine", "BrowserEngine"]),
-        .target(name: "WebKitEngine", dependencies: ["BrowserEngine"], resources: [.copy("Resources/content-blocking.js")]),
+        .target(
+            name: "WebKitEngine",
+            dependencies: ["BrowserEngine"],
+            resources: [.copy("Resources/content-blocking.js"), .copy("Resources/reader-signals.js"), .copy("Resources/reader-extract.js")]
+        ),
         .testTarget(name: "WebKitEngineTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .target(

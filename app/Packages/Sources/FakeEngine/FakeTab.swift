@@ -23,6 +23,12 @@ public final class FakeTab: BrowserTab {
     /// What `find` answers, and every search it was asked for.
     @ObservationIgnored public var findResult = false
     @ObservationIgnored public private(set) var finds: [(String, Bool)] = []
+    /// Whether a video plays, for `enterPictureInPicture`.
+    @ObservationIgnored public var isPlayingVideoForTesting = false
+    /// True while `enterPictureInPicture` has the video floating.
+    public private(set) var isInPictureInPicture = false
+    /// What `thumbnail(width:)` answers.
+    @ObservationIgnored public var thumbnailForTesting: NSImage?
 
     /// Strong on purpose: tests often keep only the tab. The cycle with `FakeEngine.madeTabs` is fine for a test double.
     @ObservationIgnored private let engine: FakeEngine
@@ -40,6 +46,8 @@ public final class FakeTab: BrowserTab {
         index = history.count - 1
         state.title = nil
         state.faviconURL = nil
+        state.isReaderAvailable = false
+        state.isShowingReader = false
         state.isLoading = true
         state.estimatedProgress = 0
         updateHistoryState()
@@ -57,6 +65,33 @@ public final class FakeTab: BrowserTab {
     }
 
     public func clearFind() {}
+
+    public func showReader() async -> Bool {
+        guard state.isReaderAvailable else { return false }
+        state.isShowingReader = true
+        return true
+    }
+
+    public func hideReader() {
+        state.isShowingReader = false
+    }
+
+    public func enterPictureInPicture() async -> Bool {
+        guard isPlayingVideoForTesting, !isInPictureInPicture else { return false }
+        isInPictureInPicture = true
+        return true
+    }
+
+    public func exitPictureInPicture() {
+        isInPictureInPicture = false
+    }
+
+    public func thumbnail(width: CGFloat) async -> NSImage? { thumbnailForTesting }
+
+    /// The page turns out to be an article, or not, as a page does once it has loaded.
+    public func simulateArticle(_ isArticle: Bool) {
+        state.isReaderAvailable = isArticle
+    }
 
     public func simulateChooseFiles(multiple: Bool, directories: Bool) async -> [URL]? {
         guard let delegate else { return nil }

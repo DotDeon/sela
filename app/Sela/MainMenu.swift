@@ -78,6 +78,7 @@ enum MainMenu {
         let menu = NSMenu(title: "View")
         menu.addItem(item("Toggle Sidebar", #selector(BrowserWindowController.toggleSidebar(_:)), "s"))
         menu.addItem(item("Downloads", #selector(BrowserWindowController.showDownloads(_:)), "l", [.command, .option]))
+        menu.addItem(item("Reader", #selector(BrowserWindowController.toggleReader(_:)), "r", [.command, .shift]))
         menu.addItem(.separator())
         menu.addItem(item("Reload Page", #selector(BrowserWindowController.reloadTab(_:)), "r"))
         menu.addItem(item("Stop", #selector(BrowserWindowController.stopTab(_:)), "."))
