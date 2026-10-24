@@ -49,6 +49,11 @@ public final class ContentBlocker {
     /// Turns blocking on or off for every page on the URL's site.
     public func setBlocking(_ on: Bool, forSiteOf url: URL) {
         guard let site = contentBlockingSite(for: url) else { return }
+        setBlocking(on, forSite: site)
+    }
+
+    /// Turns blocking on or off for a site by the name `contentBlockingSite(for:)` gives it, as Settings lists them.
+    public func setBlocking(_ on: Bool, forSite site: String) {
         if on { offSites.remove(site) } else { offSites.insert(site) }
         defaults.set(offSites.sorted(), forKey: Self.offSitesKey)
     }

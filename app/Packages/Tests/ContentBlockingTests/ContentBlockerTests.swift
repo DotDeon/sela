@@ -144,3 +144,11 @@ private func eventually(_ condition: @MainActor () -> Bool, sourceLocation: Sour
     await blocker.refreshIfNeeded()
     #expect(!blocker.isMissingLists)
 }
+
+@MainActor @Test func turningASiteBackOnByName() {
+    let blocker = Harness().makeBlocker()
+    blocker.setBlocking(false, forSiteOf: URL(string: "https://www.example.com/")!)
+    #expect(blocker.offSites == ["example.com"])
+    blocker.setBlocking(true, forSite: "example.com")
+    #expect(blocker.isBlocking(on: URL(string: "https://shop.example.com/")!))
+}

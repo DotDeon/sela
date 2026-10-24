@@ -30,8 +30,17 @@ public struct SitePermissions {
     }
 
     public func forget(siteOf origin: URL) {
+        forget(site: site(origin))
+    }
+
+    /// Every site with a choice, sorted by name. Nil means that kind was never asked.
+    public func sites() -> [(site: String, camera: Bool?, microphone: Bool?)] {
+        stored.keys.sorted().map { site in (site, stored[site]?["camera"], stored[site]?["microphone"]) }
+    }
+
+    public func forget(site: String) {
         var all = stored
-        all[site(origin)] = nil
+        all[site] = nil
         defaults.set(all, forKey: Self.key)
     }
 

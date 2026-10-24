@@ -40,3 +40,20 @@ private let other = URL(string: "https://example.com")!
     permissions.forget(siteOf: accounts)
     #expect(permissions.decision(for: .camera, on: meet) == nil)
 }
+
+@Test func sitesListsEveryChoice() {
+    let permissions = fresh()
+    permissions.remember(true, for: .camera, on: meet)
+    permissions.remember(false, for: .microphone, on: other)
+    let sites = permissions.sites()
+    #expect(sites.map(\.site) == ["example.com", "google.com"])
+    #expect(sites[0].camera == nil && sites[0].microphone == false)
+    #expect(sites[1].camera == true && sites[1].microphone == nil)
+}
+
+@Test func forgetBySiteName() {
+    let permissions = fresh()
+    permissions.remember(true, for: .camera, on: meet)
+    permissions.forget(site: "google.com")
+    #expect(permissions.sites().isEmpty)
+}
