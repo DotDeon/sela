@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var history: HistoryStore?
     private var sweeper: ArchiveSweeper?
     private var tabSleeper: TabSleeper?
+    private var settingsWindow: SettingsWindowController?
     /// This session's downloads, shown in every window.
     private let downloads = DownloadList()
     /// `-BrowDataFolder <path>` keeps every Brow file in that folder instead of Application Support,
@@ -49,6 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Brow works without history if the database can't open.
         history = (dataFile("History.sqlite") ?? (try? HistoryStore.defaultFileURL())).flatMap { try? HistoryStore(fileURL: $0) }
         startContentBlocking()
+        if dataFolderOverride == nil {
+            HistoryImport.runOnFirstLaunch(into: history)
+        }
 
         // Another window may have removed a tab or space this window shows.
         keepObserving { [weak self] in
@@ -125,6 +129,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func setArchiveInterval(_ sender: NSMenuItem) {
         ArchiveSweeper.hours = sender.tag
         sweeper?.sweep()
+    }
+
+    @objc func showSettings(_ sender: Any?) {
+        if settingsWindow == nil {
+            settingsWindow = SettingsWindowController(contentBlocker: contentBlocker, history: history) { [weak self] in
+                self?.sweeper?.sweep()
+                Task { await self?.tabSleeper?.sleepUnusedTabs() }
+            }
+        }
+        settingsWindow?.showWindow(nil)
+        settingsWindow?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc func importHistoryFromArc(_ sender: Any?) {
+        HistoryImport.runAndReport(into: history, window: NSApp.keyWindow)
     }
 
     /// The "Sleep Unused Tabs After" menu. The item's tag is the number of minutes, 0 for never.

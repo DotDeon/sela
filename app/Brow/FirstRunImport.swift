@@ -13,7 +13,7 @@ enum FirstRunImport {
         NSApp.activate()
         let offer = NSAlert()
         offer.messageText = "Bring your Arc sidebar into Brow?"
-        offer.informativeText = "Brow can copy your spaces, pinned tabs, folders and favourites from Arc. Arc isn't changed. History, passwords and extensions come in a later version."
+        offer.informativeText = "Brow can copy your spaces, pinned tabs, folders and favourites from Arc. Arc isn't changed. Your browsing history comes across too. Passwords stay with Arc: export them from Arc's settings."
         offer.addButton(withTitle: "Import")
         offer.addButton(withTitle: "Start Fresh")
         guard offer.runModal() == .alertFirstButtonReturn else { return nil }
