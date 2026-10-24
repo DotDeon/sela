@@ -42,3 +42,6 @@ next-env.d.ts
 
 # screenshots from the scroll checks
 /design/lab/
+
+# raw generation output (large PNGs and source clips)
+/design/builds/*/out/

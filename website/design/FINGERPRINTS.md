@@ -29,6 +29,7 @@ changes only grammar and world will fail it.
 | Build | Grammar | Nav treatment | Hero device | Act-sequence shape | Close pattern | Signature move | World | Port |
 |---|---|---|---|---|---|---|---|---|
 | sela (2026-10-24) | Live surface | A fixed browser sidebar is the nav: favourites, pinned tabs per section, a space bar | The Sela window already open, with Arc receding behind an import sheet as three planes | pin > flow > pin (peak, 3.8) > pan > pin + reveal > flow > pin, 7 acts, about 12.9vh | A working command bar with Download highlighted, footer inside the stage | Tabs fly out of a sample Arc sidebar into the site's own nav and stay there | Light silver Mac chrome, one teal accent | Next.js static export |
+| sela-2 (2026-10-24) | Framed film (new) | Same fixed browser sidebar as nav, dark | Scrubbed push-in on a stone in a river, mist planes front and back | scrub > pin > scrub (peak, 3.6) > pan > pin + reveal > flow > pin, 7 acts, about 15vh | Command bar floating over a still lake at dawn | Scroll runs the river, and pinned tabs climb out into the sidebar while loose ones float away | Dark low-key river at blue hour | Next.js static export |
 
 ---
 
@@ -41,7 +42,8 @@ as a constraint, so writing them down is the whole point.
 
 - Live surface with the site's nav as the product's own sidebar (sela)
 - Items flying from a sample panel into fixed chrome (sela)
-- A command bar as the close (sela)
+- A command bar as the close (sela, sela-2)
+- Framed film: product chrome around full-bleed generated footage (sela-2)
 
 ---
 
