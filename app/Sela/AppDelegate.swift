@@ -154,6 +154,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         Task { await tabSleeper?.sleepUnusedTabs() }
     }
 
+    /// Help > Report a Problem…: a new GitHub issue with the template and this Mac's details filled in.
+    /// Opens in a Sela tab rather than through NSWorkspace, which would come straight back here when Sela is the default browser.
+    @objc func reportProblem(_ sender: Any?) {
+        application(NSApp, open: [ProblemReport.current().issueURL])
+    }
+
+    @objc func openWebsite(_ sender: Any?) {
+        application(NSApp, open: [URL(string: "https://dotdeon.github.io/sela")!])
+    }
+
+    @objc func openGitHub(_ sender: Any?) {
+        application(NSApp, open: [URL(string: "https://github.com/DotDeon/sela")!])
+    }
+
     /// `-SelaOpenPages <file>`: opens each address in the file as a new tab, one every 4 seconds. For measuring runs.
     private func openPagesForMeasuring(listedIn file: URL) {
         let pages = ((try? String(contentsOf: file, encoding: .utf8)) ?? "")
