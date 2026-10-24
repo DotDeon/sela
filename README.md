@@ -16,12 +16,13 @@ What it does today:
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
 - **Extensions.** On macOS 15.4 or later Sela runs Web Extensions, the kind Safari and Chrome use. Add them in Settings from a folder or a .zip file, and their buttons sit at the top of the sidebar. Sela can't install from the Chrome Web Store.
 - **Reader mode.** When a page looks like an article, a button at the end of the address shows it in a quiet serif layout that follows light and dark mode. View > Reader (Cmd+Shift+R) turns it on and off.
+- **Picture in picture.** A video that's playing when you switch to another tab or another app floats in its own small window, and goes back into the page when you return. Settings > General turns this off.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
 - **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit.
 
-Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
+Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, picture in picture, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 

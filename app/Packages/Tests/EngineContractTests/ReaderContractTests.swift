@@ -62,4 +62,38 @@ struct ReaderContractTests {
         #expect(await tab.enterPictureInPicture() == false)
         tab.exitPictureInPicture()
     }
+
+    /// A short clip that ships with macOS, so the test needs no video of its own.
+    nonisolated private static let clip = URL(fileURLWithPath: "/System/Library/CoreServices/BluetoothUIService.app/Contents/Resources/Banner-PID-8231-Case-mov/Banner-PID-8231-Case-Loop.mov")
+
+    @Test(.enabled(if: FileManager.default.fileExists(atPath: clip.path)), arguments: EngineUnderTest.allCases)
+    func playingVideosFloatAndComeBack(engine: EngineUnderTest) async throws {
+        try FileManager.default.copyItem(at: Self.clip, to: site.folder.appending(path: "clip.mov"))
+        let page = try site.page("video.html", #"<video src="clip.mov" muted loop autoplay playsinline width="320" height="180"></video>"#)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600), styleMask: [.titled], backing: .buffered, defer: false)
+        defer { window.orderOut(nil) }
+        let tab = try await loadedTab(engine.make(), page)
+        window.contentView = tab.contentView
+        window.orderFront(nil)
+        // The clip needs a moment to start playing.
+        var floated = false
+        for _ in 0..<40 where !floated {
+            try await Task.sleep(for: .milliseconds(100))
+            floated = await tab.enterPictureInPicture()
+        }
+        #expect(floated)
+        // Already floating, so there's nothing more to float.
+        #expect(await tab.enterPictureInPicture() == false)
+        tab.exitPictureInPicture()
+        // Back in the page, the video can float again once the window has gone.
+        var floatedAgain = false
+        for _ in 0..<40 where !floatedAgain {
+            try await Task.sleep(for: .milliseconds(100))
+            floatedAgain = await tab.enterPictureInPicture()
+        }
+        #expect(floatedAgain)
+        #expect(await tab.isPlayingMedia())
+        tab.exitPictureInPicture()
+        try await Task.sleep(for: .milliseconds(500))
+    }
 }

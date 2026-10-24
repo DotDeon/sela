@@ -25,6 +25,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private var findBar: FindBarController?
     private var downloadsPopover: DownloadsPopover?
     private let extensions: ExtensionsController?
+    private var pictureInPicture: PictureInPictureController?
 
     init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore,
          contentBlocker: ContentBlocker?, downloads: DownloadList, extensions: ExtensionsController?) {
@@ -56,6 +57,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             self?.runCommand(id)
         }
         peek = PeekPresenter(model: model, host: root.pageArea)
+        pictureInPicture = PictureInPictureController(model: model, window: window)
         findBar = FindBarController(model: model, host: root.pageArea)
         let popover = DownloadsPopover(list: downloads)
         downloadsPopover = popover

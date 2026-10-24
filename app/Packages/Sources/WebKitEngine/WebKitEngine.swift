@@ -183,6 +183,7 @@ public final class WebKitEngine: ContentBlockingEngine {
         webConfiguration.websiteDataStore = dataStore(for: profile)
         webConfiguration.applicationNameForUserAgent = applicationName
         webConfiguration.preferences.isElementFullscreenEnabled = true
+        allowPictureInPicture(webConfiguration.preferences)
         webConfiguration.preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture
         webConfiguration.userContentController = makeContentController(bridge: bridge)
         if #available(macOS 15.4, *) {

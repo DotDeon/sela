@@ -33,11 +33,23 @@ enum PictureInPictureScripts {
         const video = window.selaFloatedVideo;
         window.selaFloatedVideo = null;
         if (!video) return false;
+        const wasPlaying = !video.paused;
         if (document.pictureInPictureElement === video) {
             await document.exitPictureInPicture();
         } else if (video.webkitPresentationMode === "picture-in-picture") {
             video.webkitSetPresentationMode("inline");
         }
+        // WebKit pauses a video as it comes back into the page. One that was playing carries on.
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        if (wasPlaying && video.paused) await video.play().catch(() => {});
         return true;
         """
+}
+
+/// Lets pages float their videos, as they can in Safari. WebKit only offers the switch on macOS as a private
+/// preference, so this checks it's there first. Without it, every request for picture in picture fails.
+@MainActor
+func allowPictureInPicture(_ preferences: WKPreferences) {
+    guard preferences.responds(to: NSSelectorFromString("_setAllowsPictureInPictureMediaPlayback:")) else { return }
+    preferences.setValue(true, forKey: "allowsPictureInPictureMediaPlayback")
 }
