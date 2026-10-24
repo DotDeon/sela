@@ -20,6 +20,8 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// The page showing in Peek over the selected tab, or nil. A window has at most one.
     public private(set) var peekTab: (any BrowserTab)?
     private var liveTabs: [ItemID: any BrowserTab] = [:]
+    /// Tabs put to sleep: their page is unloaded and this is where it wakes.
+    private var snapshots: [ItemID: TabSnapshot] = [:]
     private var dialogs: [PendingDialog] = []
 
     @ObservationIgnored private let engine: any BrowserEngine
@@ -273,6 +275,47 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         peekTab?.id == tab.id
     }
 
+    // MARK: Sleeping
+
+    /// True while a tab's page is unloaded to save memory. Selecting it wakes it where it was.
+    public func isSleeping(_ id: ItemID) -> Bool {
+        snapshots[id] != nil
+    }
+
+    /// Unloads every page that may sleep and was last shown at least `interval` ago, keeping a snapshot to wake it from.
+    /// Never sleeps what's on screen (the selected tab, its split's panes, Peek), or pages playing media,
+    /// using the camera or microphone, or waiting on a dialog. An interval of 0 is for memory warnings.
+    @discardableResult
+    public func sleepTabs(unusedFor interval: TimeInterval) async -> [ItemID] {
+        var slept: [ItemID] = []
+        for id in liveTabs.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            guard let tab = liveTabs[id], maySleep(id, unusedFor: interval) else { continue }
+            if await tab.isPlayingMedia() { continue }
+            // The selection may have moved while the page answered.
+            guard liveTabs[id] === tab, maySleep(id, unusedFor: interval) else { continue }
+            snapshots[id] = tab.snapshot()
+            unload(id)
+            slept.append(id)
+        }
+        return slept
+    }
+
+    private func maySleep(_ id: ItemID, unusedFor interval: TimeInterval) -> Bool {
+        guard let tab = liveTabs[id], id != selectedItemID, selectedSplit?.paneIDs.contains(id) != true,
+              !tab.state.isUsingCameraOrMicrophone, !dialogs.contains(where: { $0.tabID == tab.id })
+        else { return false }
+        let lastShown = tabInfo(id)?.lastActiveAt ?? document.item(id)?.createdAt ?? .distantPast
+        return now().timeIntervalSince(lastShown) >= interval
+    }
+
+    /// A new page for a tab: woken from its snapshot when it was asleep, otherwise loading its saved address.
+    private func makePage(for id: ItemID) -> any BrowserTab {
+        if let snapshot = snapshots.removeValue(forKey: id) {
+            return engine.makeTab(restoring: snapshot)
+        }
+        return engine.makeTab(url: tabInfo(id)?.savedURL)
+    }
+
     // MARK: Closing
 
     /// Unpinned tabs are removed from the sidebar. Pinned tabs and favourites stay and only unload their page.
@@ -289,6 +332,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
             archive?.add(archiveEntries(for: [id]))
         }
         unload(id)
+        snapshots[id] = nil
         if isUnpinned {
             sidebar.remove(id)
         }
@@ -335,6 +379,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         archive?.add(archiveEntries(for: ids))
         for id in ids {
             unload(id)
+            snapshots[id] = nil
             forgetOpener(id)
         }
         sidebar.clearUnpinned(in: selectedSpaceID)
@@ -364,6 +409,9 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     /// Drops live pages and selections whose sidebar items or spaces no longer exist,
     /// for example after another window closed a tab.
     public func reconcile() {
+        for id in Array(snapshots.keys) where !isTab(id) {
+            snapshots[id] = nil
+        }
         for id in Array(liveTabs.keys) where !isTab(id) {
             unload(id)
             forgetOpener(id)
@@ -388,6 +436,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     public func closeAllLiveTabs() {
         closePeek()
         for id in Array(liveTabs.keys) { unload(id) }
+        snapshots.removeAll()
         openerIDs.removeAll()
         leaveSelection()
     }
@@ -480,7 +529,7 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         // Every pane of a split shows at once, so every pane needs its page.
         let panes = document.splitID(containing: id).map { document.tabIDs(under: $0) } ?? [id]
         for pane in panes where liveTabs[pane] == nil {
-            register(engine.makeTab(url: tabInfo(pane)?.savedURL), for: pane)
+            register(makePage(for: pane), for: pane)
         }
         let date = now()
         if let previous = selectedItemID, previous != id {
