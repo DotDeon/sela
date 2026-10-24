@@ -41,6 +41,11 @@ export function GetSela() {
   return (
     <section id="get-sela" className="close" data-sc-act="pin" data-sc-span="1.2">
       <div data-sc-stage className="close__stage">
+        <picture>
+          <source media="(max-width: 860px)" srcSet="/media/close-m.jpg" />
+          <img className="close__ground" src="/media/close.jpg" alt="" />
+        </picture>
+        <div className="close__scrim" aria-hidden />
         <div className="close__inner">
           <h2 className="heading" data-sc-cue="0.02">
             Get Sela
@@ -97,10 +102,7 @@ export function GetSela() {
         </div>
 
         <footer className="foot">
-          <p>
-            Sela is free software under the GNU GPL, version 3. It isn&rsquo;t made by or
-            affiliated with The Browser Company.
-          </p>
+          <p>Sela is free software under the GNU GPL, version 3.</p>
         </footer>
       </div>
     </section>

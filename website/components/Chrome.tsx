@@ -2,7 +2,7 @@
 
 import { Bug, CodeXml, Download, Heart, PanelLeft, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { arcSpaces, downloadLabel, links, sections } from "@/lib/site";
+import { downloadLabel, links, sections } from "@/lib/site";
 import { Favicon } from "./Icon";
 
 const favourites = [
@@ -13,7 +13,7 @@ const favourites = [
 ];
 
 // The page's navigation is a browser sidebar: favourites, pinned tabs for the
-// sections, and a space bar. Rows for sections that arrive during the move
+// sections, and a space bar. Rows for sections that climb out of the river
 // carry data-slot so the flight can find them and mark them landed.
 export function Chrome() {
   const [current, setCurrent] = useState(sections[0].id);
@@ -103,8 +103,8 @@ export function Chrome() {
               <li key={s.id}>
                 <a
                   href={`#${s.id}`}
-                  className={s.fromArc ? "tab slot" : "tab"}
-                  data-slot={s.fromArc ? s.id : undefined}
+                  className={s.drifts ? "tab slot" : "tab"}
+                  data-slot={s.drifts ? s.id : undefined}
                   aria-current={current === s.id ? "location" : undefined}
                   onClick={() => setOpen(false)}
                 >
@@ -118,15 +118,6 @@ export function Chrome() {
 
         <div className="spacebar" aria-label="Spaces">
           <span className="space space--current" title="Sela" />
-          {arcSpaces.map((s) => (
-            <span
-              key={s.id}
-              className="space slot"
-              data-slot={s.id}
-              title={s.title}
-              style={{ background: s.tint }}
-            />
-          ))}
         </div>
       </aside>
     </>

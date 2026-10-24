@@ -1,21 +1,21 @@
 import {
   Download,
+  Droplet,
   Hand,
   House,
-  Leaf,
+  Mountain,
   Receipt,
-  ShieldCheck,
-  Truck,
+  Waves,
   type LucideProps,
 } from "lucide-react";
 import type { IconName } from "@/lib/site";
 
 const icons = {
   home: House,
-  leaf: Leaf,
-  move: Truck,
+  mountain: Mountain,
+  waves: Waves,
   hand: Hand,
-  shield: ShieldCheck,
+  droplet: Droplet,
   receipt: Receipt,
   download: Download,
 };
