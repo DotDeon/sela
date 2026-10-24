@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "CommandBar", targets: ["CommandBar"]),
         .library(name: "ArcImport", targets: ["ArcImport"]),
         .library(name: "ArcSnapshot", targets: ["ArcSnapshot"]),
+        .library(name: "BrowserImport", targets: ["BrowserImport"]),
         .library(name: "BrowserEngine", targets: ["BrowserEngine"]),
         .library(name: "FakeEngine", targets: ["FakeEngine"]),
         .library(name: "WebKitEngine", targets: ["WebKitEngine"]),
@@ -49,6 +50,12 @@ let package = Package(
         .testTarget(
             name: "ArcImportTests",
             dependencies: ["ArcImport", "SidebarModel"],
+            resources: [.copy("Fixtures")]
+        ),
+        .target(name: "BrowserImport", dependencies: ["SidebarModel"], linkerSettings: [.linkedLibrary("sqlite3")]),
+        .testTarget(
+            name: "BrowserImportTests",
+            dependencies: ["BrowserImport", "SidebarModel"],
             resources: [.copy("Fixtures")]
         ),
         .target(name: "ArcSnapshot"),

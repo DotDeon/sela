@@ -123,6 +123,12 @@ extension SidebarStore {
     public func updateSpace(_ id: SpaceID, title: String?, icon: String?, theme: SpaceTheme?) {
         try? change { try $0.updateSpace(id, title: title, icon: icon, theme: theme) }
     }
+
+    /// Makes many edits as one change with one save, such as adding a whole set of imported bookmarks.
+    @discardableResult
+    public func edit<Result>(_ body: (inout SidebarDocument) -> Result) -> Result {
+        change(body)
+    }
 }
 
 extension SidebarStore {

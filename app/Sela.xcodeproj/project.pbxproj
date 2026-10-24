@@ -21,6 +21,7 @@
 		B70000000000000000000027 /* ContentBlocking in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000028 /* ContentBlocking */; };
 		B7000000000000000000002A /* Downloads in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000002B /* Downloads */; };
 		B7000000000000000000A001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000A002 /* Sparkle */; };
+		B7000000000000000000002C /* BrowserImport in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000002D /* BrowserImport */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 				B70000000000000000000027 /* ContentBlocking in Frameworks */,
 				B7000000000000000000002A /* Downloads in Frameworks */,
 				B7000000000000000000A001 /* Sparkle in Frameworks */,
+				B7000000000000000000002C /* BrowserImport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +114,7 @@
 				B70000000000000000000028 /* ContentBlocking */,
 				B7000000000000000000002B /* Downloads */,
 				B7000000000000000000A002 /* Sparkle */,
+				B7000000000000000000002D /* BrowserImport */,
 			);
 			productName = Sela;
 			productReference = B70000000000000000000005 /* Sela.app */;
@@ -360,6 +363,10 @@
 		B7000000000000000000002B /* Downloads */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Downloads;
+		};
+		B7000000000000000000002D /* BrowserImport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrowserImport;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

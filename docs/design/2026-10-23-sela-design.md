@@ -109,6 +109,14 @@ History comes from the `History` SQLite database in Arc's Chromium profile in `~
 
 **Arc snapshot tool.** Nobody knows whether Arc keeps launching, or keeps its data, after the December shutdown. A small standalone tool copies Arc's Application Support folder to a safe location, and the importer reads from either the live Arc folder or a snapshot. It gets built first, and the owner runs it before December.
 
+### Import from Chrome, Brave, Edge and Safari
+
+Without Arc, the first launch offers the browser the owner most likely uses: the default browser, or else the one used most recently. Settings > Import can import from any of them at any time. The `BrowserImport` package finds each browser's profiles (`Default` and `Profile N` under Application Support for the Chromium browsers, `~/Library/Safari` for Safari) and reads them without writing:
+
+- Bookmarks come from Chromium's `Bookmarks` JSON and Safari's `Bookmarks.plist`. The bookmarks bar becomes pinned tabs and folders at the end of the current space's pinned section, in order and with folders nested. Chromium's other and mobile bookmarks, and Safari's bookmarks menu, follow as folders. Favourites aren't touched. Non-web addresses, and addresses already pinned in the space or in favourites, are skipped, and folders with a matching name merge, so importing twice adds nothing.
+- History from the last 90 days merges into Sela's history the same way Arc's does. Browsers lock their history database while they run, so the importer copies it and its write-ahead log to a temporary folder and reads the copy. Chromium counts microseconds from 1601, Safari seconds from 2001.
+- Safari's folder needs Full Disk Access. A refused read is reported on its own, and Sela explains it with a button that opens that pane of System Settings.
+
 ### Sync
 
 CloudKit private database, one record per sidebar item and space, with each user's data in their own iCloud account. Arc's earlier CloudKit sync stored per-item records plus an ordered space list and a container record, which is the model to follow. Conflicts resolve per item, last write wins, with deletions tracked so a deleted item can't come back from a stale device.
