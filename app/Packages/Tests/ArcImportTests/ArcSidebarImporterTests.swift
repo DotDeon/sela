@@ -35,6 +35,9 @@ private func tabInfo(_ doc: SidebarDocument, _ id: ItemID) throws -> TabInfo {
     #expect(result.document.spaces[1].title == nil)
     #expect(result.document.spaces[0].pinnedContainerID == "A-pinned")
     #expect(result.document.spaces[0].unpinnedContainerID == "A-unpinned")
+    // Arc's own profiles aren't imported, so every space starts on Default.
+    #expect(result.document.profiles.map(\.id) == [.default])
+    #expect(result.document.spaces.allSatisfy { $0.profileID == .default })
 }
 
 @Test func importsFavorites() throws {

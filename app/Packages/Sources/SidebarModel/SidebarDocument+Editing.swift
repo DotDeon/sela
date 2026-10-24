@@ -97,6 +97,7 @@ extension SidebarDocument {
             try requireContainer(space.pinnedContainerID, role: .pinned(space.id))
             try requireContainer(space.unpinnedContainerID, role: .unpinned(space.id))
         }
+        try validateProfiles()
     }
 
     /// True when `move(_:to:at:)` would succeed.
