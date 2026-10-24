@@ -2,7 +2,7 @@
 
 import { Globe } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { looseTabs, pinnedTabs } from "@/lib/site";
+import { asset, looseTabs, pinnedTabs } from "@/lib/site";
 import { Favicon } from "./Icon";
 
 // Where each tab floats on the water, as fractions of the stage.
@@ -132,13 +132,13 @@ export function RiverAct() {
     >
       <div data-sc-stage>
         <picture>
-          <source media="(max-width: 860px)" srcSet="/media/river-poster-m.jpg" />
-          <img className="sc-stage__poster" src="/media/river-poster.jpg" alt="" />
+          <source media="(max-width: 860px)" srcSet={asset("/media/river-poster-m.jpg")} />
+          <img className="sc-stage__poster" src={asset("/media/river-poster.jpg")} alt="" />
         </picture>
         <video
           data-sc-scrub
-          data-sc-src="/media/river.mp4"
-          data-sc-src-mobile="/media/river-m.mp4"
+          data-sc-src={asset("/media/river.mp4")}
+          data-sc-src-mobile={asset("/media/river-m.mp4")}
           muted
           playsInline
         />

@@ -1,6 +1,7 @@
 "use client";
 
 import Script from "next/script";
+import { asset } from "@/lib/site";
 
 declare global {
   interface Window {
@@ -13,7 +14,7 @@ declare global {
 export function Engine() {
   return (
     <Script
-      src="/scrollcraft.js"
+      src={asset("/scrollcraft.js")}
       strategy="afterInteractive"
       onReady={() => {
         const root = document.body;

@@ -4,7 +4,9 @@ import { Engine } from "@/components/Engine";
 import { EveryDay } from "@/components/EveryDay";
 import { GetSela } from "@/components/GetSela";
 import { RiverAct } from "@/components/RiverAct";
-import { downloadLabel, links } from "@/lib/site";
+import Link from "next/link";
+import { getLatest, megabytes, version } from "@/lib/releases";
+import { asset, downloadLabel, links } from "@/lib/site";
 
 const facts = [
   { term: "Price", detail: "Free. Sponsors on GitHub pay for the work." },
@@ -15,7 +17,12 @@ const facts = [
   { term: "Memory", detail: "Tabs you haven't looked at for 15 minutes sleep, and wake where you left them." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const latest = await getLatest();
+  const note = latest
+    ? `Version ${version(latest)}${latest.size ? `, ${megabytes(latest.size)}` : ""}. macOS 15 or later.`
+    : "macOS 15 or later";
+
   return (
     <>
       <Chrome />
@@ -23,13 +30,13 @@ export default function Home() {
         <section id="sela" className="hero" data-sc-act="scrub" data-sc-span="2.4" data-sc-dwell="0.3">
           <div data-sc-stage>
             <picture>
-              <source media="(max-width: 860px)" srcSet="/media/hero-poster-m.jpg" />
-              <img className="sc-stage__poster" src="/media/hero-poster.jpg" alt="" />
+              <source media="(max-width: 860px)" srcSet={asset("/media/hero-poster-m.jpg")} />
+              <img className="sc-stage__poster" src={asset("/media/hero-poster.jpg")} alt="" />
             </picture>
             <video
               data-sc-scrub
-              data-sc-src="/media/hero.mp4"
-              data-sc-src-mobile="/media/hero-m.mp4"
+              data-sc-src={asset("/media/hero.mp4")}
+              data-sc-src-mobile={asset("/media/hero-m.mp4")}
               muted
               playsInline
             />
@@ -45,7 +52,7 @@ export default function Home() {
                 <a className="button" href={links.download}>
                   {downloadLabel}
                 </a>
-                <span className="hero__note">macOS 15 or later</span>
+                <span className="hero__note">{note}</span>
               </p>
             </div>
             <div className="mist mist--near" data-sc-parallax="1.6" aria-hidden />
@@ -67,6 +74,24 @@ export default function Home() {
         </section>
 
         <RiverAct />
+
+        <section id="the-app" className="real">
+          <div className="real__inner" data-sc-in data-sc-stagger="80">
+            <h2 className="heading">This is Sela.</h2>
+            <p className="body real__lede">
+              Favourites at the top, then pinned tabs and folders, then today&rsquo;s tabs. The rest of
+              the window is the page.
+            </p>
+            <img
+              className="real__window"
+              src={asset("/media/sela-window.webp")}
+              width={1104}
+              height={701}
+              loading="lazy"
+              alt="Sela's window: a sidebar with favourites, three pinned tabs, a folder called Trip to Jordan and today's tabs, beside a Wikipedia article about Petra."
+            />
+          </div>
+        </section>
         <EveryDay />
         <ClearWater />
 
@@ -81,6 +106,10 @@ export default function Home() {
                 </div>
               ))}
             </dl>
+            <p className="fine__more">
+              <Link href="/privacy">What Sela sends, and what stays on your Mac</Link>
+              <Link href="/changelog">What changed in each version</Link>
+            </p>
           </div>
         </section>
 
