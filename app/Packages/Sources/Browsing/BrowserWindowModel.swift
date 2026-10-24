@@ -98,6 +98,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         closePeek()
         openerIDs.removeAll()
         selectedSpaceID = id
+        movePagesToTheirProfiles(reloadingVisible: false)
         if let remembered = lastSelection[id], isTab(remembered), belongsToSelectedSpace(remembered) {
             setSelection(remembered)
         } else if let recent = mostRecentTab(in: id) {
@@ -139,7 +140,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     public func newTab(url: URL?, selecting: Bool = true) -> ItemID {
         let container = document.space(selectedSpaceID)!.unpinnedContainerID
         let id = sidebar.createTab(url: url, title: nil, in: container, at: 0)
-        register(engine.makeTab(url: url), for: id)
+        register(engine.makeTab(url: url, profile: profile(for: id)), for: id)
         if selecting { select(id) }
         return id
     }
@@ -200,7 +201,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
             sidebar.remove(id)
             return nil
         }
-        register(engine.makeTab(url: nil), for: id)
+        register(engine.makeTab(url: nil, profile: profile(for: id)), for: id)
         select(id)
         return id
     }
@@ -289,7 +290,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     }
 
     /// Makes a live page from somewhere else, such as a Little Sela window, a tab at the top of the current
-    /// space's unpinned tabs. The page keeps its history and doesn't reload. Selects it unless `selecting` is false.
+    /// space's unpinned tabs. The page keeps its history and doesn't reload, unless it uses another profile than
+    /// the space: then it closes and its address opens again in the space's profile. Selects it unless `selecting` is false.
     @discardableResult
     public func adopt(_ tab: any BrowserTab, selecting: Bool = true) -> ItemID {
         let id = adopt(tab, in: document.space(selectedSpaceID)!.unpinnedContainerID)
@@ -299,7 +301,15 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     private func adopt(_ tab: any BrowserTab, in container: ItemID) -> ItemID {
         let id = sidebar.createTab(url: tab.state.url, title: nil, in: container, at: 0)
-        register(tab, for: id)
+        let wanted = profile(for: id)
+        if tab.profile == wanted {
+            register(tab, for: id)
+        } else {
+            let url = tab.state.url
+            tab.delegate = nil
+            tab.close()
+            register(engine.makeTab(url: url, profile: wanted), for: id)
+        }
         return id
     }
 
@@ -316,7 +326,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     /// Opens `url` in Peek over the current page, replacing any Peek already open.
     private func openPeek(_ url: URL, from sourceID: ItemID) {
         closePeek()
-        let tab = engine.makeTab(url: url)
+        // Peek signs in as the page whose link opened it.
+        let tab = engine.makeTab(url: url, profile: liveTabs[sourceID]?.profile ?? profile(for: sourceID))
         tab.delegate = self
         peekTab = tab
         peekSourceID = sourceID
@@ -377,9 +388,9 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     /// A new page for a tab: woken from its snapshot when it was asleep, otherwise loading its saved address.
     private func makePage(for id: ItemID) -> any BrowserTab {
         if let snapshot = snapshots.removeValue(forKey: id) {
-            return engine.makeTab(restoring: snapshot)
+            return engine.makeTab(restoring: snapshot, profile: profile(for: id))
         }
-        return engine.makeTab(url: tabInfo(id)?.savedURL)
+        return engine.makeTab(url: tabInfo(id)?.savedURL, profile: profile(for: id))
     }
 
     // MARK: Closing
@@ -473,7 +484,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         let spaceID = entry.spaceID.flatMap { document.space($0)?.id } ?? selectedSpaceID
         guard let container = document.space(spaceID)?.unpinnedContainerID else { return }
         let id = sidebar.createTab(url: entry.url, title: entry.title, in: container, at: 0)
-        register(engine.makeTab(url: entry.url), for: id)
+        register(engine.makeTab(url: entry.url, profile: profile(for: id)), for: id)
         select(id)
     }
 
@@ -500,6 +511,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         } else if let selected = selectedItemID, !isTab(selected) || !belongsToSelectedSpace(selected) {
             if let recent = mostRecentTab(in: selectedSpaceID) { setSelection(recent) } else { leaveSelection() }
         }
+        movePagesToTheirProfiles(reloadingVisible: true)
     }
 
     /// Records that the selected tab is in use right now, for example when Sela quits,
@@ -612,6 +624,40 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         return false
     }
 
+    // MARK: Profiles
+
+    /// The profile a tab's page uses: its space's, or for favourites, which every space shares, the shown space's.
+    public func profile(for id: ItemID) -> ProfileIdentifier {
+        ProfileIdentifier(document.profileID(of: document.spaceID(containing: id) ?? selectedSpaceID))
+    }
+
+    /// The profile of the space this window shows.
+    public var selectedProfile: ProfileIdentifier {
+        ProfileIdentifier(document.profileID(of: selectedSpaceID))
+    }
+
+    /// Closes pages whose tab should now use another profile: the tab moved to a space with another profile,
+    /// its space changed profile, or it's a favourite and the window switched to a space with another profile.
+    /// Each page opens again at its current address in the right profile, at once when it's on screen and
+    /// `reloadingVisible` is true, otherwise when its tab is next selected.
+    private func movePagesToTheirProfiles(reloadingVisible: Bool) {
+        if let peek = peekTab, let source = peekSourceID, peek.profile != profile(for: source) {
+            closePeek()
+        }
+        for (id, tab) in Array(liveTabs) where tab.profile != profile(for: id) {
+            // No history or scroll position: the new profile's page starts fresh at the same address.
+            if let url = tab.state.url {
+                snapshots[id] = TabSnapshot(url: url, title: tab.state.title, sessionState: nil)
+            }
+            unload(id)
+        }
+        guard reloadingVisible, let selected = selectedItemID, isTab(selected) else { return }
+        let panes = document.splitID(containing: selected).map { document.tabIDs(under: $0) } ?? [selected]
+        for pane in panes where liveTabs[pane] == nil {
+            register(makePage(for: pane), for: pane)
+        }
+    }
+
     // MARK: Helpers
 
     /// Selects without touching opener links. Creates the live page if needed and records activity.
@@ -619,6 +665,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         closePeek()
         if let spaceID = document.spaceID(containing: id), spaceID != selectedSpaceID {
             selectedSpaceID = spaceID
+            movePagesToTheirProfiles(reloadingVisible: false)
         }
         // Every pane of a split shows at once, so every pane needs its page.
         let panes = document.splitID(containing: id).map { document.tabIDs(under: $0) } ?? [id]

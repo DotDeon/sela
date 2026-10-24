@@ -35,14 +35,28 @@ public final class LittleWindowModel: BrowserTabDelegate, PageWindowModel {
     @ObservationIgnored private var reservedDestinations: Set<URL> = []
     @ObservationIgnored private var dialogAnswers: [UUID: CheckedContinuation<JavaScriptDialogResult, Never>] = [:]
 
-    /// Opens `url`, or a blank page when it's nil.
-    public init(engine: any BrowserEngine, url: URL?, archive: ArchiveStore? = nil, downloads: DownloadList? = nil,
-                permissions: SitePermissions = SitePermissions(), now: @escaping @MainActor () -> Date = { .now }) {
+    @ObservationIgnored private let engine: any BrowserEngine
+
+    /// Opens `url`, or a blank page when it's nil, using `profile`'s website data.
+    public init(engine: any BrowserEngine, url: URL?, profile: ProfileIdentifier = .default, archive: ArchiveStore? = nil,
+                downloads: DownloadList? = nil, permissions: SitePermissions = SitePermissions(), now: @escaping @MainActor () -> Date = { .now }) {
+        self.engine = engine
         self.archive = archive
         self.downloads = downloads
         self.permissions = permissions
         self.now = now
-        let tab = engine.makeTab(url: url)
+        let tab = engine.makeTab(url: url, profile: profile)
+        self.tab = tab
+        tab.delegate = self
+    }
+
+    /// Opens the page again at its current address in another profile, for when its profile is deleted.
+    public func switchProfile(to profile: ProfileIdentifier) {
+        guard let old = tab, old.profile != profile else { return }
+        dismissDialogs()
+        old.delegate = nil
+        old.close()
+        let tab = engine.makeTab(url: old.state.url, profile: profile)
         self.tab = tab
         tab.delegate = self
     }
