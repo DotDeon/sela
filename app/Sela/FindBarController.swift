@@ -7,13 +7,13 @@ import SidebarUI
 /// previous one, and Escape closes the bar.
 @MainActor
 final class FindBarController: NSObject, NSSearchFieldDelegate {
-    private let model: BrowserWindowModel
+    private let model: any PageWindowModel
     private weak var host: NSView?
     private var bar: NSView?
     private let field = NSSearchField()
     private let status = NSTextField(labelWithString: "")
 
-    init(model: BrowserWindowModel, host: NSView) {
+    init(model: any PageWindowModel, host: NSView) {
         self.model = model
         self.host = host
         super.init()

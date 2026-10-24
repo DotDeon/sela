@@ -43,7 +43,10 @@ enum MainMenu {
         let menu = NSMenu(title: "File")
         menu.addItem(item("New Tab", #selector(BrowserWindowController.newTab(_:)), "t"))
         menu.addItem(item("New Window", #selector(AppDelegate.newWindow(_:)), "n"))
+        menu.addItem(item("New Little Sela Window", #selector(AppDelegate.newLittleWindow(_:)), "n", [.command, .shift]))
         menu.addItem(item("Open Location…", #selector(BrowserWindowController.focusAddressBar(_:)), "l"))
+        // Only Little Sela windows answer this, so it's greyed out elsewhere.
+        menu.addItem(item("Open in Sela", #selector(LittleWindowController.openInSela(_:)), "o"))
         menu.addItem(item("Import History from Arc…", #selector(AppDelegate.importHistoryFromArc(_:))))
         menu.addItem(.separator())
         menu.addItem(item("Close Tab", #selector(BrowserWindowController.closeTab(_:)), "w"))

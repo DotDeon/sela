@@ -6,11 +6,11 @@ import SidebarUI
 /// Shows the selected tab's JavaScript dialog as a sheet and sends back the answer.
 @MainActor
 final class DialogPresenter {
-    private let model: BrowserWindowModel
+    private let model: any PageWindowModel
     private weak var window: NSWindow?
     private var shown: (id: PendingDialog.ID, alert: NSAlert)?
 
-    init(model: BrowserWindowModel, window: NSWindow) {
+    init(model: any PageWindowModel, window: NSWindow) {
         self.model = model
         self.window = window
         keepObserving { [weak self] in self?.update() }

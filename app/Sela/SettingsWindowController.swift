@@ -58,6 +58,7 @@ private struct GeneralSettings: View {
     @State private var sleepMinutes = TabSleepSettings().minutes
     @State private var archiveHours = ArchiveSweeper.hours
     @State private var isDefault = GeneralSettings.brIsDefault()
+    @State private var linkDestination = ExternalLinkSettings().destination
 
     var body: some View {
         Form {
@@ -76,6 +77,11 @@ private struct GeneralSettings: View {
             .onChange(of: searchEngine) { _, value in
                 SearchEngineSettings().engine = value
             }
+            Picker("Open links from other apps in", selection: $linkDestination) {
+                Text("Little Sela").tag(ExternalLinkDestination.littleWindow)
+                Text("A new tab").tag(ExternalLinkDestination.newTab)
+            }
+            .onChange(of: linkDestination) { _, value in ExternalLinkSettings().destination = value }
             Picker("Sleep unused tabs after", selection: $sleepMinutes) {
                 Text("5 minutes").tag(5)
                 Text("15 minutes").tag(15)
@@ -107,6 +113,7 @@ private struct GeneralSettings: View {
         sleepMinutes = TabSleepSettings().minutes
         archiveHours = ArchiveSweeper.hours
         isDefault = Self.brIsDefault()
+        linkDestination = ExternalLinkSettings().destination
     }
 
     private static func brIsDefault() -> Bool {

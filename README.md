@@ -11,13 +11,14 @@ What it does today:
 - **Sidebar and spaces.** Favourites, pinned tabs and folders, and today's tabs, in spaces you swipe between. Unpinned tabs archive themselves after 12 hours and stay findable for 30 days.
 - **Command bar.** Cmd+T and Cmd+L search open tabs, archived tabs, history and commands.
 - **Split view and Peek.** Up to four tabs side by side. Links from pinned tabs and favourites to other sites open in Peek, a preview over the page.
+- **Little Sela.** Links from other apps open in a small window of their own. Open in Sela moves the page to your tabs without reloading it, and Cmd+Shift+N opens an empty one.
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
 - **Updates.** Sela checks for new versions once a day and asks before installing them.
 
-Settings (Cmd+,) holds the default browser, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
+Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -41,7 +42,7 @@ Inside `app/Packages`:
 - `BrowserEngine`: the protocols Sela's UI uses to talk to a browser engine
 - `WebKitEngine`: those protocols built on Safari's WebKit
 - `FakeEngine`: a stand-in engine with no web content, for tests
-- `Browsing`: a window's live tabs on top of the sidebar, popups, page dialogs, and address bar parsing
+- `Browsing`: a window's live tabs on top of the sidebar, popups, page dialogs, address bar parsing, and Little Sela windows
 - `Sidebar`: the shared sidebar store that saves itself, plus outline, drag and drop, and swipe logic
 - `SidebarUI`: the sidebar's views: favourites grid, space pages, space bar and address
 - `Favicons`: site icons, fetched from each site and cached on disk

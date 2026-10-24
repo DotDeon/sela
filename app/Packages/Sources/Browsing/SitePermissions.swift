@@ -29,6 +29,16 @@ public struct SitePermissions {
         defaults.set(all, forKey: Self.key)
     }
 
+    /// The remembered choice, or else `ask`'s answer, which is then remembered. No when there's no way to ask.
+    @MainActor
+    func decide(_ media: MediaCapture, on origin: URL, ask: (@MainActor (MediaCapture, URL) async -> Bool)?) async -> Bool {
+        if let decision = decision(for: media, on: origin) { return decision }
+        guard let ask else { return false }
+        let allowed = await ask(media, origin)
+        remember(allowed, for: media, on: origin)
+        return allowed
+    }
+
     public func forget(siteOf origin: URL) {
         forget(site: site(origin))
     }

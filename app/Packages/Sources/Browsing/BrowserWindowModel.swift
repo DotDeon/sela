@@ -10,7 +10,7 @@ import SidebarModel
 /// sidebar tabs, and the dialogs those pages are waiting on. Pages load when their tab is first selected.
 @MainActor
 @Observable
-public final class BrowserWindowModel: BrowserTabDelegate {
+public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     public let sidebar: SidebarStore
     /// Where closed unpinned tabs go. Nil keeps no archive.
     public let archive: ArchiveStore?
@@ -261,10 +261,24 @@ public final class BrowserWindowModel: BrowserTabDelegate {
         let source = peekSourceID
         peekTab = nil
         peekSourceID = nil
-        let id = sidebar.createTab(url: tab.state.url, title: nil, in: container, at: 0)
-        register(tab, for: id)
+        let id = adopt(tab, in: container)
         if let source { openerIDs[id] = source }
         select(id)
+        return id
+    }
+
+    /// Makes a live page from somewhere else, such as a Little Sela window, a tab at the top of the current
+    /// space's unpinned tabs. The page keeps its history and doesn't reload. Selects it unless `selecting` is false.
+    @discardableResult
+    public func adopt(_ tab: any BrowserTab, selecting: Bool = true) -> ItemID {
+        let id = adopt(tab, in: document.space(selectedSpaceID)!.unpinnedContainerID)
+        if selecting { select(id) }
+        return id
+    }
+
+    private func adopt(_ tab: any BrowserTab, in container: ItemID) -> ItemID {
+        let id = sidebar.createTab(url: tab.state.url, title: nil, in: container, at: 0)
+        register(tab, for: id)
         return id
     }
 
@@ -552,25 +566,14 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     /// Uses the remembered choice for the site, or asks and remembers the answer.
     public func tab(_ tab: any BrowserTab, mayCapture media: MediaCapture, forOrigin origin: URL) async -> Bool {
-        if let decision = permissions.decision(for: media, on: origin) { return decision }
-        guard let onCaptureRequest else { return false }
-        let allowed = await onCaptureRequest(media, origin)
-        permissions.remember(allowed, for: media, on: origin)
-        return allowed
+        await permissions.decide(media, on: origin, ask: onCaptureRequest)
     }
 
     public func tab(_ tab: any BrowserTab, didStartDownload download: any BrowserDownload, suggestedFilename: String) async -> URL? {
         downloads?.add(download)
         if let onDownloadDestination { return onDownloadDestination(suggestedFilename) }
         guard let folder = downloadsFolder else { return nil }
-        // Taken means on disk, half-written, or promised to another download that hasn't written yet.
-        let destination = availableDestination(for: suggestedFilename, in: folder) { [downloads, reservedDestinations] url in
-            FileManager.default.fileExists(atPath: url.path) || FileManager.default.fileExists(atPath: partialURL(for: url).path)
-                || downloads?.isReserved(url) == true || reservedDestinations.contains(url.standardizedFileURL)
-        }
-        downloads?.reserve(destination)
-        reservedDestinations.insert(destination.standardizedFileURL)
-        return destination
+        return reserveDownloadDestination(for: suggestedFilename, in: folder, downloads: downloads, reserved: &reservedDestinations)
     }
 
     /// Links from pinned tabs and favourites to another site open in Peek, and so does a Shift-click in any tab.
