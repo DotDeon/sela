@@ -17,7 +17,7 @@ What it does today:
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
-- **Updates.** Sela checks for new versions once a day and asks before installing them.
+- **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit.
 
 Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, tab sleep, archiving, ad blocking, extensions and site permission choices. The repository also holds a tool that backs up your Arc data.
 
