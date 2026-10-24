@@ -181,3 +181,21 @@ private struct Harness {
     let page = h.controller.pager.pages[0]
     #expect(page.menuItems(for: "p1").first { $0.title == "Open in Split View" }?.isEnabled == false)
 }
+
+@MainActor @Test func pinnedTabsCanBeDeleted() throws {
+    let h = try Harness()
+    let page = h.controller.pager.pages[0]
+    #expect(page.menuItems(for: "p1").contains { $0.title == "Delete" })
+    #expect(!page.menuItems(for: "u1").contains { $0.title == "Delete" })
+}
+
+@MainActor @Test func pinnedRowsOfferCloseOnlyWhileLoaded() async throws {
+    let h = try Harness()
+    // fold, p2, p1
+    let cell = try #require(h.firstOutline.view(atColumn: 0, row: 2, makeIfNecessary: true) as? ItemCellView)
+    #expect(!cell.showsCloseOnHover)
+    h.model.select("p1")
+    try await eventually { cell.showsCloseOnHover }
+    let unpinned = try #require(h.firstOutline.view(atColumn: 0, row: 4, makeIfNecessary: true) as? ItemCellView)
+    #expect(unpinned.showsCloseOnHover)
+}

@@ -362,7 +362,10 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
                 ?? letterImage(for: page?.host() ?? cell.titleField.stringValue, size: 16)
             cell.iconView.contentTintColor = nil
             cell.titleField.textColor = live == nil ? .secondaryLabelColor : .labelColor
-            cell.showsCloseOnHover = true
+            // Closing a pinned tab only unloads it, so there's nothing to close until its page is loaded.
+            let isUnpinned: Bool
+            if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
+            cell.showsCloseOnHover = isUnpinned || live != nil
             cell.showsReset = model.isAwayFromSavedURL(id)
             cell.onClose = { [weak self] in self?.model.close(id) }
             cell.onReset = { [weak self] in self?.model.resetToSavedURL(id) }
@@ -483,6 +486,9 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             menu.addItem(split)
             menu.addItem(.separator())
             menu.addItem(menuItem("Close") { [weak self] in self?.model.close(id) })
+            if pinned {
+                menu.addItem(menuItem("Delete") { [weak self] in self?.model.delete(id) })
+            }
         case .folder:
             menu.addItem(menuItem("Rename…") { [weak self] in self?.beginRenaming(id) })
             menu.addItem(menuItem("New Folder Inside") { [weak self] in self?.newFolder(in: id) })

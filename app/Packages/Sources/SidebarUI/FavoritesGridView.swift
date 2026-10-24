@@ -39,6 +39,7 @@ final class FavoritesGridView: NSView, NSCollectionViewDataSource, NSCollectionV
         collectionView.setDraggingSourceOperationMask(.move, forLocal: true)
         let menu = NSMenu()
         menu.addItem(menuItem("Remove from Favourites") { [weak self] in self?.removeClickedFavorite() })
+        menu.addItem(menuItem("Delete") { [weak self] in self?.deleteClickedFavorite() })
         collectionView.menu = menu
 
         emptyHint.font = .systemFont(ofSize: 11)
@@ -100,6 +101,11 @@ final class FavoritesGridView: NSView, NSCollectionViewDataSource, NSCollectionV
         let title = sidebarTitle(for: item, liveState: shown)
         tile.imageView?.image = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 22)
         tile.view.toolTip = title
+    }
+
+    private func deleteClickedFavorite() {
+        guard let index = collectionView.clickedIndex, favoriteIDs.indices.contains(index) else { return }
+        model.delete(favoriteIDs[index])
     }
 
     private func removeClickedFavorite() {

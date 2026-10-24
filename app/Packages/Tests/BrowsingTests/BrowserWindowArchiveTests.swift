@@ -135,3 +135,20 @@ private struct Harness {
     model.markSelectionActive()
     #expect(tabInfo(store.document, "p1")?.lastActiveAt == clock)
 }
+
+@MainActor @Test func deletingAPinnedTabRemovesItAndArchivesIt() throws {
+    let h = try Harness()
+    h.model.select("p1")
+    h.model.delete("p1")
+    #expect(h.store.document.item("p1") == nil)
+    #expect(h.live("p1") == nil)
+    #expect(h.archive.entries.first?.url == url("p1"))
+    #expect(h.model.selectedItemID != "p1")
+}
+
+@MainActor @Test func deletingAFavouriteRemovesIt() throws {
+    let h = try Harness()
+    h.model.delete("f1")
+    #expect(h.store.document.item("f1") == nil)
+    #expect(h.store.document.item("F")?.childIDs == [])
+}

@@ -335,20 +335,30 @@ public final class BrowserWindowModel: BrowserTabDelegate {
 
     /// Unpinned tabs are removed from the sidebar. Pinned tabs and favourites stay and only unload their page.
     public func close(_ id: ItemID) {
+        let isUnpinned: Bool
+        if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
+        close(id, removing: isUnpinned)
+    }
+
+    /// Removes any tab from the sidebar, pinned tabs and favourites included. It goes to the archive, so it can be reopened.
+    public func delete(_ id: ItemID) {
+        guard isTab(id) else { return }
+        close(id, removing: true)
+    }
+
+    private func close(_ id: ItemID, removing: Bool) {
         let next = selectedItemID == id ? selectionAfterClosing(id) : selectedItemID
         // A closed pane leaves its split first, so a pinned pane doesn't stay in the split and load again.
         if let splitID = document.splitID(containing: id), let parent = document.item(splitID)?.parentID,
            let index = document.item(parent)?.childIDs.firstIndex(of: splitID) {
             try? sidebar.move(id, to: parent, at: index + 1)
         }
-        let isUnpinned: Bool
-        if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
-        if isUnpinned {
+        if removing {
             archive?.add(archiveEntries(for: [id]))
         }
         unload(id)
         snapshots[id] = nil
-        if isUnpinned {
+        if removing {
             sidebar.remove(id)
         }
         forgetOpener(id)
