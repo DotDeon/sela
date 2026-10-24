@@ -55,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if dataFolderOverride == nil, !FirstRunImport.choseStartFresh {
             HistoryImport.runOnFirstLaunch(into: history)
         }
+        FirstRunImport.importPendingHistory(into: history)
 
         // Another window may have removed a tab or space this window shows.
         keepObserving { [weak self] in
@@ -135,7 +136,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc func showSettings(_ sender: Any?) {
         if settingsWindow == nil {
-            settingsWindow = SettingsWindowController(contentBlocker: contentBlocker, history: history) { [weak self] in
+            settingsWindow = SettingsWindowController(
+                contentBlocker: contentBlocker,
+                history: history,
+                sidebar: sidebar,
+                currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID }
+            ) { [weak self] in
                 self?.sweeper?.sweep()
                 Task { await self?.tabSleeper?.sleepUnusedTabs() }
             }
@@ -152,6 +158,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func setSleepInterval(_ sender: NSMenuItem) {
         TabSleepSettings().minutes = sender.tag
         Task { await tabSleeper?.sleepUnusedTabs() }
+    }
+
+    /// The browser window nearest the front. Settings may be the main window, so this goes by window order.
+    private func frontmostWindowController() -> BrowserWindowController? {
+        NSApp.orderedWindows.lazy.compactMap { window in self.windowControllers.first { $0.window === window } }.first
+            ?? windowControllers.last
     }
 
     /// `-SelaOpenPages <file>`: opens each address in the file as a new tab, one every 4 seconds. For measuring runs.

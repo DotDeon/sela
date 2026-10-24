@@ -38,6 +38,15 @@ public enum BrowserImportError: Error, Equatable, Sendable {
     case malformed(String)
 }
 
+extension BrowserImportError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .needsFullDiskAccess: "macOS needs to give Sela Full Disk Access to read these files."
+        case .malformed(let detail): detail
+        }
+    }
+}
+
 /// Reads a profile's bookmarks and its history since `historySince`, newest first. Missing files give nothing.
 /// Never writes to the browser's files.
 public func readBrowserData(from profile: BrowserProfile, historySince cutoff: Date) throws -> BrowserData {
