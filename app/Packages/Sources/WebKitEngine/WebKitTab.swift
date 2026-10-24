@@ -11,8 +11,11 @@ final class WebKitTab: NSObject, BrowserTab {
     private(set) var state = TabState.blank
     @ObservationIgnored weak var delegate: (any BrowserTabDelegate)?
 
-    @ObservationIgnored private let webView: WKWebView
-    @ObservationIgnored private let engine: WebKitEngine
+    @ObservationIgnored let webView: WKWebView
+    @ObservationIgnored let engine: WebKitEngine
+    /// True for an extension's own page, such as its options, which gets no content blocking.
+    @ObservationIgnored let isExtensionPage: Bool
+    @ObservationIgnored private(set) var isClosed = false
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var reloadedAfterCrash = false
     @ObservationIgnored private var faviconURL: URL?
@@ -26,9 +29,10 @@ final class WebKitTab: NSObject, BrowserTab {
 
     var contentView: NSView { webView }
 
-    init(webView: WKWebView, engine: WebKitEngine) {
+    init(webView: WKWebView, engine: WebKitEngine, isExtensionPage: Bool = false) {
         self.webView = webView
         self.engine = engine
+        self.isExtensionPage = isExtensionPage
         super.init()
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -100,11 +104,13 @@ final class WebKitTab: NSObject, BrowserTab {
 
     /// Puts the engine's current rules on this tab, or takes them off when the page has blocking turned off.
     func refreshContentBlocking() {
+        guard !isExtensionPage else { return }
         engine.contentRules.apply(to: webView.configuration.userContentController, blocking: isBlocking)
     }
 
     /// Puts the rules for the page about to load into the page's start-up scripts.
     private func installPageScripts(for url: URL?) {
+        guard !isExtensionPage else { return }
         earlyRulesHost = url?.host()
         let early = isBlocking ? url.flatMap { engine.pageScripts?($0, nil) } : nil
         PageScriptInjection.installScripts(on: webView.configuration.userContentController, early: early)
@@ -129,6 +135,7 @@ final class WebKitTab: NSObject, BrowserTab {
     func stopLoading() { webView.stopLoading() }
 
     func close() {
+        isClosed = true
         observations.forEach { $0.invalidate() }
         observations = []
         webView.navigationDelegate = nil
@@ -138,6 +145,7 @@ final class WebKitTab: NSObject, BrowserTab {
         // Unloads the page so its audio and video stop.
         webView.load(URLRequest(url: URL(string: "about:blank")!))
         state.isLoading = false
+        engine.tabDidClose(self)
     }
 
     private func observeWebView() {
@@ -173,7 +181,9 @@ final class WebKitTab: NSObject, BrowserTab {
             isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none
         )
         guard next != state else { return }
+        let previous = state
         state = next
+        engine.tabStateDidChange(self, from: previous)
         delegate?.tabStateDidChange(self)
     }
 
