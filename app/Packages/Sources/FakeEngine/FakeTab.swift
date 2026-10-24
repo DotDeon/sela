@@ -19,6 +19,9 @@ public final class FakeTab: BrowserTab {
     @ObservationIgnored public var isPlayingMediaForTesting = false
     /// What `hasUnsavedState()` answers.
     @ObservationIgnored public var hasUnsavedStateForTesting = false
+    /// What `find` answers, and every search it was asked for.
+    @ObservationIgnored public var findResult = false
+    @ObservationIgnored public private(set) var finds: [(String, Bool)] = []
 
     /// Strong on purpose: tests often keep only the tab. The cycle with `FakeEngine.madeTabs` is fine for a test double.
     @ObservationIgnored private let engine: FakeEngine
@@ -45,6 +48,23 @@ public final class FakeTab: BrowserTab {
     }
 
     public func hasUnsavedState() async -> Bool { hasUnsavedStateForTesting }
+
+    public func find(_ text: String, backwards: Bool) async -> Bool {
+        finds.append((text, backwards))
+        return findResult
+    }
+
+    public func clearFind() {}
+
+    public func simulateChooseFiles(multiple: Bool, directories: Bool) async -> [URL]? {
+        guard let delegate else { return nil }
+        return await delegate.tab(self, chooseFiles: multiple, allowsDirectories: directories)
+    }
+
+    public func simulateCaptureRequest(_ media: MediaCapture, origin: URL) async -> Bool {
+        guard let delegate else { return false }
+        return await delegate.tab(self, mayCapture: media, forOrigin: origin)
+    }
 
     public func isPlayingMedia() async -> Bool {
         isPlayingMediaForTesting

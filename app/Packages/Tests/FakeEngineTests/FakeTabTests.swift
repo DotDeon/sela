@@ -151,3 +151,30 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     #expect(tab.state.isUsingCameraOrMicrophone)
     #expect(delegate.stateChanges == changes + 1)
 }
+
+@MainActor
+private final class AnsweringDelegate: BrowserTabDelegate {
+    func tabStateDidChange(_ tab: any BrowserTab) {}
+    func tab(_ tab: any BrowserTab, didOpen newTab: any BrowserTab, disposition: NewTabDisposition) {}
+    func tabDidRequestClose(_ tab: any BrowserTab) {}
+    func tab(_ tab: any BrowserTab, runDialog dialog: JavaScriptDialog) async -> JavaScriptDialogResult { .dismissed }
+    func tab(_ tab: any BrowserTab, chooseFiles allowsMultiple: Bool, allowsDirectories: Bool) async -> [URL]? { allowsMultiple ? [a, b] : [a] }
+    func tab(_ tab: any BrowserTab, mayCapture media: MediaCapture, forOrigin origin: URL) async -> Bool { media == .camera }
+}
+
+@MainActor @Test func fakeRequestsReachTheDelegate() async {
+    let (_, tab) = makeTab(a)
+    let delegate = AnsweringDelegate()
+    tab.delegate = delegate
+    #expect(await tab.simulateChooseFiles(multiple: true, directories: false) == [a, b])
+    #expect(await tab.simulateCaptureRequest(.camera, origin: a))
+    #expect(await tab.simulateCaptureRequest(.microphone, origin: a) == false)
+}
+
+@MainActor @Test func fakeRequestsDefaultToNo() async {
+    let (_, tab) = makeTab(a)
+    let delegate = RecordingDelegate()
+    tab.delegate = delegate
+    #expect(await tab.simulateChooseFiles(multiple: false, directories: false) == nil)
+    #expect(await tab.simulateCaptureRequest(.cameraAndMicrophone, origin: a) == false)
+}

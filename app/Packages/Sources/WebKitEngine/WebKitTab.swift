@@ -50,6 +50,18 @@ final class WebKitTab: NSObject, BrowserTab {
         TabSnapshot(url: webView.url, title: webView.title, sessionState: webView.interactionState as? Data)
     }
 
+    func find(_ text: String, backwards: Bool) async -> Bool {
+        let configuration = WKFindConfiguration()
+        configuration.caseSensitive = false
+        configuration.wraps = true
+        configuration.backwards = backwards
+        return (try? await webView.find(text, configuration: configuration))?.matchFound ?? false
+    }
+
+    func clearFind() {
+        webView.evaluateJavaScript("window.getSelection().removeAllRanges()", completionHandler: nil)
+    }
+
     /// A page from a submitted form would be sent again on waking, and edited fields or a focused editor would be lost.
     func hasUnsavedState() async -> Bool {
         if showingFormResult { return true }
@@ -271,6 +283,26 @@ extension WebKitTab: WKUIDelegate {
 
     func webViewDidClose(_ webView: WKWebView) {
         delegate?.tabDidRequestClose(self)
+    }
+
+    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo) async -> [URL]? {
+        guard let delegate else { return nil }
+        return await delegate.tab(self, chooseFiles: parameters.allowsMultipleSelection, allowsDirectories: parameters.allowsDirectories)
+    }
+
+    func webView(_ webView: WKWebView, decideMediaCapturePermissionsFor origin: WKSecurityOrigin, initiatedBy frame: WKFrameInfo, type: WKMediaCaptureType) async -> WKPermissionDecision {
+        guard let delegate else { return .deny }
+        let media: MediaCapture = switch type {
+        case .camera: .camera
+        case .microphone: .microphone
+        default: .cameraAndMicrophone
+        }
+        var components = URLComponents()
+        components.scheme = origin.protocol
+        components.host = origin.host
+        components.port = origin.port == 0 ? nil : origin.port
+        guard let url = components.url else { return .deny }
+        return await delegate.tab(self, mayCapture: media, forOrigin: url) ? .grant : .deny
     }
 
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo) async {

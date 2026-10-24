@@ -19,8 +19,14 @@ public protocol BrowserTabDelegate: AnyObject {
     /// The user clicked a link that would load in this tab. Return false when the delegate has opened it
     /// somewhere else, such as in Peek, so the tab stays where it is.
     func tab(_ tab: any BrowserTab, shouldFollowLinkTo url: URL, shiftKey: Bool) -> Bool
+    /// The page wants files for an upload. Nil means the user cancelled.
+    func tab(_ tab: any BrowserTab, chooseFiles allowsMultiple: Bool, allowsDirectories: Bool) async -> [URL]?
+    /// The page wants the camera, the microphone or both. True allows it.
+    func tab(_ tab: any BrowserTab, mayCapture media: MediaCapture, forOrigin origin: URL) async -> Bool
 }
 
 extension BrowserTabDelegate {
     public func tab(_ tab: any BrowserTab, shouldFollowLinkTo url: URL, shiftKey: Bool) -> Bool { true }
+    public func tab(_ tab: any BrowserTab, chooseFiles allowsMultiple: Bool, allowsDirectories: Bool) async -> [URL]? { nil }
+    public func tab(_ tab: any BrowserTab, mayCapture media: MediaCapture, forOrigin origin: URL) async -> Bool { false }
 }

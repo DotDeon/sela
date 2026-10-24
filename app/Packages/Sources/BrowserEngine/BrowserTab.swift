@@ -55,6 +55,10 @@ public protocol BrowserTab: AnyObject, Observable {
     /// True when unloading would lose something: edited form fields, or a page that came from a submitted form,
     /// which waking would send again.
     func hasUnsavedState() async -> Bool
+    /// Selects the next match for `text`, ignoring case and wrapping around. False when the page has no match.
+    func find(_ text: String, backwards: Bool) async -> Bool
+    /// Removes the selection a find left.
+    func clearFind()
     func goBack()
     func goForward()
     func reload()
