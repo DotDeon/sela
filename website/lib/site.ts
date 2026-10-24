@@ -6,8 +6,8 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 export const asset = (path: string) => `${basePath}${path}`;
 
 export const links = {
-  // Every release carries a Sela.zip, so this always downloads the newest build.
-  download: "https://github.com/DotDeon/sela/releases/latest/download/Sela.zip",
+  // Every release carries a Sela.dmg, so this always downloads the newest build.
+  download: "https://github.com/DotDeon/sela/releases/latest/download/Sela.dmg",
   releases: "https://github.com/DotDeon/sela/releases",
   sponsor: "https://github.com/sponsors/DotDeon",
   code: "https://github.com/DotDeon/sela",

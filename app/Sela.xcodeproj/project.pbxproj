@@ -20,6 +20,7 @@
 		B70000000000000000000023 /* CommandBar in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000026 /* CommandBar */; };
 		B70000000000000000000027 /* ContentBlocking in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000028 /* ContentBlocking */; };
 		B7000000000000000000002A /* Downloads in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000002B /* Downloads */; };
+		B7000000000000000000A001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000A002 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 				B70000000000000000000023 /* CommandBar in Frameworks */,
 				B70000000000000000000027 /* ContentBlocking in Frameworks */,
 				B7000000000000000000002A /* Downloads in Frameworks */,
+				B7000000000000000000A001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +111,7 @@
 				B70000000000000000000026 /* CommandBar */,
 				B70000000000000000000028 /* ContentBlocking */,
 				B7000000000000000000002B /* Downloads */,
+				B7000000000000000000A002 /* Sparkle */,
 			);
 			productName = Sela;
 			productReference = B70000000000000000000005 /* Sela.app */;
@@ -140,6 +143,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				B70000000000000000000010 /* XCLocalSwiftPackageReference "Packages" */,
+				B7000000000000000000A003 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B70000000000000000000003 /* Products */;
@@ -288,7 +292,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		B7000000000000000000A003 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		B7000000000000000000A002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B7000000000000000000A003 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		B70000000000000000000011 /* BrowserEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrowserEngine;

@@ -8,7 +8,7 @@ export type Release = {
   date: string;
   url: string;
   body: string;
-  // Size of Sela.zip in bytes, when the release has one.
+  // Size of the download in bytes: Sela.dmg, or Sela.zip for releases before it.
   size?: number;
 };
 
@@ -45,7 +45,7 @@ async function load(): Promise<Release[]> {
         date: r.published_at,
         url: r.html_url,
         body: r.body ?? "",
-        size: r.assets.find((a) => a.name === "Sela.zip")?.size,
+        size: (r.assets.find((a) => a.name === "Sela.dmg") ?? r.assets.find((a) => a.name === "Sela.zip"))?.size,
       }));
   } catch {
     return [];
