@@ -44,7 +44,7 @@ let package = Package(
         .target(name: "History", linkerSettings: [.linkedLibrary("sqlite3")]),
         .testTarget(name: "HistoryTests", dependencies: ["History"]),
         .target(name: "CommandBar", dependencies: ["Browsing", "SidebarModel", "SidebarUI"]),
-        .testTarget(name: "CommandBarTests", dependencies: ["CommandBar", "SidebarModel"]),
+        .testTarget(name: "CommandBarTests", dependencies: ["CommandBar", "Browsing", "SidebarModel"]),
         .target(name: "ArcImport", dependencies: ["SidebarModel"], linkerSettings: [.linkedLibrary("sqlite3")]),
         .testTarget(
             name: "ArcImportTests",

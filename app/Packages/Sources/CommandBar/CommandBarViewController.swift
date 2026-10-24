@@ -178,9 +178,9 @@ public final class CommandBarViewController: NSViewController, NSTextFieldDelega
     /// A row's title, right-hand hint and fallback symbol.
     private func describe(_ result: CommandBarResult) -> (String, String, String) {
         switch result {
-        case .open(let url, let isSearch):
-            if isSearch {
-                return ("Search Google for “\(model.query.trimmingCharacters(in: .whitespacesAndNewlines))”", "", "magnifyingglass")
+        case .open(let url, let search):
+            if let search {
+                return ("Search \(search.name) for “\(model.query.trimmingCharacters(in: .whitespacesAndNewlines))”", "", "magnifyingglass")
             }
             let path = url.path() == "/" ? "" : url.path()
             return ("Open \(url.host() ?? url.absoluteString)\(path)", "", "globe")

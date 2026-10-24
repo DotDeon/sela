@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import Browsing
 @testable import CommandBar
 
 @Test(arguments: [
@@ -16,7 +17,7 @@ func scores(query: String, text: String, expected: Int?) {
 private func kinds(_ results: [CommandBarResult]) -> [String] {
     results.map { result in
         switch result {
-        case .open(_, let isSearch): isSearch ? "search" : "open"
+        case .open(_, let search): search == nil ? "open" : "search"
         case .tab: "tab"
         case .command: "command"
         case .archived: "archived"
@@ -38,7 +39,7 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
 
 @Test func addressesOpenDirectly() {
     let results = commandBarResults(query: "example.com", tabs: [], commands: [], archived: [], history: [])
-    #expect(results.first == .open(URL(string: "https://example.com")!, isSearch: false))
+    #expect(results.first == .open(URL(string: "https://example.com")!, search: nil))
 }
 
 @Test func groupsAreCappedAndOrdered() {
@@ -81,4 +82,15 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
 @Test func hostsStillMakeATopHit() {
     let results = commandBarResults(query: "github", tabs: [tab("Pull requests", "github")], commands: [], archived: [], history: [])
     #expect(kinds(results).first == "tab")
+}
+
+@Test func searchesUseTheChosenEngine() {
+    let results = commandBarResults(query: "what is swift", tabs: [], commands: [], archived: [], history: [], searchEngine: .duckDuckGo)
+    #expect(results.first == .open(URL(string: "https://duckduckgo.com/?q=what%20is%20swift")!, search: .duckDuckGo))
+}
+
+/// An address that happens to be another engine's search opens as an address.
+@Test func otherEnginesSearchesOpenAsAddresses() {
+    let results = commandBarResults(query: "https://www.google.com/search?q=x", tabs: [], commands: [], archived: [], history: [], searchEngine: .bing)
+    #expect(results.first == .open(URL(string: "https://www.google.com/search?q=x")!, search: nil))
 }

@@ -24,7 +24,9 @@ export default function Privacy() {
           </li>
           <li>
             <strong>Searches.</strong> Anything you type in the address bar that isn&rsquo;t a web
-            address goes to Google as a search.
+            address goes as a search to the search engine you choose in Settings. That&rsquo;s Google
+            unless you change it. The others are DuckDuckGo, Bing, Ecosia, Kagi, Brave Search and
+            Startpage.
           </li>
           <li>
             <strong>Site icons.</strong> Sela loads each site&rsquo;s icon from the address the site

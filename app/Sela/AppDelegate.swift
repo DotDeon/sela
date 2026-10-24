@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationDidFinishLaunching(_ notification: Notification) {
         moveDataFromOldName()
         NSApp.mainMenu = MainMenu.make()
+        engine.searchURL = { SearchEngineSettings().engine.searchURL(for: $0) }
         if let dataFolderOverride {
             try? FileManager.default.createDirectory(at: dataFolderOverride, withIntermediateDirectories: true)
         }

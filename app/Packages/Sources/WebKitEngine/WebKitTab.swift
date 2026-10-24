@@ -257,7 +257,7 @@ extension WebKitTab: WKNavigationDelegate {
         guard !isIgnorable(error),
               let failedURL = error.userInfo[NSURLErrorFailingURLErrorKey] as? URL ?? webView.url
         else { return }
-        webView.loadSimulatedRequest(URLRequest(url: failedURL), responseHTML: errorPageHTML(for: failedURL, error: error))
+        webView.loadSimulatedRequest(URLRequest(url: failedURL), responseHTML: errorPageHTML(for: failedURL, error: error) { self.engine.searchURL?($0) })
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

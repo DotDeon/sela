@@ -1,12 +1,10 @@
 import Foundation
 
-/// The page shown when a URL can't be loaded: why, a retry link, and a search for what was typed.
-func errorPageHTML(for url: URL, error: NSError) -> String {
+/// The page shown when a URL can't be loaded: why, a retry link, and a search for what was typed when `searchURL` gives one.
+func errorPageHTML(for url: URL, error: NSError, searchURL: (String) -> URL?) -> String {
     let address = url.absoluteString
     let query = url.host() ?? address
-    var allowed = CharacterSet.urlQueryAllowed
-    allowed.remove(charactersIn: "+&=?#")
-    let search = "https://www.google.com/search?q=" + (query.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")
+    let search = searchURL(query).map { " · <a href=\"\(escaped($0.absoluteString))\">Search for \(escaped(query))</a>" } ?? ""
     return """
     <!doctype html>
     <html><head><meta charset="utf-8"><title>Can’t open this page</title>
@@ -17,7 +15,7 @@ func errorPageHTML(for url: URL, error: NSError) -> String {
     </style></head>
     <body><h1>Can’t open this page</h1>
     <p>Sela couldn’t open <strong>\(escaped(address))</strong>. \(escaped(error.localizedDescription))</p>
-    <p><a href="\(escaped(address))">Try again</a> · <a href="\(escaped(search))">Search for \(escaped(query))</a></p>
+    <p><a href="\(escaped(address))">Try again</a>\(search)</p>
     </body></html>
     """
 }

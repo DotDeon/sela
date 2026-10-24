@@ -42,6 +42,7 @@ private struct SettingsView: View {
 
 private struct GeneralSettings: View {
     let onSettingsChanged: () -> Void
+    @State private var searchEngine = SearchEngineSettings().engine
     @State private var sleepMinutes = TabSleepSettings().minutes
     @State private var archiveHours = ArchiveSweeper.hours
     @State private var isDefault = GeneralSettings.brIsDefault()
@@ -54,6 +55,14 @@ private struct GeneralSettings: View {
                 if !isDefault {
                     Button("Make Default") { makeDefault() }
                 }
+            }
+            Picker("Search engine", selection: $searchEngine) {
+                ForEach(SearchEngine.allCases, id: \.self) { engine in
+                    Text(engine.name).tag(engine)
+                }
+            }
+            .onChange(of: searchEngine) { _, value in
+                SearchEngineSettings().engine = value
             }
             Picker("Sleep unused tabs after", selection: $sleepMinutes) {
                 Text("5 minutes").tag(5)
@@ -82,6 +91,7 @@ private struct GeneralSettings: View {
     }
 
     private func reload() {
+        searchEngine = SearchEngineSettings().engine
         sleepMinutes = TabSleepSettings().minutes
         archiveHours = ArchiveSweeper.hours
         isDefault = Self.brIsDefault()
