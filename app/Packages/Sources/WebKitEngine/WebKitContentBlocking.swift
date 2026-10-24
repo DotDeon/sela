@@ -52,11 +52,21 @@ enum PageScriptInjection {
         return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: world)
     }()
 
-    /// Adds the script and its bridge to a new content controller.
+    /// Adds the bridge, once per content controller, and the scripts.
     static func install(on controller: WKUserContentController, bridge: PageScriptBridge) {
-        guard let script else { return }
-        controller.addUserScript(script)
         controller.addScriptMessageHandler(bridge, contentWorld: world, name: handlerName)
+        installScripts(on: controller, early: nil)
+    }
+
+    /// Replaces the controller's scripts. `early` holds the main frame's rules, known before the page loads, which
+    /// the content script then applies before any of the page's own scripts.
+    static func installScripts(on controller: WKUserContentController, early: PageScripts?) {
+        controller.removeAllUserScripts()
+        guard let script else { return }
+        if let early, let data = try? JSONEncoder().encode(early), let json = String(data: data, encoding: .utf8) {
+            controller.addUserScript(WKUserScript(source: "window.__browEarlyRules = \(json);", injectionTime: .atDocumentStart, forMainFrameOnly: true, in: world))
+        }
+        controller.addUserScript(script)
     }
 }
 

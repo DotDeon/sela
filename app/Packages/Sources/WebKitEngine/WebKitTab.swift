@@ -21,6 +21,8 @@ final class WebKitTab: NSObject, BrowserTab {
     /// Whether the navigation now under way, and the page now shown, came from submitting a form.
     @ObservationIgnored private var loadingFromForm = false
     @ObservationIgnored private var showingFormResult = false
+    /// The host whose early rules this tab's scripts now carry.
+    @ObservationIgnored private var earlyRulesHost: String?
 
     var contentView: NSView { webView }
 
@@ -87,6 +89,13 @@ final class WebKitTab: NSObject, BrowserTab {
     /// Puts the engine's current rules on this tab, or takes them off when the page has blocking turned off.
     func refreshContentBlocking() {
         engine.contentRules.apply(to: webView.configuration.userContentController, blocking: isBlocking)
+    }
+
+    /// Puts the rules for the page about to load into the page's start-up scripts.
+    private func installPageScripts(for url: URL?) {
+        earlyRulesHost = url?.host()
+        let early = isBlocking ? url.flatMap { engine.pageScripts?($0, nil) } : nil
+        PageScriptInjection.installScripts(on: webView.configuration.userContentController, early: early)
     }
 
     /// The page scripts for a page or frame in this tab, or nil when this tab's page has blocking off.
@@ -179,6 +188,7 @@ extension WebKitTab: WKNavigationDelegate {
         // Links that open elsewhere, or that the window takes for Peek, leave the page here as it is.
         if policy == .allow, navigationAction.targetFrame?.isMainFrame == true {
             setBlocking(engine.blocksContent(on: navigationAction.request.url))
+            installPageScripts(for: navigationAction.request.url)
             loadingFromForm = navigationAction.request.httpMethod?.uppercased() == "POST"
         }
         return policy
@@ -187,6 +197,10 @@ extension WebKitTab: WKNavigationDelegate {
     /// Committing settles the page's address after any redirects, so blocking follows the page actually shown.
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         setBlocking(engine.blocksContent(on: webView.url))
+        // A redirect landed somewhere else: carry that page's rules from here on, never the first site's.
+        if webView.url?.host() != earlyRulesHost {
+            installPageScripts(for: webView.url)
+        }
         showingFormResult = loadingFromForm
     }
 

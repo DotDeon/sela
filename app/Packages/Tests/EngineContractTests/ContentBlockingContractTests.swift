@@ -126,5 +126,43 @@ struct ContentBlockingContractTests {
         #expect(tab.state.title == "blocked")
         #expect(tab.state.url == page)
     }
+
+    private var flagScriptlet: PageScripts {
+        PageScripts(css: [], extendedCss: [], js: [], scriptlets: [PageScriptlet(name: "set-constant", args: ["browTestFlag", "true"])])
+    }
+
+    private func probe(_ name: String) throws -> URL {
+        try site.page(name, "<script>document.title = String(window.browTestFlag)</script>")
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func scriptletsRunBeforeThePagesFirstScript(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        let rules = flagScriptlet
+        browser.pageScripts = { _, _ in rules }
+        let tab = try await loadedTab(browser, try probe("first.html"))
+        try await eventually { tab.state.title == "true" }
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func earlyRulesFollowTheSiteSetting(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        let rules = flagScriptlet
+        browser.pageScripts = { _, _ in rules }
+        browser.isContentBlockingEnabled = { _ in false }
+        let tab = try await loadedTab(browser, try probe("first.html"))
+        try await eventually { tab.state.title == "undefined" }
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
+    func earlyRulesBelongToTheNewPage(engine: EngineUnderTest) async throws {
+        let browser = try blocking(engine)
+        let rules = flagScriptlet
+        browser.pageScripts = { page, _ in page.lastPathComponent == "a.html" ? rules : nil }
+        let tab = try await loadedTab(browser, try probe("a.html"))
+        try await eventually { tab.state.title == "true" }
+        tab.load(try probe("b.html"))
+        try await eventually { tab.state.url?.lastPathComponent == "b.html" && tab.state.title == "undefined" }
+    }
 }
 
