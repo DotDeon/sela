@@ -58,8 +58,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         let popover = DownloadsPopover(list: downloads)
         downloadsPopover = popover
         root.sidebarController.onDownloadsClicked = { [weak self] in self?.showDownloads(nil) }
-        model.onChooseFiles = { [weak self] multiple, folders in await self?.chooseFiles(multiple: multiple, folders: folders) }
-        model.onCaptureRequest = { [weak self] media, origin in await self?.askToCapture(media, origin: origin) ?? false }
+        model.onChooseFiles = { [weak self] multiple, folders in await PagePrompts.chooseFiles(in: self?.window, multiple: multiple, folders: folders) }
+        model.onCaptureRequest = { [weak self] media, origin in await PagePrompts.askToCapture(media, origin: origin, in: self?.window) }
         var shownCount = downloads.downloads.count
         keepObserving { [weak self] in
             guard let self else { return }
@@ -113,30 +113,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     @objc func showDownloads(_ sender: Any?) {
         root.revealSidebarIfHidden()
         downloadsPopover?.show(relativeTo: root.sidebarController.downloadsButton)
-    }
-
-    private func chooseFiles(multiple: Bool, folders: Bool) async -> [URL]? {
-        guard let window else { return nil }
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = multiple
-        panel.canChooseDirectories = folders
-        panel.canChooseFiles = true
-        return await panel.beginSheetModal(for: window) == .OK ? panel.urls : nil
-    }
-
-    private func askToCapture(_ media: MediaCapture, origin: URL) async -> Bool {
-        guard let window else { return false }
-        let what = switch media {
-        case .camera: "camera"
-        case .microphone: "microphone"
-        case .cameraAndMicrophone: "camera and microphone"
-        }
-        let alert = NSAlert()
-        alert.messageText = "Allow \(origin.host() ?? "this site") to use your \(what)?"
-        alert.informativeText = "Sela remembers your choice for this site."
-        alert.addButton(withTitle: "Allow")
-        alert.addButton(withTitle: "Don't Allow")
-        return await alert.beginSheetModal(for: window) == .alertFirstButtonReturn
     }
 
     /// Ctrl+Shift+=: a new pane beside the current tab, with the command bar open to choose its page.

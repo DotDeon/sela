@@ -1,5 +1,6 @@
 import AppKit
 import Archive
+import BrowserEngine
 import Browsing
 import ContentBlocking
 import Downloads
@@ -33,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
     private var windowControllers: [BrowserWindowController] = []
+    private var littleWindows: [LittleWindowController] = []
     /// Links that arrived before launch finished, opened once the first window exists.
     private var pendingURLs: [URL] = []
 
@@ -63,7 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             for controller in windowControllers { controller.model.reconcile() }
         }
 
-        newWindow(nil)
+        // Opened only to show a link in Little Sela, Sela shows just that window, as Arc does.
+        if opensMainWindowAtLaunch(linksWaiting: pendingURLs, destination: ExternalLinkSettings().destination) {
+            newWindow(nil)
+        }
         NSApp.activate()
         reportLoadProblem()
         if !pendingURLs.isEmpty {
@@ -88,6 +93,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Unfinished downloads would otherwise stay behind as ".download" files.
         engine.discardActiveDownloads()
         for controller in windowControllers { controller.model.markSelectionActive() }
+        // Little Sela pages go to the archive, as when their windows close.
+        for little in littleWindows { little.model.close() }
         sidebar?.saveNow()
     }
 
@@ -100,31 +107,78 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         return true
     }
 
-    /// Links and HTML files from other apps, for example when Sela is the default browser.
-    /// Each opens in a new tab in the frontmost window, or in a new window when none is open.
+    /// Links and HTML files from other apps, for example when Sela is the default browser. Each opens in
+    /// its own Little Sela window, or with that setting off, in a new tab in the frontmost window.
     func application(_ application: NSApplication, open urls: [URL]) {
-        let pages = urls.filter { ["http", "https", "file"].contains($0.scheme?.lowercased() ?? "") }
+        let pages = pagesToOpen(urls)
         guard !pages.isEmpty else { return }
         guard sidebar != nil else {
             pendingURLs += pages
             return
         }
-        let target = windowControllers.first { $0.window?.isMainWindow == true } ?? windowControllers.last ?? {
-            newWindow(nil)
-            return windowControllers.last!
-        }()
-        for page in pages { target.model.newTab(url: page) }
-        target.showWindow(nil)
+        switch ExternalLinkSettings().destination {
+        case .littleWindow:
+            for page in pages { openLittleWindow(url: page) }
+        case .newTab:
+            let target = frontmostWindowController()
+            for page in pages { target.model.newTab(url: page) }
+            target.showWindow(nil)
+        }
         NSApp.activate()
     }
 
     @objc func newWindow(_ sender: Any?) {
+        makeWindowController().showWithTab()
+    }
+
+    private func makeWindowController() -> BrowserWindowController {
         let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons, contentBlocker: contentBlocker, downloads: downloads)
         controller.onClose = { [weak self, weak controller] in
             self?.windowControllers.removeAll { $0 === controller }
         }
         windowControllers.append(controller)
-        controller.showWithTab()
+        return controller
+    }
+
+    /// The main window in front, or a new one, with no tab opened for it, when there isn't one.
+    private func frontmostWindowController() -> BrowserWindowController {
+        let front = NSApp.orderedWindows.lazy.compactMap { window in self.windowControllers.first { $0.window === window } }.first
+        return front ?? windowControllers.last ?? makeWindowController()
+    }
+
+    // MARK: Little Sela
+
+    /// File > New Little Sela Window: an empty one, with the address field ready.
+    @objc func newLittleWindow(_ sender: Any?) {
+        openLittleWindow(url: nil)
+    }
+
+    private func openLittleWindow(url: URL?) {
+        let occupied = littleWindows.compactMap { $0.window?.frame }
+        let controller = LittleWindowController(engine: engine, url: url, archive: archive, history: history, contentBlocker: contentBlocker,
+                                                downloads: downloads, occupied: occupied)
+        controller.onClose = { [weak self, weak controller] in
+            self?.littleWindows.removeAll { $0 === controller }
+        }
+        controller.onOpenInSela = { [weak self] tab in self?.moveToMainWindow(tab, selecting: true) }
+        // Popups and Cmd-clicked links from a Little Sela page become tabs, as they would from any tab.
+        controller.model.onOpenTab = { [weak self] tab, disposition in
+            self?.moveToMainWindow(tab, selecting: disposition == .foreground)
+        }
+        littleWindows.append(controller)
+        controller.show()
+    }
+
+    /// Makes a live page a tab in the frontmost main window's current space. A selected tab brings its window
+    /// to the front. Otherwise a window opened for it waits behind.
+    private func moveToMainWindow(_ tab: any BrowserTab, selecting: Bool) {
+        let target = frontmostWindowController()
+        target.model.adopt(tab, selecting: selecting)
+        if selecting {
+            target.showWindow(nil)
+        } else if target.window?.isVisible != true {
+            target.window?.orderBack(nil)
+        }
     }
 
     /// The "Archive Unpinned Tabs After" menu. The item's tag is the number of hours, 0 for never.
@@ -171,6 +225,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func toggleContentBlocking(_ sender: Any?) {
         contentBlocker.setEnabled(!contentBlocker.isEnabled)
         for controller in windowControllers { controller.model.selectedTab?.reload() }
+        for little in littleWindows { little.model.tab?.reload() }
     }
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
