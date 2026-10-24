@@ -56,6 +56,7 @@ Inside `app/Packages`:
 - `CommandBar`: the Cmd+T and Cmd+L command bar: ranking and the panel
 - `Downloads`: this session's downloads and how downloaded files are named
 - `Extensions`: the Web Extensions you installed, copied into Sela's data folder, which ones are on, and the permissions you gave them
+- `Passkeys`: whether Sela is signed for passkeys, and the user's choice about letting Sela see which sites have them
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
 - `SelaTestSupport`: sample sidebars shared by the tests
 
@@ -81,6 +82,16 @@ You can also open `app/Sela.xcodeproj` in Xcode and press Cmd+R. The first time,
 To measure how much memory Sela uses with 10 real sites open, before and after tabs sleep, quit Sela, Safari and Mail and run `scripts/measure-memory.sh`. It uses a throwaway profile, so your sidebar isn't touched.
 
 To release, run `scripts/ship.sh 0.1.4` on main. It sets the version, tags it and pushes, and the Release workflow on GitHub builds, signs and notarizes Sela, then publishes the disk image, the zip Sparkle updates from, delta updates from the last version and the signed update feed, `appcast.xml`. The workflow's header lists the secrets it needs. To build a release on your own Mac instead, run `scripts/release.sh TEAM_ID`. It needs a Developer ID Application certificate, the `asc` command-line tool logged in to App Store Connect, the `gh` tool logged in to GitHub, and Sela's update signing key in your login keychain.
+
+### Passkeys
+
+Websites can use passkeys only in a copy of Sela signed with Apple's browser passkey entitlement, `com.apple.developer.web-browser.public-key-credential`. Apple hasn't granted it to Sela yet, so releases are signed without it and Settings has no Passwords tab. Once Apple grants it, make a Developer ID provisioning profile that includes it and release with:
+
+```bash
+SELA_PASSKEYS=1 SELA_PROFILE=~/path/to/Sela.provisionprofile scripts/release.sh TEAM_ID
+```
+
+That signs Sela with `app/Support/Sela-Passkeys.entitlements` and puts the profile inside the app. The full steps, including the Release workflow, are in [`docs/plans/2026-10-24-passkeys.md`](docs/plans/2026-10-24-passkeys.md). Sela can't fill in passwords saved in the Passwords app, because macOS only offers them to Safari.
 
 ## Running the tests
 
