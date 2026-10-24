@@ -76,6 +76,15 @@ private struct GeneralSettings: View {
             }
         }
         .formStyle(.grouped)
+        // The window is reused, so read the choices again each time it shows: menus may have changed them.
+        .onAppear(perform: reload)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in reload() }
+    }
+
+    private func reload() {
+        sleepMinutes = TabSleepSettings().minutes
+        archiveHours = ArchiveSweeper.hours
+        isDefault = Self.brIsDefault()
     }
 
     private static func brIsDefault() -> Bool {

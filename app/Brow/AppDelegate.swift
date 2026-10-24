@@ -50,7 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Brow works without history if the database can't open.
         history = (dataFile("History.sqlite") ?? (try? HistoryStore.defaultFileURL())).flatMap { try? HistoryStore(fileURL: $0) }
         startContentBlocking()
-        if dataFolderOverride == nil {
+        // Start Fresh means nothing from Arc. File > Import History from Arc… still brings it in later.
+        if dataFolderOverride == nil, !FirstRunImport.choseStartFresh {
             HistoryImport.runOnFirstLaunch(into: history)
         }
 
