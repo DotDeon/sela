@@ -235,6 +235,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = B70000000000000000000029 /* Signing.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Support/Brow.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = NO;

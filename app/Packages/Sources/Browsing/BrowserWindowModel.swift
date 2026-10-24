@@ -22,9 +22,12 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     @ObservationIgnored public var onDownloadDestination: (@MainActor (String) -> URL?)?
     /// Asks the user whether a site may use the camera or microphone. Only called when there's no remembered choice.
     @ObservationIgnored public var onCaptureRequest: (@MainActor (MediaCapture, URL) async -> Bool)?
+    /// Where downloads go when `onDownloadDestination` isn't set. Defaults to the user's Downloads folder.
+    @ObservationIgnored public var downloadsFolder: URL? = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
     /// This session's downloads, shared by every window.
     public let downloads: DownloadList?
     @ObservationIgnored private let permissions: SitePermissions
+    @ObservationIgnored private var reservedDestinations: Set<URL> = []
     public private(set) var selectedSpaceID: SpaceID
     public private(set) var selectedItemID: ItemID?
     /// The page showing in Peek over the selected tab, or nil. A window has at most one.
@@ -559,8 +562,15 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     public func tab(_ tab: any BrowserTab, didStartDownload download: any BrowserDownload, suggestedFilename: String) async -> URL? {
         downloads?.add(download)
         if let onDownloadDestination { return onDownloadDestination(suggestedFilename) }
-        guard let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return nil }
-        return availableDestination(for: suggestedFilename, in: folder) { FileManager.default.fileExists(atPath: $0.path) }
+        guard let folder = downloadsFolder else { return nil }
+        // Taken means on disk, half-written, or promised to another download that hasn't written yet.
+        let destination = availableDestination(for: suggestedFilename, in: folder) { [downloads, reservedDestinations] url in
+            FileManager.default.fileExists(atPath: url.path) || FileManager.default.fileExists(atPath: partialURL(for: url).path)
+                || downloads?.isReserved(url) == true || reservedDestinations.contains(url.standardizedFileURL)
+        }
+        downloads?.reserve(destination)
+        reservedDestinations.insert(destination.standardizedFileURL)
+        return destination
     }
 
     /// Links from pinned tabs and favourites to another site open in Peek, and so does a Shift-click in any tab.

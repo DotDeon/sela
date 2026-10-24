@@ -47,6 +47,26 @@ struct EssentialsContractTests {
     }
 }
 
+extension EssentialsContractTests {
+    @Test(arguments: EngineUnderTest.allCases)
+    func cancellingEndsTheDownloadAndRemovesItsFile(engine: EngineUnderTest) async throws {
+        let server = try SlowServer()
+        let target = FileManager.default.temporaryDirectory.appending(path: "brow-dl-\(UUID().uuidString)/slow.bin")
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let delegate = DownloadingDelegate(destination: target)
+        let tab = engine.make().makeTab(url: nil)
+        tab.delegate = delegate
+        tab.load(server.url)
+        try await eventually { (delegate.download?.progress ?? 0) > 0.01 }
+        delegate.download?.cancel()
+        try await eventually { delegate.download?.state == .cancelled }
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(!FileManager.default.fileExists(atPath: target.path + ".download"))
+        #expect(!FileManager.default.fileExists(atPath: target.path))
+        _ = server
+    }
+}
+
 @MainActor
 final class DownloadingDelegate: BrowserTabDelegate {
     let destination: URL

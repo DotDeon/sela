@@ -26,13 +26,24 @@ final class WebKitDownload: NSObject, BrowserDownload, WKDownloadDelegate {
         download.delegate = self
         progressObservation = download.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
             let fraction = progress.totalUnitCount > 0 ? progress.fractionCompleted : -1
-            Task { @MainActor in self?.progress = fraction }
+            Task { @MainActor in
+                // Whole percents are enough for a progress bar, and spare redrawing on every packet.
+                guard let self, fraction < 0 || abs(fraction - self.progress) >= 0.01 || fraction == 1 else { return }
+                self.progress = fraction
+            }
         }
     }
 
+    /// WebKit doesn't report a failure after a cancel, so ending happens here.
     func cancel() {
+        guard state == .downloading else { return }
         wasCancelled = true
-        download.cancel { _ in }
+        download.cancel { [weak self] _ in
+            Task { @MainActor in
+                self?.removePartialFile()
+                self?.end(.cancelled)
+            }
+        }
     }
 
     /// Removes the unfinished file, for example when Brow quits mid-download.
@@ -50,6 +61,7 @@ final class WebKitDownload: NSObject, BrowserDownload, WKDownloadDelegate {
     }
 
     private func end(_ final: DownloadState) {
+        guard state == .downloading else { return }
         state = final
         progressObservation = nil
         onEnd?(self)

@@ -14,7 +14,6 @@ xcodebuild -project app/Brow.xcodeproj -scheme Brow -configuration Release \
     CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$team" \
     PROVISIONING_PROFILE_SPECIFIER="" CODE_SIGN_STYLE=Manual \
     ENABLE_HARDENED_RUNTIME=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
-    CODE_SIGN_ENTITLEMENTS=app/Support/Brow.entitlements \
     OTHER_CODE_SIGN_FLAGS="--timestamp" build
 
 version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$products/Brow.app/Contents/Info.plist")

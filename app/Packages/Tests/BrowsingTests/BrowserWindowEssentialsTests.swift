@@ -67,3 +67,16 @@ private func freshPermissions() -> SitePermissions {
     #expect(destination == target)
     #expect(downloads.downloads.map(\.filename) == ["file.pdf"])
 }
+
+@MainActor @Test func twoDownloadsWithOneNameGetTwoFiles() async throws {
+    let model = try makeModel(permissions: freshPermissions())
+    let folder = try temporaryFolder()
+    model.downloadsFolder = folder
+    model.select("u1")
+    let tab = try #require(model.liveTab(for: "u1"))
+    let delegate: any BrowserTabDelegate = model
+    let first = await delegate.tab(tab, didStartDownload: StubDownload(), suggestedFilename: "report.pdf")
+    let second = await delegate.tab(tab, didStartDownload: StubDownload(), suggestedFilename: "report.pdf")
+    #expect(first?.lastPathComponent == "report.pdf")
+    #expect(second?.lastPathComponent == "report 2.pdf")
+}
