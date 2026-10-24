@@ -4,11 +4,13 @@ import Browsing
 import ContentBlocking
 import Extensions
 import History
+import Passkeys
 import Sidebar
 import SidebarModel
 import SwiftUI
 
-/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Profiles, Permissions and Import.
+/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Passwords, Profiles, Permissions and Import.
+/// Passwords shows only in a copy of Sela signed with the browser passkey entitlement.
 @MainActor
 final class SettingsWindowController: NSWindowController {
     /// `currentSpace` names the space imported bookmarks go into: the one shown in the frontmost browser window.
@@ -18,11 +20,13 @@ final class SettingsWindowController: NSWindowController {
         history: HistoryStore?,
         sidebar: SidebarStore,
         extensions: ExtensionsController?,
+        passkeys: PasskeyAccessModel?,
         currentSpace: @escaping () -> SpaceID?,
         onDeleteProfile: @escaping (ProfileID) -> Void,
         onSettingsChanged: @escaping () -> Void
     ) {
         let view = SettingsView(contentBlocker: contentBlocker, history: history, sidebar: sidebar, currentSpace: currentSpace, extensions: extensions,
+                                passkeys: passkeys,
                                 onDeleteProfile: onDeleteProfile, onSettingsChanged: onSettingsChanged)
         let window = NSWindow(contentViewController: NSHostingController(rootView: view))
         window.title = "Settings"
@@ -42,6 +46,7 @@ private struct SettingsView: View {
     let sidebar: SidebarStore
     let currentSpace: () -> SpaceID?
     let extensions: ExtensionsController?
+    let passkeys: PasskeyAccessModel?
     let onDeleteProfile: (ProfileID) -> Void
     let onSettingsChanged: () -> Void
 
@@ -53,6 +58,9 @@ private struct SettingsView: View {
             }
             if let extensions {
                 ExtensionSettings(controller: extensions).tabItem { Label("Extensions", systemImage: "puzzlepiece.extension") }
+            }
+            if let passkeys {
+                PasswordSettings(passkeys: passkeys).tabItem { Label("Passwords", systemImage: "key") }
             }
             ProfileSettings(sidebar: sidebar, onDelete: onDeleteProfile).tabItem { Label("Profiles", systemImage: "person.2") }
             PermissionSettings().tabItem { Label("Permissions", systemImage: "video") }
@@ -225,6 +233,44 @@ private struct ExtensionSettings: View {
             ))
             .toggleStyle(.switch)
             .labelsHidden()
+        }
+    }
+}
+
+/// Passkey access, for a copy of Sela signed with the browser passkey entitlement.
+private struct PasswordSettings: View {
+    let passkeys: PasskeyAccessModel
+
+    var body: some View {
+        Form {
+            Section("Passkeys") {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Passkey access")
+                        Text(passkeys.status).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if passkeys.isRequesting { ProgressView().controlSize(.small) }
+                    if let action = passkeys.action {
+                        Button(action.title) { perform(action) }.disabled(passkeys.isRequesting)
+                    }
+                }
+                Text(passkeys.explanation).font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Saved passwords") {
+                Text("Sela can't fill in passwords from the Passwords app yet, because macOS only offers them to Safari. Copy them from the Passwords app, or add your password manager's Web Extension in Extensions.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { passkeys.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in passkeys.refresh() }
+    }
+
+    private func perform(_ action: PasskeyAccessModel.Action) {
+        switch action {
+        case .requestAccess: Task { await passkeys.requestAccess() }
+        case .openPrivacySettings: NSWorkspace.shared.open(PasskeyAccessModel.privacySettingsURL)
         }
     }
 }

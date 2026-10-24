@@ -6,6 +6,7 @@ import ContentBlocking
 import Downloads
 import Favicons
 import History
+import Passkeys
 import Sidebar
 import SidebarModel
 import SidebarUI
@@ -33,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var contentBlocker: ContentBlocker!
     /// Nil on systems too old for Web Extensions.
     private var extensions: ExtensionsController?
+    /// Nil unless Sela is signed with the browser passkey entitlement, so the Passwords settings stay hidden.
+    private lazy var passkeys: PasskeyAccessModel? = engine.servesPasskeys ? PasskeyAccessModel(source: SystemPasskeyAccess()) : nil
     private var listRefreshTimer: Timer?
     private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
@@ -218,6 +221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 history: history,
                 sidebar: sidebar,
                 extensions: extensions,
+                passkeys: passkeys,
                 currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID },
                 onDeleteProfile: { [weak self] id in self?.deleteProfile(id) }
             ) { [weak self] in

@@ -22,6 +22,7 @@ let package = Package(
         .library(name: "ContentBlocking", targets: ["ContentBlocking"]),
         .library(name: "Downloads", targets: ["Downloads"]),
         .library(name: "Extensions", targets: ["Extensions"]),
+        .library(name: "Passkeys", targets: ["Passkeys"]),
         .executable(name: "sela-arc", targets: ["sela-arc"]),
     ],
     dependencies: [
@@ -66,7 +67,7 @@ let package = Package(
         .testTarget(name: "FakeEngineTests", dependencies: ["FakeEngine", "BrowserEngine"]),
         .target(
             name: "WebKitEngine",
-            dependencies: ["BrowserEngine"],
+            dependencies: ["BrowserEngine", "Passkeys"],
             resources: [.copy("Resources/content-blocking.js"), .copy("Resources/reader-signals.js"), .copy("Resources/reader-extract.js")]
         ),
         .testTarget(name: "WebKitEngineTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
@@ -87,6 +88,8 @@ let package = Package(
         .testTarget(name: "ContentBlockingTests", dependencies: ["ContentBlocking", "BrowserEngine", "FakeEngine"]),
         .target(name: "Extensions", dependencies: ["BrowserEngine"]),
         .testTarget(name: "ExtensionsTests", dependencies: ["Extensions", "BrowserEngine", "FakeEngine"]),
+        .target(name: "Passkeys"),
+        .testTarget(name: "PasskeysTests", dependencies: ["Passkeys"]),
         .target(name: "Downloads", dependencies: ["BrowserEngine"]),
         .testTarget(name: "DownloadsTests", dependencies: ["Downloads", "BrowserEngine"]),
         .executableTarget(name: "sela-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
