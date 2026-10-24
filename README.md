@@ -4,7 +4,7 @@
 
 Brow is an open-source Mac browser built to work like Arc: favourites at the top of a sidebar, pinned tabs and folders, unpinned tabs that archive themselves, and spaces you swipe between. It runs on WebKit, the engine Safari uses, with a native Swift interface on top. The design lives in [`docs/design/2026-10-23-brow-design.md`](docs/design/2026-10-23-brow-design.md).
 
-Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. It blocks ads and trackers, YouTube's video ads included, with AdGuard Base and EasyPrivacy, and you can turn blocking off for any site. Tabs you haven't looked at for 15 minutes go to sleep to save memory, and wake where they were. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
+Brow is early. Today it browses websites with Arc's sidebar: favourites, pinned tabs and folders, unpinned tabs, and spaces you swipe between. Cmd+T opens the command bar, and unpinned tabs archive themselves after 12 hours. Split view shows up to four tabs side by side, and links from pinned tabs and favourites to other sites open in Peek, a preview over the page. It blocks ads and trackers, YouTube's video ads included, with AdGuard Base and EasyPrivacy, and you can turn blocking off for any site. Tabs you haven't looked at for 15 minutes go to sleep to save memory, and wake where they were. It downloads files, finds text on a page with Cmd+F, uploads files, and asks before a site uses your camera or microphone. On first launch it offers to bring in your Arc sidebar. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -35,6 +35,7 @@ Inside `app/Packages`:
 - `Archive`: closed and inactive unpinned tabs, kept 30 days so they can be found and reopened
 - `History`: pages you've visited, kept 90 days in a SQLite file on your Mac
 - `CommandBar`: the Cmd+T and Cmd+L command bar: ranking and the panel
+- `Downloads`: this session's downloads and how downloaded files are named
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
 - `BrowTestSupport`: sample sidebars shared by the tests
 

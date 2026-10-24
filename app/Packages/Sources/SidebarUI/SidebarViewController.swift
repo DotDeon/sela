@@ -14,6 +14,24 @@ public final class SidebarViewController: NSViewController {
         didSet { addressPill.onClick = onAddressClicked }
     }
 
+    /// Shows or hides the downloads button in the space bar.
+    public var showsDownloadsButton: Bool {
+        get { !spaceBar.downloadsButton.isHidden }
+        set { spaceBar.downloadsButton.isHidden = !newValue }
+    }
+
+    /// The downloads button, for anchoring the downloads popover. Its action is `onDownloadsClicked`.
+    public var downloadsButton: NSView { spaceBar.downloadsButton }
+
+    public var onDownloadsClicked: (() -> Void)? {
+        didSet {
+            spaceBar.downloadsButton.target = self
+            spaceBar.downloadsButton.action = #selector(downloadsClicked)
+        }
+    }
+
+    @objc private func downloadsClicked() { onDownloadsClicked?() }
+
     /// When set, the sidebar's New Tab button calls this instead of adding a blank tab.
     public var onNewTabClicked: (() -> Void)?
 

@@ -2,6 +2,7 @@ import AppKit
 import Archive
 import BrowserEngine
 import ContentBlocking
+import Downloads
 import Browsing
 import Favicons
 import History
@@ -21,9 +22,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private var peek: PeekPresenter?
     private let history: HistoryStore?
     private let contentBlocker: ContentBlocker?
+    private var findBar: FindBarController?
+    private var downloadsPopover: DownloadsPopover?
 
-    init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore, contentBlocker: ContentBlocker?) {
-        model = BrowserWindowModel(engine: engine, sidebar: sidebar, archive: archive)
+    init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore,
+         contentBlocker: ContentBlocker?, downloads: DownloadList) {
+        model = BrowserWindowModel(engine: engine, sidebar: sidebar, archive: archive, downloads: downloads)
         self.history = history
         self.contentBlocker = contentBlocker
         root = BrowserRootViewController(model: model, favicons: favicons)
@@ -50,6 +54,23 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             self?.runCommand(id)
         }
         peek = PeekPresenter(model: model, host: root.pageArea)
+        findBar = FindBarController(model: model, host: root.pageArea)
+        let popover = DownloadsPopover(list: downloads)
+        downloadsPopover = popover
+        root.sidebarController.onDownloadsClicked = { [weak self] in self?.showDownloads(nil) }
+        model.onChooseFiles = { [weak self] multiple, folders in await self?.chooseFiles(multiple: multiple, folders: folders) }
+        model.onCaptureRequest = { [weak self] media, origin in await self?.askToCapture(media, origin: origin) ?? false }
+        var shownCount = downloads.downloads.count
+        keepObserving { [weak self] in
+            guard let self else { return }
+            let count = downloads.downloads.count
+            root.sidebarController.showsDownloadsButton = count > 0
+            // A new download opens the list, so you see it start.
+            if count > shownCount, self.window?.isKeyWindow == true {
+                DispatchQueue.main.async { self.showDownloads(nil) }
+            }
+            shownCount = count
+        }
         root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
         root.sidebarController.onNewTabClicked = { [weak self] in self?.newTab(nil) }
         keepObserving { [weak self] in self?.updateTitle() }
@@ -80,6 +101,43 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     }
 
     @objc func reopenArchivedTab(_ sender: Any?) { model.reopenLastArchived() }
+
+    // MARK: Find, downloads, files and permissions
+
+    @objc func showFindBar(_ sender: Any?) { findBar?.show() }
+
+    @objc func findNextInPage(_ sender: Any?) { findBar?.findNext() }
+
+    @objc func findPreviousInPage(_ sender: Any?) { findBar?.findPrevious() }
+
+    @objc func showDownloads(_ sender: Any?) {
+        root.revealSidebarIfHidden()
+        downloadsPopover?.show(relativeTo: root.sidebarController.downloadsButton)
+    }
+
+    private func chooseFiles(multiple: Bool, folders: Bool) async -> [URL]? {
+        guard let window else { return nil }
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = multiple
+        panel.canChooseDirectories = folders
+        panel.canChooseFiles = true
+        return await panel.beginSheetModal(for: window) == .OK ? panel.urls : nil
+    }
+
+    private func askToCapture(_ media: MediaCapture, origin: URL) async -> Bool {
+        guard let window else { return false }
+        let what = switch media {
+        case .camera: "camera"
+        case .microphone: "microphone"
+        case .cameraAndMicrophone: "camera and microphone"
+        }
+        let alert = NSAlert()
+        alert.messageText = "Allow \(origin.host() ?? "this site") to use your \(what)?"
+        alert.informativeText = "Brow remembers your choice for this site."
+        alert.addButton(withTitle: "Allow")
+        alert.addButton(withTitle: "Don't Allow")
+        return await alert.beginSheetModal(for: window) == .alertFirstButtonReturn
+    }
 
     /// Ctrl+Shift+=: a new pane beside the current tab, with the command bar open to choose its page.
     @objc func addSplitView(_ sender: Any?) {

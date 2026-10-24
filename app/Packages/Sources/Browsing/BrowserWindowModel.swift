@@ -1,4 +1,5 @@
 import Archive
+import Downloads
 import BrowserEngine
 import Foundation
 import Observation
@@ -15,6 +16,15 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     public let archive: ArchiveStore?
     /// Called once each time a tab finishes loading a new web address, with the title it has then.
     @ObservationIgnored public var onPageVisited: ((URL, String?) -> Void)?
+    /// Asks the user for files to upload. Gets whether several files, and folders, are allowed. Nil means cancelled.
+    @ObservationIgnored public var onChooseFiles: (@MainActor (Bool, Bool) async -> [URL]?)?
+    /// Where a download goes, given its suggested name. Defaults to a free name in the Downloads folder.
+    @ObservationIgnored public var onDownloadDestination: (@MainActor (String) -> URL?)?
+    /// Asks the user whether a site may use the camera or microphone. Only called when there's no remembered choice.
+    @ObservationIgnored public var onCaptureRequest: (@MainActor (MediaCapture, URL) async -> Bool)?
+    /// This session's downloads, shared by every window.
+    public let downloads: DownloadList?
+    @ObservationIgnored private let permissions: SitePermissions
     public private(set) var selectedSpaceID: SpaceID
     public private(set) var selectedItemID: ItemID?
     /// The page showing in Peek over the selected tab, or nil. A window has at most one.
@@ -36,8 +46,11 @@ public final class BrowserWindowModel: BrowserTabDelegate {
     @ObservationIgnored private var dialogAnswers: [UUID: CheckedContinuation<JavaScriptDialogResult, Never>] = [:]
 
     /// Shows the first space, with its most recently active tab selected.
-    public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, now: @escaping @MainActor () -> Date = { .now }) {
+    public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, downloads: DownloadList? = nil,
+                permissions: SitePermissions = SitePermissions(), now: @escaping @MainActor () -> Date = { .now }) {
         self.engine = engine
+        self.downloads = downloads
+        self.permissions = permissions
         self.sidebar = sidebar
         self.archive = archive
         self.now = now
@@ -528,6 +541,26 @@ public final class BrowserWindowModel: BrowserTabDelegate {
             dialogAnswers[pending.id] = continuation
             dialogs.append(pending)
         }
+    }
+
+    public func tab(_ tab: any BrowserTab, chooseFiles allowsMultiple: Bool, allowsDirectories: Bool) async -> [URL]? {
+        await onChooseFiles?(allowsMultiple, allowsDirectories)
+    }
+
+    /// Uses the remembered choice for the site, or asks and remembers the answer.
+    public func tab(_ tab: any BrowserTab, mayCapture media: MediaCapture, forOrigin origin: URL) async -> Bool {
+        if let decision = permissions.decision(for: media, on: origin) { return decision }
+        guard let onCaptureRequest else { return false }
+        let allowed = await onCaptureRequest(media, origin)
+        permissions.remember(allowed, for: media, on: origin)
+        return allowed
+    }
+
+    public func tab(_ tab: any BrowserTab, didStartDownload download: any BrowserDownload, suggestedFilename: String) async -> URL? {
+        downloads?.add(download)
+        if let onDownloadDestination { return onDownloadDestination(suggestedFilename) }
+        guard let folder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return nil }
+        return availableDestination(for: suggestedFilename, in: folder) { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     /// Links from pinned tabs and favourites to another site open in Peek, and so does a Shift-click in any tab.

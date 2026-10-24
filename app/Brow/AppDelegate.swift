@@ -2,6 +2,7 @@ import AppKit
 import Archive
 import Browsing
 import ContentBlocking
+import Downloads
 import Favicons
 import History
 import Sidebar
@@ -21,6 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var history: HistoryStore?
     private var sweeper: ArchiveSweeper?
     private var tabSleeper: TabSleeper?
+    /// This session's downloads, shown in every window.
+    private let downloads = DownloadList()
     /// `-BrowDataFolder <path>` keeps every Brow file in that folder instead of Application Support,
     /// and skips the Arc import. For measuring runs that mustn't touch your own sidebar.
     private let dataFolderOverride: URL? = UserDefaults.standard.string(forKey: "BrowDataFolder").map { URL(fileURLWithPath: $0, isDirectory: true) }
@@ -76,6 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Unfinished downloads would otherwise stay behind as ".download" files.
+        engine.discardActiveDownloads()
         for controller in windowControllers { controller.model.markSelectionActive() }
         sidebar?.saveNow()
     }
@@ -108,7 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc func newWindow(_ sender: Any?) {
-        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons, contentBlocker: contentBlocker)
+        let controller = BrowserWindowController(engine: engine, sidebar: sidebar, archive: archive, history: history, favicons: favicons, contentBlocker: contentBlocker, downloads: downloads)
         controller.onClose = { [weak self, weak controller] in
             self?.windowControllers.removeAll { $0 === controller }
         }

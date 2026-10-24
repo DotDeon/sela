@@ -32,6 +32,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Websites you allow can use your camera.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Websites you allow can use your microphone.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>

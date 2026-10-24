@@ -61,9 +61,9 @@ let package = Package(
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .target(
             name: "Browsing",
-            dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", .product(name: "PublicSuffixList", package: "swift-psl")]
+            dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", .product(name: "PublicSuffixList", package: "swift-psl")]
         ),
-        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "BrowTestSupport"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "BrowTestSupport"]),
         .target(
             name: "ContentBlocking",
             dependencies: [

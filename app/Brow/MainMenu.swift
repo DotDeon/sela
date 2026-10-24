@@ -52,12 +52,21 @@ enum MainMenu {
         menu.addItem(item("Copy", #selector(NSText.copy(_:)), "c"))
         menu.addItem(item("Paste", #selector(NSText.paste(_:)), "v"))
         menu.addItem(item("Select All", #selector(NSText.selectAll(_:)), "a"))
+        menu.addItem(.separator())
+        let find = NSMenuItem(title: "Find", action: nil, keyEquivalent: "")
+        let findMenu = NSMenu(title: "Find")
+        findMenu.addItem(item("Find…", #selector(BrowserWindowController.showFindBar(_:)), "f"))
+        findMenu.addItem(item("Find Next", #selector(BrowserWindowController.findNextInPage(_:)), "g"))
+        findMenu.addItem(item("Find Previous", #selector(BrowserWindowController.findPreviousInPage(_:)), "g", [.command, .shift]))
+        find.submenu = findMenu
+        menu.addItem(find)
         return menu
     }
 
     private static func viewMenu() -> NSMenu {
         let menu = NSMenu(title: "View")
         menu.addItem(item("Toggle Sidebar", #selector(BrowserWindowController.toggleSidebar(_:)), "s"))
+        menu.addItem(item("Downloads", #selector(BrowserWindowController.showDownloads(_:)), "l", [.command, .option]))
         menu.addItem(.separator())
         menu.addItem(item("Reload Page", #selector(BrowserWindowController.reloadTab(_:)), "r"))
         menu.addItem(item("Stop", #selector(BrowserWindowController.stopTab(_:)), "."))
