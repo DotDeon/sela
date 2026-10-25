@@ -2,6 +2,7 @@ import AppKit
 import Archive
 import BrowserEngine
 import Browsing
+import CloudSync
 import ContentBlocking
 import Downloads
 import Favicons
@@ -39,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private lazy var passkeys: PasskeyAccessModel? = engine.servesPasskeys ? PasskeyAccessModel(source: SystemPasskeyAccess()) : nil
     /// Nil for measuring runs, and while the app has no real key for checking the remote settings.
     private var remoteSettings: RemoteSettingsController?
+    /// Nil unless Sela is signed for iCloud, so the Sync settings stay hidden and CloudKit is never touched.
+    private var cloudSync: CloudSyncController?
     private var listRefreshTimer: Timer?
     private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
@@ -65,6 +68,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         archive = ArchiveStore(fileURL: dataFile("Archive.json") ?? (try? ArchiveStore.defaultFileURL()) ?? FileManager.default.temporaryDirectory.appending(path: "Sela-Archive.json"))
         // Sela works without history if the database can't open.
         history = (dataFile("History.sqlite") ?? (try? HistoryStore.defaultFileURL())).flatMap { try? HistoryStore(fileURL: $0) }
+        cloudSync = CloudSyncController(sidebar: sidebar, ledgerFile: dataFile("CloudSync.json") ?? sidebarFileURL().deletingLastPathComponent().appending(path: "CloudSync.json")) { [weak self] in
+            self?.frontmostWindowController()?.pageArea
+        }
         startContentBlocking()
         startExtensions()
         // Start Fresh means nothing from Arc. File > Import History from Arc… still brings it in later.
@@ -87,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.activate()
         reportLoadProblem()
         remoteSettings?.start()
+        cloudSync?.start()
         if !pendingURLs.isEmpty {
             application(NSApp, open: pendingURLs)
             pendingURLs = []
@@ -228,6 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 sidebar: sidebar,
                 extensions: extensions,
                 passkeys: passkeys,
+                cloudSync: cloudSync?.model,
                 currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID },
                 onDeleteProfile: { [weak self] id in self?.deleteProfile(id) }
             ) { [weak self] in

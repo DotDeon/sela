@@ -58,6 +58,7 @@ Inside `app/Packages`:
 - `Downloads`: this session's downloads and how downloaded files are named
 - `Extensions`: the Web Extensions you installed, copied into Sela's data folder, which ones are on, and the permissions you gave them
 - `Passkeys`: whether Sela is signed for passkeys, and the user's choice about letting Sela see which sites have them
+- `CloudSync`: the sidebar as CloudKit records, the merge that folds other Macs' changes in, and the sync engine behind it
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
 - `RemoteSettings`: downloads, checks and caches the signed remote settings file, plus `FeatureFlags` and the one-time messages
 - `SelaTestSupport`: sample sidebars shared by the tests
@@ -94,6 +95,16 @@ SELA_PASSKEYS=1 SELA_PROFILE=~/path/to/Sela.provisionprofile scripts/release.sh 
 ```
 
 That signs Sela with `app/Support/Sela-Passkeys.entitlements` and puts the profile inside the app. The full steps, including the Release workflow, are in [`docs/plans/2026-10-24-passkeys.md`](docs/plans/2026-10-24-passkeys.md). Sela can't fill in passwords saved in the Passwords app, because macOS only offers them to Safari.
+
+### iCloud sync
+
+Spaces, pinned tabs, folders, favourites and profiles can follow you to your other Macs through your own iCloud account, with CloudKit's private database. Today's tabs, the archive and history stay on each Mac, and there is no Sela server. It works only in a copy of Sela signed with the iCloud entitlements and a Developer ID provisioning profile that allows them, which releases don't have yet, so Settings has no Sync tab. Once the App ID has iCloud and Push Notifications turned on, the container `iCloud.app.brow.Brow` exists and the CloudKit schema is deployed, release with:
+
+```bash
+SELA_CLOUD=1 SELA_PROFILE=~/path/to/Sela.provisionprofile scripts/release.sh TEAM_ID
+```
+
+Set `SELA_PASSKEYS=1` as well to sign with both, with a profile that allows both. The full steps are in [`docs/plans/2026-10-25-icloud-sync.md`](docs/plans/2026-10-25-icloud-sync.md). Sync is off until you turn it on in Settings > Sync.
 
 ## Remote settings
 
