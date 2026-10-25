@@ -73,7 +73,8 @@ private struct SettingsView: View {
 
 private struct GeneralSettings: View {
     let onSettingsChanged: () -> Void
-    @State private var searchEngine = SearchEngineSettings().engine
+    @State private var searchEngine = SearchEngineSettings().engine.id
+    @State private var searchEngines = SearchEngineSettings().available
     @State private var sleepMinutes = TabSleepSettings().minutes
     @State private var archiveHours = ArchiveSweeper.hours
     @State private var isDefault = GeneralSettings.brIsDefault()
@@ -90,12 +91,13 @@ private struct GeneralSettings: View {
                 }
             }
             Picker("Search engine", selection: $searchEngine) {
-                ForEach(SearchEngine.allCases, id: \.self) { engine in
-                    Text(engine.name).tag(engine)
+                ForEach(searchEngines, id: \.id) { engine in
+                    Text(engine.name).tag(engine.id)
                 }
             }
             .onChange(of: searchEngine) { _, value in
-                SearchEngineSettings().engine = value
+                guard let engine = searchEngines.first(where: { $0.id == value }) else { return }
+                SearchEngineSettings().engine = engine
             }
             Picker("Open links from other apps in", selection: $linkDestination) {
                 Text("Little Sela").tag(ExternalLinkDestination.littleWindow)
@@ -131,7 +133,8 @@ private struct GeneralSettings: View {
     }
 
     private func reload() {
-        searchEngine = SearchEngineSettings().engine
+        searchEngines = SearchEngineSettings().available
+        searchEngine = SearchEngineSettings().engine.id
         sleepMinutes = TabSleepSettings().minutes
         archiveHours = ArchiveSweeper.hours
         isDefault = Self.brIsDefault()

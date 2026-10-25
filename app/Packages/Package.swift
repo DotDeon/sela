@@ -23,6 +23,7 @@ let package = Package(
         .library(name: "Downloads", targets: ["Downloads"]),
         .library(name: "Extensions", targets: ["Extensions"]),
         .library(name: "Passkeys", targets: ["Passkeys"]),
+        .library(name: "RemoteSettings", targets: ["RemoteSettings"]),
         .executable(name: "sela-arc", targets: ["sela-arc"]),
     ],
     dependencies: [
@@ -74,9 +75,9 @@ let package = Package(
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .target(
             name: "Browsing",
-            dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", .product(name: "PublicSuffixList", package: "swift-psl")]
+            dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "RemoteSettings", .product(name: "PublicSuffixList", package: "swift-psl")]
         ),
-        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "SelaTestSupport"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "RemoteSettings", "SelaTestSupport"]),
         .target(
             name: "ContentBlocking",
             dependencies: [
@@ -90,6 +91,8 @@ let package = Package(
         .testTarget(name: "ExtensionsTests", dependencies: ["Extensions", "BrowserEngine", "FakeEngine"]),
         .target(name: "Passkeys"),
         .testTarget(name: "PasskeysTests", dependencies: ["Passkeys"]),
+        .target(name: "RemoteSettings"),
+        .testTarget(name: "RemoteSettingsTests", dependencies: ["RemoteSettings"]),
         .target(name: "Downloads", dependencies: ["BrowserEngine"]),
         .testTarget(name: "DownloadsTests", dependencies: ["Downloads", "BrowserEngine"]),
         .executableTarget(name: "sela-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),

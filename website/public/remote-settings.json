@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "searchEngines": [],
+  "defaults": {
+    "searchEngine": "google",
+    "tabSleepMinutes": 15,
+    "autoPictureInPicture": true
+  },
+  "features": {}
+}

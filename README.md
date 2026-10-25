@@ -22,6 +22,7 @@ What it does today:
 - **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
 - **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit.
+- **Remote settings.** Once a day Sela reads a small signed file from its website that can change search engine addresses, the defaults for settings you haven't changed, and feature switches, or show a one-time notice. It holds data, never code.
 
 Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, picture in picture, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
 
@@ -58,6 +59,7 @@ Inside `app/Packages`:
 - `Extensions`: the Web Extensions you installed, copied into Sela's data folder, which ones are on, and the permissions you gave them
 - `Passkeys`: whether Sela is signed for passkeys, and the user's choice about letting Sela see which sites have them
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
+- `RemoteSettings`: downloads, checks and caches the signed remote settings file, plus `FeatureFlags` and the one-time messages
 - `SelaTestSupport`: sample sidebars shared by the tests
 
 ## Download
@@ -92,6 +94,35 @@ SELA_PASSKEYS=1 SELA_PROFILE=~/path/to/Sela.provisionprofile scripts/release.sh 
 ```
 
 That signs Sela with `app/Support/Sela-Passkeys.entitlements` and puts the profile inside the app. The full steps, including the Release workflow, are in [`docs/plans/2026-10-24-passkeys.md`](docs/plans/2026-10-24-passkeys.md). Sela can't fill in passwords saved in the Passwords app, because macOS only offers them to Safari.
+
+## Remote settings
+
+Sela downloads `website/public/remote-settings.json` from https://dotdeon.github.io/sela/remote-settings.json once a day, with its signature in `remote-settings.json.sig` beside it. It only accepts the file over https from that address, up to 64 KB, with `"version": 1` and an Ed25519 signature from the key built into the app. It keeps the last good copy in `~/Library/Application Support/Sela/RemoteSettings` and uses it offline. Measuring runs with `-SelaDataFolder` never fetch it.
+
+Every part of the file is optional. Sela ignores keys it doesn't know, and drops a value with the wrong type on its own without losing the rest:
+
+```json
+{
+  "version": 1,
+  "searchEngines": [{ "id": "mojeek", "name": "Mojeek", "template": "https://www.mojeek.com/search?q=%s" }],
+  "defaults": { "searchEngine": "google", "tabSleepMinutes": 15, "autoPictureInPicture": true },
+  "features": { "someFeature": true },
+  "message": { "id": "2026-11-news", "text": "Sela 0.2 is out.", "link": "https://dotdeon.github.io/sela/changelog", "style": "banner", "minimumVersion": "0.1.3", "maximumVersion": "0.1.9" }
+}
+```
+
+- `searchEngines` changes a built-in engine with the same id, or adds a new one. Templates must be https and contain `%s`. People keep the engine they chose. A built-in engine whose change goes away goes back to its built-in address, and someone whose added engine goes away gets the default engine until it returns.
+- `defaults` only reaches people who haven't changed that setting themselves. A choice someone makes always wins.
+- `features` turns switches on or off by name. Code asks `FeatureFlags.isOn(.someFeature)`, with the feature declared as `extension Feature { static let someFeature = Feature("someFeature") }` and off unless the file turns it on. A launch argument such as `-Feature.someFeature YES` overrides both, for trying one out.
+- `message` shows once per id as an alert, with `"style": "alert"`, or as a quiet banner at the bottom of the window, which is the default. The version bounds are optional.
+
+Until the app has a real public key, Sela skips remote settings and logs that once at launch. To set the key up, once:
+
+1. Run `scripts/make-remote-settings-key.sh`. It makes a key pair, saves the private key in your login keychain as a generic password named "Sela remote settings key", and prints the public key.
+2. Paste the public key into `RemoteSettingsSignature.publicKey` in `app/Packages/Sources/RemoteSettings/RemoteSettingsSignature.swift` and release that build.
+3. Back up the private key somewhere safe. `security find-generic-password -s "Sela remote settings key" -w` prints it. Without it you can't sign a new file, and a new key only works in releases that carry its public key.
+
+After every change to `remote-settings.json`, run `scripts/sign-remote-settings.sh` and commit the file and its `.sig` together. The script reads the key from the keychain, or from the file named in `REMOTE_SETTINGS_KEY_FILE` when that's set. The site deploys both, and a file whose signature doesn't match is ignored, so Sela keeps its last good copy.
 
 ## Running the tests
 
