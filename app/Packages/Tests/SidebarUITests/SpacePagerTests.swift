@@ -63,3 +63,10 @@ private func scrollEvent(phase: Int64, dx: Int32, at time: TimeInterval) -> NSEv
     #expect(h.model.selectedSpaceID == "S")
     #expect(h.controller.pager.currentPage == 0)
 }
+
+@MainActor @Test func aCancelledSwipeGoesBackToItsSpace() throws {
+    let h = try Harness()
+    try h.swipe([(-20, 1.0), (-60, 1.02), (-60, 1.04)], endingAt: 1.06, phase: 8)
+    #expect(h.model.selectedSpaceID == "S")
+    #expect(h.controller.pager.currentPage == 0)
+}

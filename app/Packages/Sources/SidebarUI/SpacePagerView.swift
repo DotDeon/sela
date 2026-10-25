@@ -143,7 +143,8 @@ final class SpacePagerView: NSScrollView {
             samples.append((event.timestamp, swipeOffset))
             samples = samples.filter { event.timestamp - $0.time < 0.1 }
             let speed = velocity()
-            let target = targetPage(
+            // A swipe the system cancels goes back to where it started.
+            let target = event.phase == .cancelled ? swipeStartPage : targetPage(
                 startPage: swipeStartPage,
                 offset: swipeOffset,
                 pageWidth: pageWidth,
