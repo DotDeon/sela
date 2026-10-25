@@ -94,6 +94,7 @@ final class WebKitTab: NSObject, BrowserTab {
         let reader = WKWebView(frame: webView.bounds, configuration: configuration)
         reader.autoresizingMask = [.width, .height]
         reader.allowsMagnification = true
+        reader.pageZoom = webView.pageZoom
         readerNavigation.pageURL = pageURL
         reader.navigationDelegate = readerNavigation
         reader.loadHTMLString(readerPageHTML(for: article), baseURL: pageURL)
@@ -170,6 +171,16 @@ final class WebKitTab: NSObject, BrowserTab {
         let configuration = WKSnapshotConfiguration()
         configuration.snapshotWidth = NSNumber(value: Double(width))
         return try? await view.takeSnapshot(configuration: configuration)
+    }
+
+    // MARK: Zoom
+
+    /// The reader follows the page, so an article reads at the same size either way.
+    func setPageZoom(_ zoom: Double) {
+        guard !isClosed, webView.pageZoom != zoom else { return }
+        webView.pageZoom = zoom
+        readerView?.pageZoom = zoom
+        syncState()
     }
 
     // MARK: Printing
@@ -308,7 +319,8 @@ final class WebKitTab: NSObject, BrowserTab {
             faviconURL: faviconURL,
             isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
             isReaderAvailable: isArticle,
-            isShowingReader: readerView != nil
+            isShowingReader: readerView != nil,
+            pageZoom: webView.pageZoom
         )
         guard next != state else { return }
         let previous = state

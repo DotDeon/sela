@@ -29,10 +29,10 @@ private struct Harness {
 
     let window: NSWindow
 
-    init(document: SidebarDocument = fixtureDocument()) throws {
+    init(document: SidebarDocument = fixtureDocument(), zoomStore: PageZoomStore = PageZoomStore()) throws {
         let folder = try temporaryFolder()
         let store = SidebarStore(fileStore: SidebarDocumentStore(fileURL: folder.appending(path: "Sidebar.json")), saveDelay: .seconds(60), firstRunDocument: { document })
-        model = BrowserWindowModel(engine: FakeEngine(), sidebar: store)
+        model = BrowserWindowModel(engine: FakeEngine(), sidebar: store, zoomStore: zoomStore)
         let favicons = FaviconStore(cacheFolder: folder, fetch: { _ in throw Offline() })
         controller = SidebarViewController(model: model, favicons: favicons)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 260, height: 800), styleMask: [.titled], backing: .buffered, defer: false)
@@ -265,6 +265,18 @@ private func fakeExtension(named name: String) async throws -> FakeExtension {
     h.controller.readerButton.performClick(nil)
     try await eventually { tab.state.isShowingReader }
     try await eventually { h.controller.readerButton.accessibilityLabel() == "Hide Reader" }
+}
+
+@MainActor @Test func zoomLevelShowsInTheAddressUntilClicked() async throws {
+    let h = try Harness(zoomStore: PageZoomStore(defaults: UserDefaults(suiteName: "sela-zoom-\(UUID().uuidString)")!))
+    h.model.select("u1")
+    try await eventually { h.controller.zoomButton.isHidden }
+    h.model.zoomIn()
+    h.model.zoomIn()
+    try await eventually { !h.controller.zoomButton.isHidden && h.controller.zoomButton.title == "125%" }
+    h.controller.zoomButton.performClick(nil)
+    #expect(h.model.selectedTab?.state.pageZoom == 1)
+    try await eventually { h.controller.zoomButton.isHidden }
 }
 
 @MainActor @Test func clearShowsOnlyWhileThereAreUnpinnedTabs() async throws {

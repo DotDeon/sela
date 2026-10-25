@@ -35,6 +35,19 @@ struct EssentialsContractTests {
     }
 
     @Test(arguments: EngineUnderTest.allCases)
+    func pageZoomShowsInTheState(engine: EngineUnderTest) async throws {
+        let delegate = RecordingDelegate()
+        let tab = try await loadedTab(engine.make(), try site.page("zoom.html", "<p>Zoomed</p>"), delegate: delegate)
+        #expect(tab.state.pageZoom == 1)
+        let changes = delegate.stateChanges
+        tab.setPageZoom(1.5)
+        #expect(tab.state.pageZoom == 1.5)
+        #expect(delegate.stateChanges == changes + 1)
+        tab.setPageZoom(1.5)
+        #expect(delegate.stateChanges == changes + 1, "setting the same level again is quiet")
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
     func downloadsArriveWhereTheDelegateSays(engine: EngineUnderTest) async throws {
         // A file WebKit can't show is downloaded, the same way a server's attachment is.
         try Data("hello download".utf8).write(to: site.folder.appending(path: "data.bin"))

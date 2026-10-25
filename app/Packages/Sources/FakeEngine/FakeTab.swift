@@ -92,6 +92,10 @@ public final class FakeTab: BrowserTab {
 
     public func thumbnail(width: CGFloat) async -> NSImage? { thumbnailForTesting }
 
+    public func setPageZoom(_ zoom: Double) {
+        state.pageZoom = zoom
+    }
+
     public func printOperation(with info: NSPrintInfo) -> NSPrintOperation? {
         printRequests += 1
         return nil

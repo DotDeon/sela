@@ -153,6 +153,14 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         downloadsPopover?.show(relativeTo: root.sidebarController.downloadsButton)
     }
 
+    // MARK: Zoom
+
+    @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
+
+    @objc func zoomOut(_ sender: Any?) { model.zoomOut() }
+
+    @objc func resetZoom(_ sender: Any?) { model.resetZoom() }
+
     // MARK: Printing
 
     @objc func printPage(_ sender: Any?) { PagePrinting.print(model.selectedTab, in: window) }
@@ -204,6 +212,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             return true
         case #selector(printPage(_:)), #selector(exportPDF(_:)):
             return model.selectedTab?.state.url != nil
+        case #selector(zoomIn(_:)), #selector(zoomOut(_:)):
+            return model.selectedTab != nil
+        case #selector(resetZoom(_:)):
+            guard let zoom = model.selectedTab?.state.pageZoom else { return false }
+            return !PageZoom.isActualSize(zoom)
         default:
             return true
         }

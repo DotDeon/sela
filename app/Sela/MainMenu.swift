@@ -89,6 +89,15 @@ enum MainMenu {
         menu.addItem(item("Reload Page", #selector(BrowserWindowController.reloadTab(_:)), "r"))
         menu.addItem(item("Stop", #selector(BrowserWindowController.stopTab(_:)), "."))
         menu.addItem(.separator())
+        menu.addItem(item("Actual Size", #selector(BrowserWindowController.resetZoom(_:)), "0"))
+        menu.addItem(item("Zoom In", #selector(BrowserWindowController.zoomIn(_:)), "+"))
+        // Cmd+= zooms in too, as in Safari. The alternate never shows, since it has the same modifiers,
+        // but its key still works.
+        let zoomInWithEquals = item("Zoom In", #selector(BrowserWindowController.zoomIn(_:)), "=")
+        zoomInWithEquals.isAlternate = true
+        menu.addItem(zoomInWithEquals)
+        menu.addItem(item("Zoom Out", #selector(BrowserWindowController.zoomOut(_:)), "-"))
+        menu.addItem(.separator())
         menu.addItem(item("Back", #selector(BrowserWindowController.goBackInTab(_:)), "["))
         menu.addItem(item("Forward", #selector(BrowserWindowController.goForwardInTab(_:)), "]"))
         return menu

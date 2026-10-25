@@ -27,9 +27,11 @@ public struct TabState: Equatable, Sendable {
     public var isReaderAvailable: Bool
     /// True while the tab shows its page in reader mode.
     public var isShowingReader: Bool
+    /// How much the page is scaled: 1 is actual size, 1.5 is 150 percent.
+    public var pageZoom: Double
 
     public init(url: URL?, title: String?, isLoading: Bool, estimatedProgress: Double, canGoBack: Bool, canGoForward: Bool, faviconURL: URL? = nil,
-                isUsingCameraOrMicrophone: Bool = false, isReaderAvailable: Bool = false, isShowingReader: Bool = false) {
+                isUsingCameraOrMicrophone: Bool = false, isReaderAvailable: Bool = false, isShowingReader: Bool = false, pageZoom: Double = 1) {
         self.url = url
         self.title = title
         self.isLoading = isLoading
@@ -40,6 +42,7 @@ public struct TabState: Equatable, Sendable {
         self.isUsingCameraOrMicrophone = isUsingCameraOrMicrophone
         self.isReaderAvailable = isReaderAvailable
         self.isShowingReader = isShowingReader
+        self.pageZoom = pageZoom
     }
 
     public static let blank = TabState(url: nil, title: nil, isLoading: false, estimatedProgress: 0, canGoBack: false, canGoForward: false)
@@ -80,6 +83,8 @@ public protocol BrowserTab: AnyObject, Observable {
     func exitPictureInPicture()
     /// A picture of what the page shows, `width` points wide. Nil when there's nothing to draw.
     func thumbnail(width: CGFloat) async -> NSImage?
+    /// Scales the page, and everything in it, to `zoom` times its actual size. `state.pageZoom` follows.
+    func setPageZoom(_ zoom: Double)
     /// Prints what the page shows, the reader when it's on, through the standard print panel.
     /// Nil when there's no page to print.
     func printOperation(with info: NSPrintInfo) -> NSPrintOperation?

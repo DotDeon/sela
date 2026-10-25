@@ -265,6 +265,12 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
 
     @objc func findPreviousInPage(_ sender: Any?) { findBar?.findPrevious() }
 
+    @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
+
+    @objc func zoomOut(_ sender: Any?) { model.zoomOut() }
+
+    @objc func resetZoom(_ sender: Any?) { model.resetZoom() }
+
     @objc func printPage(_ sender: Any?) { PagePrinting.print(model.tab, in: window) }
 
     @objc func exportPDF(_ sender: Any?) { PagePrinting.exportPDF(model.tab, in: window) }
@@ -297,6 +303,9 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
             return model.tab?.state.canGoBack == true
         case #selector(goForwardInTab(_:)):
             return model.tab?.state.canGoForward == true
+        case #selector(resetZoom(_:)):
+            guard let zoom = model.tab?.state.pageZoom else { return false }
+            return !PageZoom.isActualSize(zoom)
         case #selector(toggleSiteBlocking(_:)):
             guard let url = blockableURL, let contentBlocker else {
                 item.state = .off
