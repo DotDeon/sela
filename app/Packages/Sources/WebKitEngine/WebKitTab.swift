@@ -262,8 +262,9 @@ final class WebKitTab: NSObject, BrowserTab {
         observations = [
             webView.observe(\.url) { webView, _ in update(webView) },
             webView.observe(\.title) { webView, _ in update(webView) },
+            // Progress is read whenever something else changes, not watched: it ticks many times a second
+            // while a page loads, and every tick would redraw the whole sidebar.
             webView.observe(\.isLoading) { webView, _ in update(webView) },
-            webView.observe(\.estimatedProgress) { webView, _ in update(webView) },
             webView.observe(\.canGoBack) { webView, _ in update(webView) },
             webView.observe(\.canGoForward) { webView, _ in update(webView) },
             webView.observe(\.cameraCaptureState) { webView, _ in update(webView) },
