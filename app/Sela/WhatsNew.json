@@ -1,4 +1,7 @@
 {
+  "0.1.6": [
+    "A new tab stays in the space you're in. Tabs from other spaces no longer take the command bar's top row; they sit lower, named with their space."
+  ],
   "0.1.5": [
     "Print a page with Cmd+P, or save it as a PDF from the File menu.",
     "Zoom pages in and out from the View menu. Sela remembers the level for each site.",
