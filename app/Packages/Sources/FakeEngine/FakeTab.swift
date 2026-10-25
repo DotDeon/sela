@@ -35,6 +35,17 @@ public final class FakeTab: BrowserTab {
     @ObservationIgnored public private(set) var inspectorRequests = 0
     /// What `pdf()` answers.
     @ObservationIgnored public var pdfForTesting = Data()
+    /// What `languageSample()` answers.
+    @ObservationIgnored public var languageSampleForTesting: PageLanguageSample?
+    /// What `collectPageText` answers.
+    @ObservationIgnored public var pageTextForTesting: [TextSegment] = []
+    /// Every segment `replacePageText` was given, by node number, until `restorePageText` clears it.
+    public private(set) var replacedText: [Int: String] = [:]
+    /// How many times `restorePageText` ran.
+    public private(set) var restoreCount = 0
+    /// True between `collectPageText` and `restorePageText`.
+    public private(set) var isWatchingText = false
+    @ObservationIgnored private var onNewText: (@MainActor ([TextSegment]) -> Void)?
 
     /// Strong on purpose: tests often keep only the tab. The cycle with `FakeEngine.madeTabs` is fine for a test double.
     @ObservationIgnored private let engine: FakeEngine
@@ -118,6 +129,30 @@ public final class FakeTab: BrowserTab {
     }
 
     public func pdf() async throws -> Data { pdfForTesting }
+
+    public func languageSample() async -> PageLanguageSample? { languageSampleForTesting }
+
+    public func collectPageText(onNewText: @escaping @MainActor ([TextSegment]) -> Void) async -> [TextSegment] {
+        self.onNewText = onNewText
+        isWatchingText = true
+        return pageTextForTesting
+    }
+
+    public func replacePageText(_ segments: [TextSegment]) {
+        for segment in segments { replacedText[segment.id] = segment.text }
+    }
+
+    public func restorePageText() {
+        onNewText = nil
+        isWatchingText = false
+        replacedText = [:]
+        restoreCount += 1
+    }
+
+    /// Text that appeared in the page after `collectPageText`, as a page's own scripts add it.
+    public func simulateNewText(_ segments: [TextSegment]) {
+        onNewText?(segments)
+    }
 
     /// The page turns out to be an article, or not, as a page does once it has loaded.
     public func simulateArticle(_ isArticle: Bool) {

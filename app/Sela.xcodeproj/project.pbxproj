@@ -27,6 +27,7 @@
 		B7000000000000000000003E /* RemoteSettings in Frameworks */ = {isa = PBXBuildFile; productRef = B7000000000000000000003F /* RemoteSettings */; };
 		B70000000000000000000040 /* CloudSync in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000041 /* CloudSync */; };
 		B70000000000000000000042 /* WhatsNew in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000043 /* WhatsNew */; };
+		B70000000000000000000044 /* PageTranslation in Frameworks */ = {isa = PBXBuildFile; productRef = B70000000000000000000045 /* PageTranslation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +68,7 @@
 				B7000000000000000000003E /* RemoteSettings in Frameworks */,
 				B70000000000000000000040 /* CloudSync in Frameworks */,
 				B70000000000000000000042 /* WhatsNew in Frameworks */,
+				B70000000000000000000044 /* PageTranslation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +132,7 @@
 				B7000000000000000000003F /* RemoteSettings */,
 				B70000000000000000000041 /* CloudSync */,
 				B70000000000000000000043 /* WhatsNew */,
+				B70000000000000000000045 /* PageTranslation */,
 			);
 			productName = Sela;
 			productReference = B70000000000000000000005 /* Sela.app */;
@@ -402,6 +405,10 @@
 		B70000000000000000000043 /* WhatsNew */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WhatsNew;
+		};
+		B70000000000000000000045 /* PageTranslation */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PageTranslation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

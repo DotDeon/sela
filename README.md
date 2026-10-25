@@ -16,6 +16,7 @@ What it does today:
 - **Ad and tracker blocking.** AdGuard Base and EasyPrivacy, YouTube's video ads included, with a switch per site.
 - **Extensions.** On macOS 15.4 or later Sela runs Web Extensions, the kind Safari and Chrome use. Add them in Settings from a folder or a .zip file, and their buttons sit at the top of the sidebar. Sela can't install from the Chrome Web Store.
 - **Reader mode.** When a page looks like an article, a button at the end of the address shows it in a quiet serif layout that follows light and dark mode. View > Reader (Cmd+Shift+R) turns it on and off.
+- **Translation.** When a page is in a language you don't read, a button at the end of the address offers to translate it, and View > Translate Page does the same. The translation happens on your Mac with Apple's translation, so the page's text never leaves your computer, and macOS asks before downloading a language it doesn't have yet. Settings > General chooses the language to translate into and turns the offer off.
 - **Tab overview.** View > Tab Overview (Cmd+Shift+\\) shows the space's tabs as a grid of pictures. Type to filter, click or press Return to switch, Cmd+W or a tile's close button to close a tab, and Esc to go back.
 - **Picture in picture.** A video that's playing when you switch to another tab or another app floats in its own small window, and goes back into the page when you return. Settings > General turns this off.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
@@ -28,7 +29,7 @@ What it does today:
 - **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit. The first launch after an update shows a short list of what's new, from `app/Sela/WhatsNew.json`, which release notes can be copied into.
 - **Remote settings.** Once a day Sela reads a small signed file from its website that can change search engine addresses, the defaults for settings you haven't changed, and feature switches, or show a one-time notice. It holds data, never code.
 
-Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, picture in picture, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
+Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, picture in picture, translation, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
 
 ## Folder layout
 
@@ -53,6 +54,7 @@ Inside `app/Packages`:
 - `WebKitEngine`: those protocols built on Safari's WebKit
 - `FakeEngine`: a stand-in engine with no web content, for tests
 - `Browsing`: a window's live tabs on top of the sidebar, popups, page dialogs, address bar parsing, and Little Sela windows
+- `PageTranslation`: which language a page is in, whether to offer translating it, and translating its text in place through a translator the app provides
 - `Sidebar`: the shared sidebar store that saves itself, plus outline, drag and drop, and swipe logic
 - `SidebarUI`: the sidebar's views: favourites grid, space pages, space bar and address
 - `Favicons`: site icons, fetched from each site and cached on disk

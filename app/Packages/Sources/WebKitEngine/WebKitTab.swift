@@ -37,6 +37,9 @@ final class WebKitTab: NSObject, BrowserTab {
     @ObservationIgnored private var isMuted = false
     /// True while this tab watches the web view's audio, which WebKit only reports through a private key.
     @ObservationIgnored nonisolated(unsafe) private var observesAudio = false
+    /// Where text the page adds while translated arrives, once per content controller.
+    @ObservationIgnored private var textBridge: PageTextBridge?
+    @ObservationIgnored private var onNewText: (@MainActor ([TextSegment]) -> Void)?
 
     var contentView: NSView { webView }
 
@@ -148,6 +151,51 @@ final class WebKitTab: NSObject, BrowserTab {
         else { return }
         isArticle = signals.looksLikeArticle
         syncState()
+    }
+
+    // MARK: Page text
+
+    func languageSample() async -> PageLanguageSample? {
+        guard !isClosed, !isExtensionPage, isWebPage(webView.url),
+              let json = try? await webView.evaluateJavaScript(PageTextScripts.languageSample, contentWorld: PageTextScripts.world) as? String
+        else { return nil }
+        return try? JSONDecoder().decode(PageLanguageSample.self, from: Data(json.utf8))
+    }
+
+    /// Numbers the page's text nodes and starts the page watching for more. The watcher's messages come through
+    /// `textBridge`, added to the content controller the first time a page in this tab is translated.
+    func collectPageText(onNewText: @escaping @MainActor ([TextSegment]) -> Void) async -> [TextSegment] {
+        guard !isClosed, !isExtensionPage, isWebPage(webView.url), let setup = PageTextScripts.setup else { return [] }
+        if textBridge == nil {
+            let bridge = PageTextBridge()
+            bridge.tab = self
+            webView.configuration.userContentController.add(bridge, contentWorld: PageTextScripts.world, name: PageTextScripts.handlerName)
+            textBridge = bridge
+        }
+        self.onNewText = onNewText
+        guard let json = try? await webView.evaluateJavaScript(setup + "\nJSON.stringify(window.__selaText.collect())", contentWorld: PageTextScripts.world) as? String,
+              let segments = try? JSONDecoder().decode([TextSegment].self, from: Data(json.utf8))
+        else { return [] }
+        return segments
+    }
+
+    func replacePageText(_ segments: [TextSegment]) {
+        guard !isClosed, let json = pageTextJSON(segments) else { return }
+        webView.evaluateJavaScript("window.__selaText && window.__selaText.replace(\(json)); 0", in: nil, in: PageTextScripts.world, completionHandler: nil)
+    }
+
+    func restorePageText() {
+        onNewText = nil
+        guard !isClosed else { return }
+        webView.evaluateJavaScript("window.__selaText && window.__selaText.restore(); 0", in: nil, in: PageTextScripts.world, completionHandler: nil)
+    }
+
+    func pageDidAddText(_ segments: [TextSegment]) {
+        onNewText?(segments)
+    }
+
+    private func isWebPage(_ url: URL?) -> Bool {
+        ["http", "https", "file"].contains(url?.scheme?.lowercased() ?? "")
     }
 
     private func hasFocus(_ view: NSView) -> Bool {
@@ -369,6 +417,8 @@ final class WebKitTab: NSObject, BrowserTab {
             if !onlyFragmentChanged {
                 isArticle = false
                 removeReader()
+                // The new document starts with its own text, untranslated.
+                onNewText = nil
             }
         }
         let next = TabState(

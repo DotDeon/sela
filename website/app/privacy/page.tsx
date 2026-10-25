@@ -49,6 +49,12 @@ export default function Privacy() {
           website data are kept by WebKit in Sela&rsquo;s own storage on your Mac, separate from
           Safari&rsquo;s.
         </p>
+        <p>
+          Translating a page happens on your Mac too, with the same Apple translation that Safari
+          uses. The page&rsquo;s text is never sent to us or to Apple. The first time you translate a
+          pair of languages your Mac doesn&rsquo;t have, macOS asks whether to download them from Apple,
+          and that download carries no page text.
+        </p>
       </section>
 
       <section className="doc__section">

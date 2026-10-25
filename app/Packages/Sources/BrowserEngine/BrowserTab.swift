@@ -83,6 +83,15 @@ public protocol BrowserTab: AnyObject, Observable {
     func showReader() async -> Bool
     /// Goes back from reader mode to the page itself.
     func hideReader()
+    /// The page's declared language and a sample of its text. Nil when there's no page to read.
+    func languageSample() async -> PageLanguageSample?
+    /// The page's visible text, one segment per text node, skipping code, form fields and anything being edited.
+    /// The page keeps watching for text that appears later and hands it to `onNewText`, until `restorePageText`.
+    func collectPageText(onNewText: @escaping @MainActor ([TextSegment]) -> Void) async -> [TextSegment]
+    /// Writes text back into the nodes `collectPageText` numbered, keeping the layout around them.
+    func replacePageText(_ segments: [TextSegment])
+    /// Puts every text node back as it was and stops watching for new text.
+    func restorePageText()
     /// Moves the video playing in the page into a floating picture in picture window. False when no video is
     /// playing, the page turned picture in picture off, or the video already floats.
     func enterPictureInPicture() async -> Bool

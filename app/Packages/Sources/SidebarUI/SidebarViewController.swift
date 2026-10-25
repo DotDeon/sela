@@ -3,6 +3,7 @@ import BrowserEngine
 import Browsing
 import Favicons
 import Observation
+import PageTranslation
 import Sidebar
 import SidebarModel
 
@@ -80,7 +81,12 @@ public final class SidebarViewController: NSViewController {
     let readerButton = HoverButton(symbol: "doc.plaintext", label: "Show Reader", size: 24)
     /// The zoom level, at the end of the address while the page isn't at actual size. A click goes back to it.
     let zoomButton = NSButton(title: "", target: nil, action: nil)
-    private let addressAccessories = NSStackView()
+    /// Sits before the reader button while the page is in a language the user doesn't read, or is translated.
+    let translateButton = HoverButton(symbol: "translate", label: "Translate Page", size: 24)
+    /// Fills in over the translate button's symbol while a page translates.
+    private let translateProgress = NSProgressIndicator()
+    /// The buttons at the end of the address, in the order they sit.
+    private let addressButtons = NSStackView()
     private let extensionButtons = ExtensionButtonsView()
     private let extensionList = ExtensionList()
 
@@ -124,12 +130,24 @@ public final class SidebarViewController: NSViewController {
         zoomButton.target = self
         zoomButton.action = #selector(resetZoom)
         zoomButton.isHidden = true
-        addressAccessories.orientation = .horizontal
-        addressAccessories.spacing = 2
-        addressAccessories.addArrangedSubview(zoomButton)
-        addressAccessories.addArrangedSubview(readerButton)
+        translateButton.target = self
+        translateButton.action = #selector(translateClicked)
+        translateButton.isHidden = true
+        translateProgress.style = .spinning
+        translateProgress.controlSize = .small
+        translateProgress.isIndeterminate = false
+        translateProgress.minValue = 0
+        translateProgress.maxValue = 1
+        translateProgress.isHidden = true
+        translateProgress.translatesAutoresizingMaskIntoConstraints = false
+        translateButton.addSubview(translateProgress)
+        addressButtons.orientation = .horizontal
+        addressButtons.spacing = 0
+        addressButtons.addArrangedSubview(zoomButton)
+        addressButtons.addArrangedSubview(translateButton)
+        addressButtons.addArrangedSubview(readerButton)
 
-        for view in [tint, controls, addressPill, addressAccessories, favoritesGrid, pager, spaceBar] {
+        for view in [tint, controls, addressPill, addressButtons, favoritesGrid, pager, spaceBar] {
             view.translatesAutoresizingMaskIntoConstraints = false
             background.addSubview(view)
         }
@@ -160,8 +178,10 @@ public final class SidebarViewController: NSViewController {
             addressPill.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 2),
             addressPill.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
             addressPill.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -inset),
-            addressAccessories.trailingAnchor.constraint(equalTo: addressPill.trailingAnchor, constant: -5),
-            addressAccessories.centerYAnchor.constraint(equalTo: addressPill.centerYAnchor),
+            addressButtons.trailingAnchor.constraint(equalTo: addressPill.trailingAnchor, constant: -5),
+            addressButtons.centerYAnchor.constraint(equalTo: addressPill.centerYAnchor),
+            translateProgress.centerXAnchor.constraint(equalTo: translateButton.centerXAnchor),
+            translateProgress.centerYAnchor.constraint(equalTo: translateButton.centerYAnchor),
 
             favoritesGrid.topAnchor.constraint(equalTo: addressPill.bottomAnchor, constant: 12),
             favoritesGrid.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
@@ -217,6 +237,7 @@ public final class SidebarViewController: NSViewController {
         }
         updateReaderButton(state)
         updateZoomButton(state)
+        updateTranslateButton(model.selectedTranslator)
     }
 
     private var showsStop = false
@@ -229,11 +250,12 @@ public final class SidebarViewController: NSViewController {
         guard readerShown?.offered != isOffered || readerShown?.showing != isShowing else { return }
         readerShown = (isOffered, isShowing)
         readerButton.isHidden = !isOffered
+        updateAddressInset()
         let label = isShowing ? "Hide Reader" : "Show Reader"
         readerButton.setSymbol(isShowing ? "doc.plaintext.fill" : "doc.plaintext", label: label)
         readerButton.toolTip = label
         readerButton.contentTintColor = isShowing ? .controlAccentColor : .secondaryLabelColor
-        keepAddressClearOfAccessories()
+        updateAddressInset()
     }
 
     private var shownZoom: String?
@@ -246,18 +268,7 @@ public final class SidebarViewController: NSViewController {
         zoomButton.isHidden = text == nil
         zoomButton.title = text ?? ""
         zoomButton.setAccessibilityLabel(text.map { "Zoomed to \($0). Back to Actual Size" })
-        keepAddressClearOfAccessories()
-    }
-
-    /// Leaves room at the end of the address for whichever of the zoom level and reader button show.
-    private func keepAddressClearOfAccessories() {
-        let shown = addressAccessories.arrangedSubviews.filter { !$0.isHidden }
-        guard !shown.isEmpty else {
-            addressPill.trailingInset = 0
-            return
-        }
-        let widths = shown.map { $0.fittingSize.width }.reduce(0, +)
-        addressPill.trailingInset = widths + CGFloat(shown.count - 1) * addressAccessories.spacing + 4
+        updateAddressInset()
     }
 
     @objc private func toggleReader() {
@@ -266,6 +277,62 @@ public final class SidebarViewController: NSViewController {
 
     @objc private func resetZoom() {
         model.resetZoom()
+    }
+
+    /// Leaves room at the end of the address for whichever of the zoom level, translate and reader buttons show.
+    private func updateAddressInset() {
+        let shown = addressButtons.arrangedSubviews.filter { !$0.isHidden }
+        guard !shown.isEmpty else {
+            addressPill.trailingInset = 0
+            return
+        }
+        let widths = shown.map { $0.fittingSize.width }.reduce(0, +)
+        addressPill.trailingInset = widths + CGFloat(shown.count - 1) * addressButtons.spacing + 4
+    }
+
+    /// Called with the translate button when it's clicked. The window decides what to show.
+    public var onTranslateClicked: ((NSView) -> Void)?
+
+    /// Where notes about translation point: the translate button, or the address when the button isn't showing.
+    public var translationAnchor: NSView {
+        translateButton.isHidden ? addressPill : translateButton
+    }
+
+    private var translateShown: (offered: Bool, status: PageTranslator.Status)?
+
+    /// Shows the button while the page is offered for translation, or has been translated; a progress wheel takes
+    /// the symbol's place while it translates.
+    private func updateTranslateButton(_ translator: PageTranslator?) {
+        let status = translator?.status ?? .idle
+        let isOffered = translator.map { $0.isOffered || $0.status.isActive } ?? false
+        guard translateShown?.offered != isOffered || translateShown?.status != status else { return }
+        translateShown = (isOffered, status)
+        translateButton.isHidden = !isOffered
+        updateAddressInset()
+        let label: String
+        switch status {
+        case .translated: label = "Show Original"
+        case .checking, .downloading, .translating: label = "Translating"
+        case .idle, .unsupported, .downloadNeeded, .failed: label = "Translate Page"
+        }
+        if case .translating(let fraction) = status {
+            translateProgress.doubleValue = max(fraction, 0.05)
+        } else {
+            translateProgress.doubleValue = 0.05
+        }
+        translateProgress.isHidden = !status.isBusy
+        if status.isBusy {
+            translateButton.image = nil
+            translateButton.setAccessibilityLabel(label)
+        } else {
+            translateButton.setSymbol("translate", label: label)
+        }
+        translateButton.toolTip = label
+        translateButton.contentTintColor = status.isActive ? .controlAccentColor : .secondaryLabelColor
+    }
+
+    @objc private func translateClicked() {
+        onTranslateClicked?(translateButton)
     }
 
     /// Reads each extension's button for the selected tab, so an extension changing it updates the sidebar.

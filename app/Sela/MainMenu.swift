@@ -83,6 +83,8 @@ enum MainMenu {
         menu.addItem(item("Toggle Sidebar", #selector(BrowserWindowController.toggleSidebar(_:)), "s"))
         menu.addItem(item("Downloads", #selector(BrowserWindowController.showDownloads(_:)), "l", [.command, .option]))
         menu.addItem(item("Reader", #selector(BrowserWindowController.toggleReader(_:)), "r", [.command, .shift]))
+        menu.addItem(item("Translate Page", #selector(BrowserWindowController.translatePage(_:))))
+        menu.addItem(item("Show Original", #selector(BrowserWindowController.showOriginalPage(_:))))
         // With Shift held the backslash key reports "|".
         menu.addItem(item("Tab Overview", #selector(BrowserWindowController.toggleTabOverview(_:)), "|", [.command, .shift]))
         menu.addItem(.separator())
