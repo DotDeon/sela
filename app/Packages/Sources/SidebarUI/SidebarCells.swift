@@ -182,6 +182,8 @@ final class DividerCellView: NSTableCellView {
     private let line = NSBox()
     private let clearButton = NSButton(title: "Clear", target: nil, action: nil)
     private let newTabButton = NSButton(title: "New Tab", target: nil, action: nil)
+    private var lineToClear: NSLayoutConstraint!
+    private var lineToEdge: NSLayoutConstraint!
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -209,9 +211,11 @@ final class DividerCellView: NSTableCellView {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
+        lineToClear = line.trailingAnchor.constraint(equalTo: clearButton.leadingAnchor, constant: -6)
+        lineToEdge = line.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6)
         NSLayoutConstraint.activate([
             line.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
-            line.trailingAnchor.constraint(equalTo: clearButton.leadingAnchor, constant: -6),
+            lineToClear,
             line.centerYAnchor.constraint(equalTo: clearButton.centerYAnchor),
             clearButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
             clearButton.topAnchor.constraint(equalTo: topAnchor, constant: 4),
@@ -223,8 +227,11 @@ final class DividerCellView: NSTableCellView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
 
+    /// Without Clear, the line runs the whole width instead of stopping where the button would be.
     func setClearVisible(_ visible: Bool) {
         clearButton.isHidden = !visible
+        lineToClear.isActive = visible
+        lineToEdge.isActive = !visible
     }
 
     @objc private func clearTapped() { onClear?() }
