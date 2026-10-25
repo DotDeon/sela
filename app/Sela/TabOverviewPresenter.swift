@@ -48,23 +48,17 @@ final class TabOverviewPresenter {
         // Pages on screen draw now. Others keep the picture from when they were last shown.
         Task { await thumbnails.refresh(model.overviewItems.filter(\.isLive).map(\.id)) }
 
+        // The grid zooms out from the page a little, as the overview is the space seen from further away.
         view.alphaValue = 0
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.16
-            view.animator().alphaValue = 1
-        }
+        view.layoutSubtreeIfNeeded()
+        OverlayTransition.appear(view, scale: 1 / Motion.settleScale)
     }
 
     func dismiss() {
         guard let view = overview else { return }
         overview = nil
         let window = host?.window
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.12
-            view.animator().alphaValue = 0
-        }, completionHandler: {
-            MainActor.assumeIsolated { view.removeFromSuperview() }
-        })
+        OverlayTransition.disappear(view, scale: 1 / Motion.settleScale)
         if let page = model.selectedTab?.contentView, page.window != nil {
             window?.makeFirstResponder(page)
         } else if let previousResponder {

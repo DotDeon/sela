@@ -19,6 +19,14 @@ final class MessageBanner: NSVisualEffectView {
             banner.bottomAnchor.constraint(equalTo: host.bottomAnchor, constant: -12),
             banner.widthAnchor.constraint(lessThanOrEqualTo: host.widthAnchor, constant: -24),
         ])
+        // Rises from the bottom edge, where it sits.
+        banner.alphaValue = 0
+        host.layoutSubtreeIfNeeded()
+        OverlayTransition.appear(banner, offset: CGPoint(x: 0, y: -Motion.settleDistance))
+    }
+
+    private func dismiss() {
+        OverlayTransition.disappear(self, offset: CGPoint(x: 0, y: -Motion.settleDistance))
     }
 
     private init(_ message: RemoteMessage, openLink: @escaping (URL) -> Void) {
@@ -66,10 +74,10 @@ final class MessageBanner: NSVisualEffectView {
 
     @objc private func openClicked() {
         if let link { openLink(link) }
-        removeFromSuperview()
+        dismiss()
     }
 
     @objc private func closeClicked() {
-        removeFromSuperview()
+        dismiss()
     }
 }
