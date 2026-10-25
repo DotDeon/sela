@@ -1,6 +1,7 @@
 import AppKit
 import BrowserImport
 import Browsing
+import CloudSync
 import ContentBlocking
 import Extensions
 import History
@@ -9,8 +10,8 @@ import Sidebar
 import SidebarModel
 import SwiftUI
 
-/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Passwords, Profiles, Permissions and Import.
-/// Passwords shows only in a copy of Sela signed with the browser passkey entitlement.
+/// Sela > Settings… (Cmd+,): General, Ad Blocking, Extensions, Passwords, Sync, Profiles, Permissions and Import.
+/// Passwords shows only in a copy of Sela signed with the browser passkey entitlement, and Sync only in one signed for iCloud.
 @MainActor
 final class SettingsWindowController: NSWindowController {
     /// `currentSpace` names the space imported bookmarks go into: the one shown in the frontmost browser window.
@@ -21,12 +22,13 @@ final class SettingsWindowController: NSWindowController {
         sidebar: SidebarStore,
         extensions: ExtensionsController?,
         passkeys: PasskeyAccessModel?,
+        cloudSync: CloudSyncModel?,
         currentSpace: @escaping () -> SpaceID?,
         onDeleteProfile: @escaping (ProfileID) -> Void,
         onSettingsChanged: @escaping () -> Void
     ) {
         let view = SettingsView(contentBlocker: contentBlocker, history: history, sidebar: sidebar, currentSpace: currentSpace, extensions: extensions,
-                                passkeys: passkeys,
+                                passkeys: passkeys, cloudSync: cloudSync,
                                 onDeleteProfile: onDeleteProfile, onSettingsChanged: onSettingsChanged)
         let window = NSWindow(contentViewController: NSHostingController(rootView: view))
         window.title = "Settings"
@@ -47,6 +49,7 @@ private struct SettingsView: View {
     let currentSpace: () -> SpaceID?
     let extensions: ExtensionsController?
     let passkeys: PasskeyAccessModel?
+    let cloudSync: CloudSyncModel?
     let onDeleteProfile: (ProfileID) -> Void
     let onSettingsChanged: () -> Void
 
@@ -61,6 +64,9 @@ private struct SettingsView: View {
             }
             if let passkeys {
                 PasswordSettings(passkeys: passkeys).tabItem { Label("Passwords", systemImage: "key") }
+            }
+            if let cloudSync {
+                SyncSettings(sync: cloudSync).tabItem { Label("Sync", systemImage: "icloud") }
             }
             ProfileSettings(sidebar: sidebar, onDelete: onDeleteProfile).tabItem { Label("Profiles", systemImage: "person.2") }
             PermissionSettings().tabItem { Label("Permissions", systemImage: "video") }
@@ -275,6 +281,39 @@ private struct PasswordSettings: View {
         case .requestAccess: Task { await passkeys.requestAccess() }
         case .openPrivacySettings: NSWorkspace.shared.open(PasskeyAccessModel.privacySettingsURL)
         }
+    }
+}
+
+/// iCloud sync, for a copy of Sela signed for it: the switch, the account, when it last synced, and Sync Now.
+private struct SyncSettings: View {
+    let sync: CloudSyncModel
+
+    var body: some View {
+        Form {
+            Toggle("Sync your sidebar between your Macs with iCloud", isOn: Binding(get: { sync.isEnabled }, set: { sync.setEnabled($0) }))
+            Section("Status") {
+                LabeledContent("iCloud account", value: accountStatus)
+                LabeledContent("Last synced", value: sync.lastSyncAt.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "Never")
+                LabeledContent("This Mac", value: sync.deviceName)
+                HStack {
+                    if let problem = sync.problem {
+                        Text(problem.text).font(.footnote).foregroundStyle(.red)
+                    }
+                    Spacer()
+                    if sync.isSyncing { ProgressView().controlSize(.small) }
+                    Button("Sync Now") { Task { await sync.syncNow() } }.disabled(!sync.isEnabled || sync.isSyncing)
+                }
+            }
+            Text("Spaces, pinned tabs, folders, favourites and profiles go to your own iCloud account, where only your Macs can read them. Today's tabs, archived tabs, history, cookies and logins stay on each Mac. When two Macs change the same thing, the later change wins, and anything that would otherwise be lost lands in a Recovered from folder. Turning sync off leaves what's in iCloud as it is.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        .formStyle(.grouped)
+        .onAppear { Task { await sync.refreshAccountStatus() } }
+    }
+
+    private var accountStatus: String {
+        guard sync.isEnabled else { return "Checked when sync is on" }
+        return sync.accountStatus?.description ?? "Checking"
     }
 }
 
