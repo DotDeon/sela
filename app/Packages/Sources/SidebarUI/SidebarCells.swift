@@ -227,6 +227,8 @@ final class DividerCellView: NSTableCellView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
 
+    var isClearVisible: Bool { !clearButton.isHidden }
+
     /// Without Clear, the line runs the whole width instead of stopping where the button would be.
     func setClearVisible(_ visible: Bool) {
         clearButton.isHidden = !visible
