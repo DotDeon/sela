@@ -3,6 +3,7 @@ import Downloads
 import BrowserEngine
 import Foundation
 import Observation
+import PageTranslation
 import Sidebar
 import SidebarModel
 
@@ -26,6 +27,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     @ObservationIgnored public var downloadsFolder: URL? = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
     /// This session's downloads, shared by every window.
     public let downloads: DownloadList?
+    /// Each page's language and its translator, once it has one.
+    public let translation: TranslationCoordinator
     @ObservationIgnored private let permissions: SitePermissions
     @ObservationIgnored private var reservedDestinations: Set<URL> = []
     public private(set) var selectedSpaceID: SpaceID
@@ -50,12 +53,14 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     /// Shows the first space, with its most recently active tab selected.
     public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, downloads: DownloadList? = nil,
-                permissions: SitePermissions = SitePermissions(), now: @escaping @MainActor () -> Date = { .now }) {
+                permissions: SitePermissions = SitePermissions(), translation: TranslationCoordinator = TranslationCoordinator(),
+                now: @escaping @MainActor () -> Date = { .now }) {
         self.engine = engine
         self.downloads = downloads
         self.permissions = permissions
         self.sidebar = sidebar
         self.archive = archive
+        self.translation = translation
         self.now = now
         selectedSpaceID = sidebar.document.spaces[0].id
         if let recent = mostRecentTab(in: selectedSpaceID) {
@@ -187,6 +192,24 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         return await tab.showReader()
     }
 
+    /// The selected page's translator, once its language is known and it can be translated.
+    public var selectedTranslator: PageTranslator? {
+        selectedTab.flatMap(translation.translator(for:))
+    }
+
+    /// Translates the selected page. False when it has no translator.
+    @discardableResult
+    public func translateSelectedPage() async -> Bool {
+        guard let translator = selectedTranslator else { return false }
+        await translator.translate()
+        return true
+    }
+
+    /// Puts the selected page's own text back.
+    public func showOriginalSelectedPage() {
+        selectedTranslator?.showOriginal()
+    }
+
     // MARK: Split view
 
     /// The split holding the selected tab, or nil when the selected tab isn't in one.
@@ -283,6 +306,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         peekSourceID = nil
         dismissDialogs(of: tab)
         lastVisitedURLs[tab.id] = nil
+        translation.forget(tab.id)
         tab.delegate = nil
         tab.close()
     }
@@ -580,6 +604,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         } else if !isPeek(tab) {
             return
         }
+        translation.tabStateDidChange(tab)
         if !state.isLoading, let url = state.url, let scheme = url.scheme?.lowercased(),
            ["http", "https"].contains(scheme), lastVisitedURLs[tab.id] != url {
             lastVisitedURLs[tab.id] = url
@@ -712,6 +737,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         guard let tab = liveTabs.removeValue(forKey: id) else { return }
         itemIDsByTab[tab.id] = nil
         lastVisitedURLs[tab.id] = nil
+        translation.forget(tab.id)
         dismissDialogs(of: tab)
         tab.delegate = nil
         tab.close()

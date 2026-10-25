@@ -19,6 +19,7 @@ let package = Package(
         .library(name: "FakeEngine", targets: ["FakeEngine"]),
         .library(name: "WebKitEngine", targets: ["WebKitEngine"]),
         .library(name: "Browsing", targets: ["Browsing"]),
+        .library(name: "PageTranslation", targets: ["PageTranslation"]),
         .library(name: "ContentBlocking", targets: ["ContentBlocking"]),
         .library(name: "Downloads", targets: ["Downloads"]),
         .library(name: "Extensions", targets: ["Extensions"]),
@@ -39,7 +40,7 @@ let package = Package(
         .target(name: "SelaTestSupport", dependencies: ["SidebarModel"]),
         .target(name: "Favicons"),
         .testTarget(name: "FaviconsTests", dependencies: ["Favicons"]),
-        .target(name: "SidebarUI", dependencies: ["Browsing", "Sidebar", "SidebarModel", "Favicons", "BrowserEngine"]),
+        .target(name: "SidebarUI", dependencies: ["Browsing", "PageTranslation", "Sidebar", "SidebarModel", "Favicons", "BrowserEngine"]),
         .testTarget(
             name: "SidebarUITests",
             dependencies: ["SidebarUI", "BrowserEngine", "Browsing", "Sidebar", "SidebarModel", "Favicons", "FakeEngine", "SelaTestSupport"]
@@ -70,15 +71,17 @@ let package = Package(
         .target(
             name: "WebKitEngine",
             dependencies: ["BrowserEngine", "Passkeys"],
-            resources: [.copy("Resources/content-blocking.js"), .copy("Resources/reader-signals.js"), .copy("Resources/reader-extract.js")]
+            resources: [.copy("Resources/content-blocking.js"), .copy("Resources/reader-signals.js"), .copy("Resources/reader-extract.js"), .copy("Resources/page-text.js")]
         ),
         .testTarget(name: "WebKitEngineTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
         .testTarget(name: "EngineContractTests", dependencies: ["WebKitEngine", "BrowserEngine"]),
+        .target(name: "PageTranslation", dependencies: ["BrowserEngine"]),
+        .testTarget(name: "PageTranslationTests", dependencies: ["PageTranslation", "BrowserEngine", "FakeEngine"]),
         .target(
             name: "Browsing",
-            dependencies: ["BrowserEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "RemoteSettings", .product(name: "PublicSuffixList", package: "swift-psl")]
+            dependencies: ["BrowserEngine", "PageTranslation", "Sidebar", "SidebarModel", "Archive", "Downloads", "RemoteSettings", .product(name: "PublicSuffixList", package: "swift-psl")]
         ),
-        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "Sidebar", "SidebarModel", "Archive", "Downloads", "RemoteSettings", "SelaTestSupport"]),
+        .testTarget(name: "BrowsingTests", dependencies: ["Browsing", "BrowserEngine", "FakeEngine", "PageTranslation", "Sidebar", "SidebarModel", "Archive", "Downloads", "RemoteSettings", "SelaTestSupport"]),
         .target(
             name: "ContentBlocking",
             dependencies: [
