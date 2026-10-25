@@ -70,6 +70,7 @@ public final class CommandBarModel {
         let inNewTab = mode == .newTab
         switch results[index] {
         case .open(let url, _): return .open(url, inNewTab: inNewTab)
+        case .siteSearch(let search): return .open(search.url, inNewTab: inNewTab)
         case .tab(let tab): return .selectTab(tab.id)
         case .command(let command): return .runCommand(command.id)
         case .archived(let entry): return .restoreArchived(entry.id)

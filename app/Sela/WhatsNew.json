@@ -1,0 +1,17 @@
+{
+  "0.1.5": [
+    "Print a page with Cmd+P, or save it as a PDF from the File menu.",
+    "Zoom pages in and out from the View menu. Sela remembers the level for each site.",
+    "Tabs that play sound show a speaker. Click it, or press Cmd+Shift+M, to mute them.",
+    "Search a site from the command bar: type yt cats, gh swift or w otters. Add your own in Settings.",
+    "Turn on developer tools in Settings > General to inspect pages."
+  ],
+  "0.1.4": [
+    "Add Web Extensions, such as uBlock Origin or Dark Reader, in Settings on macOS 15.4 or later.",
+    "Links from other apps open in Little Sela, a small window of their own.",
+    "Give a space its own profile from its menu, with its own logins and cookies.",
+    "Reader mode shows an article in a clean layout. Press Cmd+Shift+R.",
+    "A playing video floats in picture in picture when you switch tabs or apps.",
+    "Tab Overview shows the space's tabs as a grid. Press Cmd+Shift+Backslash."
+  ]
+}

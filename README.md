@@ -19,9 +19,13 @@ What it does today:
 - **Tab overview.** View > Tab Overview (Cmd+Shift+\\) shows the space's tabs as a grid of pictures. Type to filter, click or press Return to switch, Cmd+W or a tile's close button to close a tab, and Esc to go back.
 - **Picture in picture.** A video that's playing when you switch to another tab or another app floats in its own small window, and goes back into the page when you return. Settings > General turns this off.
 - **Tab sleep.** Tabs you haven't looked at for 15 minutes sleep to save memory, and wake where they were.
-- **The basics.** Downloads, find on page (Cmd+F), file uploads, and a prompt before a site uses your camera or microphone.
+- **Page zoom.** View > Zoom In (Cmd+Plus), Zoom Out (Cmd+Minus) and Actual Size (Cmd+0), in Safari's steps from 50 to 300 percent. Sela remembers the level for each site and shows it at the end of the address while it isn't 100 percent.
+- **Sound.** Tabs that play sound show a speaker in the sidebar and on favourites. Click it, or press Cmd+Shift+M, to mute the tab.
+- **Site search.** In the command bar, type a site's shortcut, a space and what to look for: `yt cats` searches YouTube. Sela ships shortcuts for YouTube, GitHub, Wikipedia, Reddit, Amazon, Apple Maps and X, and Settings > General lets you add your own.
+- **Developer tools.** A switch in Settings > General adds Inspect Element to a page's menu and View > Developer > Show Web Inspector (Cmd+Option+I).
+- **The basics.** Downloads, find on page (Cmd+F), print (Cmd+P) and Export as PDF, file uploads, and a prompt before a site uses your camera or microphone.
 - **Moving in.** On first launch Sela offers to bring in your sidebar and the last 90 days of history from Arc.
-- **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit.
+- **Updates.** Sela checks for new versions once a day, downloads them in the background, and installs them the next time you quit. The first launch after an update shows a short list of what's new, from `app/Sela/WhatsNew.json`, which release notes can be copied into.
 - **Remote settings.** Once a day Sela reads a small signed file from its website that can change search engine addresses, the defaults for settings you haven't changed, and feature switches, or show a one-time notice. It holds data, never code.
 
 Settings (Cmd+,) holds the default browser, search engine, where links from other apps open, picture in picture, tab sleep, archiving, ad blocking, extensions, profiles and site permission choices. The repository also holds a tool that backs up your Arc data.
@@ -61,6 +65,7 @@ Inside `app/Packages`:
 - `CloudSync`: the sidebar as CloudKit records, the merge that folds other Macs' changes in, and the sync engine behind it
 - `ContentBlocking`: ad and tracker blocking: downloads the filter lists, converts them with AdGuard's converter, and keeps the per-site settings
 - `RemoteSettings`: downloads, checks and caches the signed remote settings file, plus `FeatureFlags` and the one-time messages
+- `WhatsNew`: the notes shown once after an update, and the check for whether the version changed
 - `SelaTestSupport`: sample sidebars shared by the tests
 
 ## Download

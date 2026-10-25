@@ -30,6 +30,8 @@ public final class WebKitEngine: ContentBlockingEngine {
     /// Every other profile's store, made the first time a tab uses the profile.
     private var profileDataStores: [ProfileIdentifier: WKWebsiteDataStore] = [:]
     private let applicationName: String
+    /// One set of page preferences for every web view, so a change reaches pages already open.
+    let preferences = WKPreferences()
     let contentRules: WebKitContentRules
     /// Every tab still open, so new rules reach pages that are already showing.
     private let tabs = NSHashTable<WebKitTab>.weakObjects()
@@ -46,6 +48,19 @@ public final class WebKitEngine: ContentBlockingEngine {
     /// The `WebKitExtensions` every web view shares, on systems that have it.
     private var extensionsStorage: AnyObject?
 
+    /// Turns on Web Inspector for every page, open or new. `isInspectable` lets Safari's Develop menu in, and
+    /// WebKit's developer extras put Inspect Element in the context menu and let the inspector open from here.
+    /// Those extras are only reachable through a preference key WebKit doesn't publish, so that part is guarded.
+    public var isInspectable = false {
+        didSet {
+            guard isInspectable != oldValue else { return }
+            if preferences.responds(to: NSSelectorFromString("_setDeveloperExtrasEnabled:")) {
+                preferences.setValue(isInspectable, forKey: "developerExtrasEnabled")
+            }
+            for tab in tabs.allObjects { tab.webView.isInspectable = isInspectable }
+        }
+    }
+
     public init(configuration: Configuration = .init()) {
         self.configuration = configuration
         dataStore = switch configuration.storage {
@@ -58,6 +73,9 @@ public final class WebKitEngine: ContentBlockingEngine {
         }
         contentRules = WebKitContentRules(store: ruleStore)
         applicationName = safariApplicationName(infoPlistURL: URL(fileURLWithPath: "/Applications/Safari.app/Contents/Info.plist"))
+        preferences.isElementFullscreenEnabled = true
+        allowPictureInPicture(preferences)
+        preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture
         if #available(macOS 15.4, *) {
             extensionsStorage = WebKitExtensions(engine: self, persistent: configuration.storage == .persistent, dataStore: dataStore)
         }
@@ -182,9 +200,7 @@ public final class WebKitEngine: ContentBlockingEngine {
         let webConfiguration = WKWebViewConfiguration()
         webConfiguration.websiteDataStore = dataStore(for: profile)
         webConfiguration.applicationNameForUserAgent = applicationName
-        webConfiguration.preferences.isElementFullscreenEnabled = true
-        allowPictureInPicture(webConfiguration.preferences)
-        webConfiguration.preferences.javaScriptCanOpenWindowsAutomatically = configuration.allowsPopupsWithoutUserGesture
+        webConfiguration.preferences = preferences
         webConfiguration.userContentController = makeContentController(bridge: bridge)
         if #available(macOS 15.4, *) {
             webConfiguration.webExtensionController = extensions?.controller

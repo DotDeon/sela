@@ -25,6 +25,13 @@ func resolves(input: String, expected: String) {
     #expect(AddressInput.resolve(input)?.absoluteString == expected)
 }
 
+@Test func siteShortcutsSearchTheirSite() {
+    let youtube = SiteSearch(name: "YouTube", shortcut: "yt", template: "https://www.youtube.com/results?search_query=%s")
+    #expect(AddressInput.resolve("yt cats", searchEngine: .google, siteSearches: [youtube])?.absoluteString == "https://www.youtube.com/results?search_query=cats")
+    #expect(AddressInput.resolve("yt cats", searchEngine: .google, siteSearches: [])?.absoluteString == "https://www.google.com/search?q=yt%20cats")
+    #expect(AddressInput.resolve("yt", searchEngine: .google, siteSearches: [youtube])?.absoluteString == "https://www.google.com/search?q=yt")
+}
+
 @Test func searchesGoToTheChosenEngine() {
     #expect(AddressInput.resolve("what is swift", searchEngine: .kagi)?.absoluteString == "https://kagi.com/search?q=what%20is%20swift")
     #expect(AddressInput.resolve("swift", searchEngine: .startpage)?.absoluteString == "https://www.startpage.com/sp/search?query=swift")

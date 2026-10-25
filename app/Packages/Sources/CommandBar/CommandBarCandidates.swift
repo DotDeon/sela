@@ -69,10 +69,27 @@ public struct HistoryCandidate: Equatable, Sendable {
     }
 }
 
+/// A search on one site from its shortcut, such as `yt cats`.
+public struct SiteSearchResult: Equatable, Sendable {
+    public var siteName: String
+    public var shortcut: String
+    public var query: String
+    public var url: URL
+
+    public init(siteName: String, shortcut: String, query: String, url: URL) {
+        self.siteName = siteName
+        self.shortcut = shortcut
+        self.query = query
+        self.url = url
+    }
+}
+
 /// A row in the command bar.
 public enum CommandBarResult: Equatable, Sendable {
     /// Open what was typed: an address, or a search on `search` when it isn't nil.
     case open(URL, search: SearchEngine?)
+    /// Search the site whose shortcut was typed.
+    case siteSearch(SiteSearchResult)
     case tab(TabCandidate)
     case command(CommandCandidate)
     case archived(ArchivedCandidate)

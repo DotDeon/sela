@@ -26,6 +26,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     @ObservationIgnored public var downloadsFolder: URL? = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
     /// This session's downloads, shared by every window.
     public let downloads: DownloadList?
+    /// Where each site's zoom level is kept, shared by every window.
+    @ObservationIgnored public let zoomStore: PageZoomStore
     @ObservationIgnored private let permissions: SitePermissions
     @ObservationIgnored private var reservedDestinations: Set<URL> = []
     public private(set) var selectedSpaceID: SpaceID
@@ -50,10 +52,12 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     /// Shows the first space, with its most recently active tab selected.
     public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, downloads: DownloadList? = nil,
-                permissions: SitePermissions = SitePermissions(), now: @escaping @MainActor () -> Date = { .now }) {
+                permissions: SitePermissions = SitePermissions(), zoomStore: PageZoomStore = PageZoomStore(),
+                now: @escaping @MainActor () -> Date = { .now }) {
         self.engine = engine
         self.downloads = downloads
         self.permissions = permissions
+        self.zoomStore = zoomStore
         self.sidebar = sidebar
         self.archive = archive
         self.now = now
@@ -153,6 +157,11 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         return containers.flatMap { document.tabIDs(under: $0) }.compactMap { liveTabs[$0] }
     }
 
+    /// Every live page: the sidebar's, then Peek's when it's open.
+    public var openTabs: [any BrowserTab] {
+        liveTabsInOrder + (peekTab.map { [$0] } ?? [])
+    }
+
     /// The sidebar item showing `tab`, or nil when it shows in none, as with Peek.
     public func itemID(for tab: any BrowserTab) -> ItemID? {
         itemIDsByTab[tab.id]
@@ -173,6 +182,12 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         } else {
             newTab(url: url)
         }
+    }
+
+    /// Turns a tab's sound off, or back on, from its row in the sidebar. Only live pages make sound.
+    public func toggleMute(_ id: ItemID) {
+        guard let tab = liveTabs[id] else { return }
+        tab.setMuted(!tab.state.isMuted)
     }
 
     /// Shows the selected tab's article in reader mode, or goes back to the page. False when the page has no
@@ -343,6 +358,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         tab.delegate = self
         peekTab = tab
         peekSourceID = sourceID
+        applyRememberedZoom(to: tab)
     }
 
     private func isPeek(_ tab: any BrowserTab) -> Bool {
@@ -580,6 +596,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         } else if !isPeek(tab) {
             return
         }
+        applyRememberedZoom(to: tab)
         if !state.isLoading, let url = state.url, let scheme = url.scheme?.lowercased(),
            ["http", "https"].contains(scheme), lastVisitedURLs[tab.id] != url {
             lastVisitedURLs[tab.id] = url
@@ -705,6 +722,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         tab.delegate = self
         liveTabs[id] = tab
         itemIDsByTab[tab.id] = id
+        // The page may have started loading before it had a delegate to tell.
+        applyRememberedZoom(to: tab)
     }
 
     /// Closes an item's live page, answering its dialogs as dismissed.

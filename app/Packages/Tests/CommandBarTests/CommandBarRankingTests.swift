@@ -20,6 +20,7 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
     results.map { result in
         switch result {
         case .open(_, let search): search == nil ? "open" : "search"
+        case .siteSearch: "site"
         case .tab: "tab"
         case .command: "command"
         case .archived: "archived"
@@ -32,6 +33,21 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
     let results = commandBarResults(query: "inbox", tabs: [tab("Inbox – Gmail", "mail")], commands: [], archived: [], history: [])
     #expect(results.first == .tab(tab("Inbox – Gmail", "mail")))
     #expect(kinds(results) == ["tab", "search"])
+}
+
+@Test func siteShortcutComesFirstAndNamesTheSite() {
+    let youtube = SiteSearch(name: "YouTube", shortcut: "yt", template: "https://www.youtube.com/results?search_query=%s")
+    let results = commandBarResults(query: "yt cats and dogs", tabs: [tab("YouTube", "yt")], commands: [], archived: [], history: [], siteSearches: [youtube])
+    #expect(kinds(results).first == "site")
+    #expect(results.first == .siteSearch(SiteSearchResult(siteName: "YouTube", shortcut: "yt", query: "cats and dogs",
+                                                          url: URL(string: "https://www.youtube.com/results?search_query=cats%20and%20dogs")!)))
+    #expect(kinds(results).contains("search"), "the plain search still follows")
+}
+
+@Test func shortcutWithoutAQueryIsJustASearch() {
+    let youtube = SiteSearch(name: "YouTube", shortcut: "yt", template: "https://www.youtube.com/results?search_query=%s")
+    #expect(!kinds(commandBarResults(query: "yt", tabs: [], commands: [], archived: [], history: [], siteSearches: [youtube])).contains("site"))
+    #expect(!kinds(commandBarResults(query: "yt ", tabs: [], commands: [], archived: [], history: [], siteSearches: [youtube])).contains("site"))
 }
 
 @Test func searchComesFirstForSentences() {

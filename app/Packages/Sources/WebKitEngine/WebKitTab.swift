@@ -33,6 +33,10 @@ final class WebKitTab: NSObject, BrowserTab {
     /// The reader's own web view, laid over the page while reader mode is on.
     @ObservationIgnored private var readerView: WKWebView?
     @ObservationIgnored private let readerNavigation = ReaderNavigation()
+    /// Whether the tab's sound is off. WebKit keeps it per page, so this is read back from there too.
+    @ObservationIgnored private var isMuted = false
+    /// True while this tab watches the web view's audio, which WebKit only reports through a private key.
+    @ObservationIgnored nonisolated(unsafe) private var observesAudio = false
 
     var contentView: NSView { webView }
 
@@ -46,7 +50,7 @@ final class WebKitTab: NSObject, BrowserTab {
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
-        webView.isInspectable = true
+        webView.isInspectable = engine.isInspectable
         readerNavigation.tab = self
         observeWebView()
     }
@@ -94,6 +98,7 @@ final class WebKitTab: NSObject, BrowserTab {
         let reader = WKWebView(frame: webView.bounds, configuration: configuration)
         reader.autoresizingMask = [.width, .height]
         reader.allowsMagnification = true
+        reader.pageZoom = webView.pageZoom
         readerNavigation.pageURL = pageURL
         reader.navigationDelegate = readerNavigation
         reader.loadHTMLString(readerPageHTML(for: article), baseURL: pageURL)
@@ -172,6 +177,86 @@ final class WebKitTab: NSObject, BrowserTab {
         return try? await view.takeSnapshot(configuration: configuration)
     }
 
+    // MARK: Sound
+
+    /// WebKit has no public way to mute a page or hear that it plays sound. Safari uses these, and they've been
+    /// stable for years. Without them a tab shows no speaker and Mute Tab does nothing.
+    private nonisolated static let playingAudioKey = "_isPlayingAudio"
+    private static let setMutedSelector = NSSelectorFromString("_setPageMuted:")
+    /// The audio bit of WebKit's muted state. The other bits cover the camera and microphone, which stay as they are.
+    private static let audioMutedBit: UInt = 1
+
+    private var isPlayingAudio: Bool {
+        guard observesAudio else { return false }
+        return (webView.value(forKey: Self.playingAudioKey) as? Bool) ?? false
+    }
+
+    func setMuted(_ muted: Bool) {
+        guard !isClosed, muted != isMuted, webView.responds(to: Self.setMutedSelector),
+              let method = webView.method(for: Self.setMutedSelector)
+        else { return }
+        isMuted = muted
+        typealias Setter = @convention(c) (AnyObject, Selector, UInt) -> Void
+        unsafeBitCast(method, to: Setter.self)(webView, Self.setMutedSelector, muted ? Self.audioMutedBit : 0)
+        syncState()
+    }
+
+    private func observeAudio() {
+        guard webView.responds(to: NSSelectorFromString(Self.playingAudioKey)) else { return }
+        observesAudio = true
+        webView.addObserver(self, forKeyPath: Self.playingAudioKey, options: [], context: nil)
+    }
+
+    private func stopObservingAudio() {
+        guard observesAudio else { return }
+        observesAudio = false
+        webView.removeObserver(self, forKeyPath: Self.playingAudioKey)
+    }
+
+    override nonisolated func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        MainActor.assumeIsolated { syncState() }
+    }
+
+    deinit {
+        // The web view goes with the tab, and would complain about an observer it still had.
+        if observesAudio { webView.removeObserver(self, forKeyPath: Self.playingAudioKey) }
+    }
+
+    // MARK: Web Inspector
+
+    /// WebKit opens its inspector only through a private object, the one Safari uses. Without it, nothing happens.
+    func showWebInspector() {
+        guard !isClosed, engine.isInspectable, webView.responds(to: NSSelectorFromString("_inspector")),
+              let inspector = webView.value(forKey: "_inspector") as? NSObject
+        else { return }
+        let show = NSSelectorFromString("show")
+        if inspector.responds(to: show) { inspector.perform(show) }
+    }
+
+    // MARK: Zoom
+
+    /// The reader follows the page, so an article reads at the same size either way.
+    func setPageZoom(_ zoom: Double) {
+        guard !isClosed, webView.pageZoom != zoom else { return }
+        webView.pageZoom = zoom
+        readerView?.pageZoom = zoom
+        syncState()
+    }
+
+    // MARK: Printing
+
+    func printOperation(with info: NSPrintInfo) -> NSPrintOperation? {
+        guard !isClosed, webView.url != nil else { return nil }
+        let operation = (readerView ?? webView).printOperation(with: info)
+        // WebKit lays the page out to its print view's frame, which starts empty and would print nothing.
+        operation.view?.frame = NSRect(origin: .zero, size: info.paperSize)
+        return operation
+    }
+
+    func pdf() async throws -> Data {
+        try await (readerView ?? webView).pdf()
+    }
+
     /// A page from a submitted form would be sent again on waking, and edited fields or a focused editor would be lost.
     func hasUnsavedState() async -> Bool {
         if showingFormResult { return true }
@@ -245,6 +330,7 @@ final class WebKitTab: NSObject, BrowserTab {
         removeReader()
         observations.forEach { $0.invalidate() }
         observations = []
+        stopObservingAudio()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.stopLoading()
@@ -270,6 +356,7 @@ final class WebKitTab: NSObject, BrowserTab {
             webView.observe(\.cameraCaptureState) { webView, _ in update(webView) },
             webView.observe(\.microphoneCaptureState) { webView, _ in update(webView) },
         ]
+        observeAudio()
         syncState()
     }
 
@@ -294,7 +381,10 @@ final class WebKitTab: NSObject, BrowserTab {
             faviconURL: faviconURL,
             isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
             isReaderAvailable: isArticle,
-            isShowingReader: readerView != nil
+            isShowingReader: readerView != nil,
+            pageZoom: webView.pageZoom,
+            isPlayingAudio: isPlayingAudio,
+            isMuted: isMuted
         )
         guard next != state else { return }
         let previous = state
@@ -417,7 +507,8 @@ extension WebKitTab: WKUIDelegate {
         // A popup gets its own rules and page script, so blocking can differ between it and the page that opened it.
         let bridge = PageScriptBridge()
         configuration.userContentController = engine.makeContentController(bridge: bridge)
-        // WebKit hands over the opener's configuration, so the popup shares its data store and profile.
+        // WebKit hands over the opener's configuration, so the popup shares its data store and profile. Its
+        // preferences are a copy taken now, so a popup keeps the developer tools setting it opened with.
         let popup = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: engine, profile: profile)
         bridge.tab = popup
         engine.register(popup)

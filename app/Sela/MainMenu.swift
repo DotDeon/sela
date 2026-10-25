@@ -51,6 +51,10 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Close Tab", #selector(BrowserWindowController.closeTab(_:)), "w"))
         menu.addItem(item("Close Window", #selector(NSWindow.performClose(_:)), "w", [.command, .shift]))
+        menu.addItem(.separator())
+        menu.addItem(item("Export as PDF…", #selector(BrowserWindowController.exportPDF(_:))))
+        menu.addItem(.separator())
+        menu.addItem(item("Print…", #selector(BrowserWindowController.printPage(_:)), "p"))
         return menu
     }
 
@@ -85,16 +89,36 @@ enum MainMenu {
         menu.addItem(item("Reload Page", #selector(BrowserWindowController.reloadTab(_:)), "r"))
         menu.addItem(item("Stop", #selector(BrowserWindowController.stopTab(_:)), "."))
         menu.addItem(.separator())
+        menu.addItem(item("Actual Size", #selector(BrowserWindowController.resetZoom(_:)), "0"))
+        menu.addItem(item("Zoom In", #selector(BrowserWindowController.zoomIn(_:)), "+"))
+        // Cmd+= zooms in too, as in Safari. The alternate never shows, since it has the same modifiers,
+        // but its key still works.
+        let zoomInWithEquals = item("Zoom In", #selector(BrowserWindowController.zoomIn(_:)), "=")
+        zoomInWithEquals.isAlternate = true
+        menu.addItem(zoomInWithEquals)
+        menu.addItem(item("Zoom Out", #selector(BrowserWindowController.zoomOut(_:)), "-"))
+        menu.addItem(.separator())
         menu.addItem(item("Back", #selector(BrowserWindowController.goBackInTab(_:)), "["))
         menu.addItem(item("Forward", #selector(BrowserWindowController.goForwardInTab(_:)), "]"))
+        menu.addItem(.separator())
+        let developer = NSMenuItem(title: "Developer", action: nil, keyEquivalent: "")
+        let developerMenu = NSMenu(title: "Developer")
+        developerMenu.addItem(item("Show Web Inspector", #selector(BrowserWindowController.showWebInspector(_:)), "i", [.command, .option]))
+        developer.submenu = developerMenu
+        menu.addItem(developer)
+        // The submenu, and its shortcut, only exist while developer tools are on in Settings.
+        menu.delegate = viewMenuDelegate
         return menu
     }
+
+    private static let viewMenuDelegate = ViewMenuDelegate()
 
     private static func tabMenu() -> NSMenu {
         let menu = NSMenu(title: "Tab")
         menu.addItem(item("Pin or Unpin Tab", #selector(BrowserWindowController.togglePin(_:)), "d"))
         menu.addItem(item("New Folder", #selector(BrowserWindowController.newFolder(_:)), "n", [.command, .option]))
         menu.addItem(item("Copy URL", #selector(BrowserWindowController.copyURL(_:)), "c", [.command, .shift]))
+        menu.addItem(item("Mute Tab", #selector(BrowserWindowController.toggleMute(_:)), "m", [.command, .shift]))
         menu.addItem(.separator())
         // With Shift held the keys report "+" and "_", so those are what the menu has to match.
         menu.addItem(item("Add Split View", #selector(BrowserWindowController.addSplitView(_:)), "+", [.control, .shift]))
@@ -187,5 +211,17 @@ enum MainMenu {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.keyEquivalentModifierMask = modifiers
         return item
+    }
+}
+
+/// Hides the View menu's Developer submenu, and the separator above it, while developer tools are off.
+/// AppKit asks before showing the menu and before matching a shortcut, so a hidden shortcut doesn't fire.
+@MainActor
+private final class ViewMenuDelegate: NSObject, NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let hidden = !DeveloperToolsSettings().isEnabled
+        guard let developer = menu.items.last, developer.title == "Developer" else { return }
+        developer.isHidden = hidden
+        menu.items.dropLast().last?.isHidden = hidden
     }
 }

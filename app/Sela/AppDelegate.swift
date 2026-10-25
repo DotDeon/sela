@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var sweeper: ArchiveSweeper?
     private var tabSleeper: TabSleeper?
     private var settingsWindow: SettingsWindowController?
+    /// The notes shown on the first launch after an update, while they're open.
+    private var whatsNew: WhatsNewWindowController?
     private lazy var updater = Updater(enabled: dataFolderOverride == nil)
     /// This session's downloads, shown in every window.
     private let downloads = DownloadList()
@@ -57,9 +59,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.mainMenu = MainMenu.make()
         _ = updater
         engine.searchURL = { SearchEngineSettings().engine.searchURL(for: $0) }
+        engine.isInspectable = DeveloperToolsSettings().isEnabled
         if let dataFolderOverride {
             try? FileManager.default.createDirectory(at: dataFolderOverride, withIntermediateDirectories: true)
         }
+        // A sidebar file from before this launch means Sela has run here before, so this isn't a first install.
+        let isFirstInstall = !FileManager.default.fileExists(atPath: sidebarFileURL().path)
         sidebar = SidebarStore(
             fileStore: SidebarDocumentStore(fileURL: dataFile("Sidebar.json") ?? sidebarFileURL()),
             firstRunDocument: dataFolderOverride == nil ? FirstRunImport.document : { nil }
@@ -94,6 +99,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         reportLoadProblem()
         remoteSettings?.start()
         cloudSync?.start()
+        // Measuring runs never see the notes, so they stay repeatable.
+        if dataFolderOverride == nil {
+            whatsNew = WhatsNewWindowController.showIfUpdated(
+                version: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, isFirstInstall: isFirstInstall
+            )
+        }
         if !pendingURLs.isEmpty {
             application(NSApp, open: pendingURLs)
             pendingURLs = []
@@ -239,8 +250,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID },
                 onDeleteProfile: { [weak self] id in self?.deleteProfile(id) }
             ) { [weak self] in
-                self?.sweeper?.sweep()
-                Task { await self?.tabSleeper?.sleepUnusedTabs() }
+                guard let self else { return }
+                sweeper?.sweep()
+                engine.isInspectable = DeveloperToolsSettings().isEnabled
+                Task { await self.tabSleeper?.sleepUnusedTabs() }
             }
         }
         settingsWindow?.showWindow(nil)

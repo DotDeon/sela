@@ -78,6 +78,9 @@ public final class SidebarViewController: NSViewController {
     private let reloadButton = HoverButton(symbol: "arrow.clockwise", label: "Reload")
     /// Sits at the end of the address while the page is an article or shows in reader mode.
     let readerButton = HoverButton(symbol: "doc.plaintext", label: "Show Reader", size: 24)
+    /// The zoom level, at the end of the address while the page isn't at actual size. A click goes back to it.
+    let zoomButton = NSButton(title: "", target: nil, action: nil)
+    private let addressAccessories = NSStackView()
     private let extensionButtons = ExtensionButtonsView()
     private let extensionList = ExtensionList()
 
@@ -113,8 +116,20 @@ public final class SidebarViewController: NSViewController {
         readerButton.target = self
         readerButton.action = #selector(toggleReader)
         readerButton.isHidden = true
+        zoomButton.bezelStyle = .inline
+        zoomButton.isBordered = false
+        zoomButton.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+        zoomButton.contentTintColor = .secondaryLabelColor
+        zoomButton.toolTip = "Back to Actual Size"
+        zoomButton.target = self
+        zoomButton.action = #selector(resetZoom)
+        zoomButton.isHidden = true
+        addressAccessories.orientation = .horizontal
+        addressAccessories.spacing = 2
+        addressAccessories.addArrangedSubview(zoomButton)
+        addressAccessories.addArrangedSubview(readerButton)
 
-        for view in [tint, controls, addressPill, readerButton, favoritesGrid, pager, spaceBar] {
+        for view in [tint, controls, addressPill, addressAccessories, favoritesGrid, pager, spaceBar] {
             view.translatesAutoresizingMaskIntoConstraints = false
             background.addSubview(view)
         }
@@ -145,8 +160,8 @@ public final class SidebarViewController: NSViewController {
             addressPill.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 2),
             addressPill.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
             addressPill.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -inset),
-            readerButton.trailingAnchor.constraint(equalTo: addressPill.trailingAnchor, constant: -5),
-            readerButton.centerYAnchor.constraint(equalTo: addressPill.centerYAnchor),
+            addressAccessories.trailingAnchor.constraint(equalTo: addressPill.trailingAnchor, constant: -5),
+            addressAccessories.centerYAnchor.constraint(equalTo: addressPill.centerYAnchor),
 
             favoritesGrid.topAnchor.constraint(equalTo: addressPill.bottomAnchor, constant: 12),
             favoritesGrid.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: inset),
@@ -201,6 +216,7 @@ public final class SidebarViewController: NSViewController {
             reloadButton.setSymbol(isLoading ? "xmark" : "arrow.clockwise", label: isLoading ? "Stop" : "Reload")
         }
         updateReaderButton(state)
+        updateZoomButton(state)
     }
 
     private var showsStop = false
@@ -213,15 +229,43 @@ public final class SidebarViewController: NSViewController {
         guard readerShown?.offered != isOffered || readerShown?.showing != isShowing else { return }
         readerShown = (isOffered, isShowing)
         readerButton.isHidden = !isOffered
-        addressPill.trailingInset = isOffered ? 22 : 0
         let label = isShowing ? "Hide Reader" : "Show Reader"
         readerButton.setSymbol(isShowing ? "doc.plaintext.fill" : "doc.plaintext", label: label)
         readerButton.toolTip = label
         readerButton.contentTintColor = isShowing ? .controlAccentColor : .secondaryLabelColor
+        keepAddressClearOfAccessories()
+    }
+
+    private var shownZoom: String?
+
+    private func updateZoomButton(_ state: TabState?) {
+        let zoom = state?.pageZoom ?? 1
+        let text = PageZoom.isActualSize(zoom) ? nil : PageZoom.percentText(zoom)
+        guard text != shownZoom else { return }
+        shownZoom = text
+        zoomButton.isHidden = text == nil
+        zoomButton.title = text ?? ""
+        zoomButton.setAccessibilityLabel(text.map { "Zoomed to \($0). Back to Actual Size" })
+        keepAddressClearOfAccessories()
+    }
+
+    /// Leaves room at the end of the address for whichever of the zoom level and reader button show.
+    private func keepAddressClearOfAccessories() {
+        let shown = addressAccessories.arrangedSubviews.filter { !$0.isHidden }
+        guard !shown.isEmpty else {
+            addressPill.trailingInset = 0
+            return
+        }
+        let widths = shown.map { $0.fittingSize.width }.reduce(0, +)
+        addressPill.trailingInset = widths + CGFloat(shown.count - 1) * addressAccessories.spacing + 4
     }
 
     @objc private func toggleReader() {
         Task { await model.toggleReader() }
+    }
+
+    @objc private func resetZoom() {
+        model.resetZoom()
     }
 
     /// Reads each extension's button for the selected tab, so an extension changing it updates the sidebar.

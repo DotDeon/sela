@@ -2,11 +2,16 @@ import Foundation
 
 /// Turns what someone typed in the address bar into a URL to load.
 public enum AddressInput {
-    /// Nil for blank input. Otherwise a website, a local address, or a search on `searchEngine`.
-    public static func resolve(_ text: String, searchEngine: SearchEngine = SearchEngineSettings().engine) -> URL? {
+    /// Nil for blank input. Otherwise a site search such as `yt cats`, a website, a local address, or a search
+    /// on `searchEngine`.
+    public static func resolve(_ text: String, searchEngine: SearchEngine = SearchEngineSettings().engine,
+                               siteSearches: [SiteSearch] = SiteSearchSettings().all) -> URL? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
 
+        if let (site, query) = SiteSearch.match(text, in: siteSearches) {
+            return site.searchURL(for: query)
+        }
         let lowered = text.lowercased()
         if ["http://", "https://", "file://"].contains(where: lowered.hasPrefix) || lowered.hasPrefix("about:") {
             return URL(string: text.replacingOccurrences(of: " ", with: "%20"))

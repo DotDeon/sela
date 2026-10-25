@@ -265,6 +265,20 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
 
     @objc func findPreviousInPage(_ sender: Any?) { findBar?.findPrevious() }
 
+    @objc func toggleMute(_ sender: Any?) { model.toggleMute() }
+
+    @objc func showWebInspector(_ sender: Any?) { model.tab?.showWebInspector() }
+
+    @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
+
+    @objc func zoomOut(_ sender: Any?) { model.zoomOut() }
+
+    @objc func resetZoom(_ sender: Any?) { model.resetZoom() }
+
+    @objc func printPage(_ sender: Any?) { PagePrinting.print(model.tab, in: window) }
+
+    @objc func exportPDF(_ sender: Any?) { PagePrinting.exportPDF(model.tab, in: window) }
+
     @objc func copyURL(_ sender: Any?) {
         guard let url = model.tab?.state.url else { return }
         NSPasteboard.general.clearContents()
@@ -287,12 +301,20 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
-        case #selector(openInSela(_:)), #selector(copyURL(_:)), #selector(reloadTab(_:)):
+        case #selector(openInSela(_:)), #selector(copyURL(_:)), #selector(reloadTab(_:)), #selector(printPage(_:)), #selector(exportPDF(_:)):
             return model.tab?.state.url != nil
         case #selector(goBackInTab(_:)):
             return model.tab?.state.canGoBack == true
         case #selector(goForwardInTab(_:)):
             return model.tab?.state.canGoForward == true
+        case #selector(resetZoom(_:)):
+            guard let zoom = model.tab?.state.pageZoom else { return false }
+            return !PageZoom.isActualSize(zoom)
+        case #selector(toggleMute(_:)):
+            item.state = model.tab?.state.isMuted == true ? .on : .off
+            return model.tab != nil
+        case #selector(showWebInspector(_:)):
+            return DeveloperToolsSettings().isEnabled && model.tab?.state.url != nil
         case #selector(toggleSiteBlocking(_:)):
             guard let url = blockableURL, let contentBlocker else {
                 item.state = .off

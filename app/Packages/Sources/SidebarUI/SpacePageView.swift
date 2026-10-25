@@ -345,6 +345,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             cell.iconView.contentTintColor = .secondaryLabelColor
             cell.showsCloseOnHover = false
             cell.showsReset = false
+            cell.showAudio(playing: false, muted: false)
         case .split:
             let panes = item.childIDs
             (cell as? SplitCellView)?.configure(panes: panes.map { pane in
@@ -361,6 +362,7 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             }
             cell.showsCloseOnHover = true
             cell.showsReset = false
+            cell.showAudio(playing: false, muted: false)
             cell.onClose = { [weak self] in self?.model.closeSplit(id) }
         case .tab(let info):
             let live = model.liveTab(for: id)
@@ -380,8 +382,10 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             if case .unpinned = document.containerRole(of: id) { isUnpinned = true } else { isUnpinned = false }
             cell.showsCloseOnHover = isUnpinned || live != nil
             cell.showsReset = model.isAwayFromSavedURL(id)
+            cell.showAudio(playing: state?.isPlayingAudio ?? false, muted: state?.isMuted ?? false)
             cell.onClose = { [weak self] in self?.model.close(id) }
             cell.onReset = { [weak self] in self?.model.resetToSavedURL(id) }
+            cell.onToggleMute = { [weak self] in self?.model.toggleMute(id) }
         case .container:
             break
         }
@@ -493,6 +497,9 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             })
             if model.isAwayFromSavedURL(id) {
                 menu.addItem(menuItem("Back to Saved Address") { [weak self] in self?.model.resetToSavedURL(id) })
+            }
+            if let live = model.liveTab(for: id) {
+                menu.addItem(menuItem(live.state.isMuted ? "Unmute Tab" : "Mute Tab") { [weak self] in self?.model.toggleMute(id) })
             }
             let split = menuItem("Open in Split View") { [weak self] in self?.model.openInSplit(id) }
             split.isEnabled = model.canOpenInSplit(id)

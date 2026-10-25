@@ -29,6 +29,8 @@ public final class LittleWindowModel: BrowserTabDelegate, PageWindowModel {
     public private(set) var tab: (any BrowserTab)?
     private var dialogs: [PendingDialog] = []
 
+    /// Where each site's zoom level is kept, shared with the main windows.
+    @ObservationIgnored public let zoomStore: PageZoomStore
     @ObservationIgnored private let permissions: SitePermissions
     @ObservationIgnored private let now: @MainActor () -> Date
     @ObservationIgnored private var lastVisitedURL: URL?
@@ -39,15 +41,18 @@ public final class LittleWindowModel: BrowserTabDelegate, PageWindowModel {
 
     /// Opens `url`, or a blank page when it's nil, using `profile`'s website data.
     public init(engine: any BrowserEngine, url: URL?, profile: ProfileIdentifier = .default, archive: ArchiveStore? = nil,
-                downloads: DownloadList? = nil, permissions: SitePermissions = SitePermissions(), now: @escaping @MainActor () -> Date = { .now }) {
+                downloads: DownloadList? = nil, permissions: SitePermissions = SitePermissions(), zoomStore: PageZoomStore = PageZoomStore(),
+                now: @escaping @MainActor () -> Date = { .now }) {
         self.engine = engine
         self.archive = archive
         self.downloads = downloads
         self.permissions = permissions
+        self.zoomStore = zoomStore
         self.now = now
         let tab = engine.makeTab(url: url, profile: profile)
         self.tab = tab
         tab.delegate = self
+        applyRememberedZoom(to: tab)
     }
 
     /// Opens the page again at its current address in another profile, for when its profile is deleted.
@@ -59,9 +64,12 @@ public final class LittleWindowModel: BrowserTabDelegate, PageWindowModel {
         let tab = engine.makeTab(url: old.state.url, profile: profile)
         self.tab = tab
         tab.delegate = self
+        applyRememberedZoom(to: tab)
     }
 
     public var selectedTab: (any BrowserTab)? { tab }
+
+    public var openTabs: [any BrowserTab] { tab.map { [$0] } ?? [] }
 
     public var dialogForSelectedTab: PendingDialog? { dialogs.first }
 
@@ -118,6 +126,7 @@ public final class LittleWindowModel: BrowserTabDelegate, PageWindowModel {
 
     public func tabStateDidChange(_ tab: any BrowserTab) {
         guard tab === self.tab else { return }
+        applyRememberedZoom(to: tab)
         let state = tab.state
         if !state.isLoading, let url = state.url, let scheme = url.scheme?.lowercased(),
            ["http", "https"].contains(scheme), lastVisitedURL != url {

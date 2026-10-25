@@ -153,6 +153,26 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         downloadsPopover?.show(relativeTo: root.sidebarController.downloadsButton)
     }
 
+    /// Tab > Mute Tab: the selected tab's sound off, or back on.
+    @objc func toggleMute(_ sender: Any?) { model.toggleMute() }
+
+    /// View > Developer > Show Web Inspector, while developer tools are on in Settings.
+    @objc func showWebInspector(_ sender: Any?) { model.selectedTab?.showWebInspector() }
+
+    // MARK: Zoom
+
+    @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
+
+    @objc func zoomOut(_ sender: Any?) { model.zoomOut() }
+
+    @objc func resetZoom(_ sender: Any?) { model.resetZoom() }
+
+    // MARK: Printing
+
+    @objc func printPage(_ sender: Any?) { PagePrinting.print(model.selectedTab, in: window) }
+
+    @objc func exportPDF(_ sender: Any?) { PagePrinting.exportPDF(model.selectedTab, in: window) }
+
     /// Ctrl+Shift+=: a new pane beside the current tab, with the command bar open to choose its page.
     @objc func addSplitView(_ sender: Any?) {
         guard model.addSplitPane() != nil else { return }
@@ -196,6 +216,18 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             }
             item.state = contentBlocker.isBlocking(on: url) ? .on : .off
             return true
+        case #selector(printPage(_:)), #selector(exportPDF(_:)):
+            return model.selectedTab?.state.url != nil
+        case #selector(zoomIn(_:)), #selector(zoomOut(_:)):
+            return model.selectedTab != nil
+        case #selector(toggleMute(_:)):
+            item.state = model.selectedTab?.state.isMuted == true ? .on : .off
+            return model.selectedTab != nil
+        case #selector(showWebInspector(_:)):
+            return DeveloperToolsSettings().isEnabled && model.selectedTab?.state.url != nil
+        case #selector(resetZoom(_:)):
+            guard let zoom = model.selectedTab?.state.pageZoom else { return false }
+            return !PageZoom.isActualSize(zoom)
         default:
             return true
         }

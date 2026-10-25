@@ -22,7 +22,8 @@ public func matchScore(_ query: String, _ text: String) -> Int? {
 }
 
 /// Command bar rows for a query, in display order:
-/// the typed address or search (after a tab that matches every word as a word start), then up to 5 tabs
+/// a site search when the query starts with a site's shortcut, such as `yt cats`, then the typed address or
+/// search (after a tab that matches every word as a word start), then up to 5 tabs
 /// (favourites and tabs in folders too, found by title, address or folder name),
 /// 3 commands, 3 archived tabs and 5 history pages. An empty query shows the 6 most recently active tabs.
 public func commandBarResults(
@@ -31,11 +32,17 @@ public func commandBarResults(
     commands: [CommandCandidate],
     archived: [ArchivedCandidate],
     history: [HistoryCandidate],
-    searchEngine: SearchEngine = SearchEngineSettings().engine
+    searchEngine: SearchEngine = SearchEngineSettings().engine,
+    siteSearches: [SiteSearch] = SiteSearchSettings().all
 ) -> [CommandBarResult] {
     let words = queryWords(query)
     guard !words.isEmpty else {
         return tabs.sorted(by: moreRecent).prefix(6).map(CommandBarResult.tab)
+    }
+    // The site search goes first, so Enter does what the shortcut promised.
+    var results: [CommandBarResult] = []
+    if let (site, siteQuery) = SiteSearch.match(query, in: siteSearches), let url = site.searchURL(for: siteQuery) {
+        results.append(.siteSearch(SiteSearchResult(siteName: site.name, shortcut: site.shortcut, query: siteQuery, url: url)))
     }
 
     let rankedTabs = ranked(tabs, by: { "\($0.title) \($0.url?.absoluteString ?? "") \($0.location ?? "")" }, query: query, tieBreak: moreRecent)
@@ -44,14 +51,14 @@ public func commandBarResults(
     let rankedArchived = ranked(archived.filter { $0.url.map { !openURLs.contains($0) } ?? true }, by: { "\($0.title) \($0.url?.absoluteString ?? "")" }, query: query)
     let rankedHistory = ranked(history.filter { !openURLs.contains($0.url) }, by: { "\($0.title) \($0.url.absoluteString)" }, query: query)
 
-    var results: [CommandBarResult] = []
     var tabRows = rankedTabs.prefix(5).map { CommandBarResult.tab($0.item) }
     // Only the title and host can make a top hit, so a word that happens to be in an address path
     // ("docs", "com") still searches.
     if let best = rankedTabs.first, matchScore(query, "\(best.item.title) \(best.item.url?.host() ?? "")") == 2 * words.count {
         results.append(tabRows.removeFirst())
     }
-    if let url = AddressInput.resolve(query, searchEngine: searchEngine) {
+    // The site search has its own row above, so this one is the plain address or search.
+    if let url = AddressInput.resolve(query, searchEngine: searchEngine, siteSearches: []) {
         results.append(.open(url, search: searchEngine.isSearch(url) ? searchEngine : nil))
     }
     results += tabRows

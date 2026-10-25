@@ -156,6 +156,7 @@ final class CommandBarPresenter {
         case .tab(let tab): favicons.image(forPage: tab.url)
         case .archived(let entry): favicons.image(forPage: entry.url)
         case .history(let page): favicons.image(forPage: page.url)
+        case .siteSearch(let search): favicons.image(forPage: search.url)
         case .open, .command: nil
         }
     }
