@@ -57,3 +57,31 @@ private struct Harness {
     #expect(other.selectedSpaceID == "S2")
     #expect(other.selectedItemID == "q1")
 }
+
+@MainActor @Test func deletingTheShownSpaceShowsTheFirstSpacesLastSelection() throws {
+    let h = try Harness()
+    h.model.select("f1")
+    h.model.selectSpace("S2")
+    try h.store.removeSpace("S2")
+    h.model.reconcile()
+    #expect(h.model.selectedSpaceID == "S")
+    #expect(h.model.selectedItemID == "f1")
+}
+
+@MainActor @Test func deletingTheShownSpaceClosesPeek() throws {
+    let h = try Harness()
+    h.model.selectSpace("S2")
+    let id = h.model.newTab(url: url("a"))
+    let tab = try #require(h.live(id))
+    _ = h.model.tab(tab, shouldFollowLinkTo: url("b"), shiftKey: true)
+    #expect(h.model.peekTab != nil)
+    try h.store.edit { document in
+        for tab in document.tabIDs(under: "P") + document.tabIDs(under: "U") {
+            try? document.updateTab(tab) { $0.lastActiveAt = nil }
+        }
+    }
+    try h.store.removeSpace("S2")
+    h.model.reconcile()
+    #expect(h.model.selectedSpaceID == "S")
+    #expect(h.model.peekTab == nil)
+}

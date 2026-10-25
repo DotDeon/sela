@@ -105,6 +105,11 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     public func selectSpace(_ id: SpaceID) {
         guard document.space(id) != nil, id != selectedSpaceID else { return }
+        show(id)
+    }
+
+    /// Switches to a space and selects its last selection, or its most recently active tab.
+    private func show(_ id: SpaceID) {
         closePeek()
         openerIDs.removeAll()
         selectedSpaceID = id
@@ -559,8 +564,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
             forgetOpener(id)
         }
         if document.space(selectedSpaceID) == nil {
-            selectedSpaceID = document.spaces[0].id
-            if let recent = mostRecentTab(in: selectedSpaceID) { setSelection(recent) } else { leaveSelection() }
+            show(document.spaces[0].id)
         } else if let selected = selectedItemID, !isTab(selected) || !belongsToSelectedSpace(selected) {
             if let recent = mostRecentTab(in: selectedSpaceID) { setSelection(recent) } else { leaveSelection() }
         }
