@@ -139,6 +139,9 @@ final class SpacePagerView: NSScrollView {
         case .ended, .cancelled:
             guard isSwiping else { return }
             isSwiping = false
+            // Fingers that rest before lifting send nothing, so the lift itself counts as standing still.
+            samples.append((event.timestamp, swipeOffset))
+            samples = samples.filter { event.timestamp - $0.time < 0.1 }
             let speed = velocity()
             let target = targetPage(
                 startPage: swipeStartPage,
