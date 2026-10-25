@@ -18,6 +18,8 @@ public final class FaviconStore {
     @ObservationIgnored private var inFlight: Set<String> = []
     /// Hosts with no usable icon this launch. Not retried until Sela restarts.
     @ObservationIgnored private var failed: Set<String> = []
+    /// Hosts whose icon isn't on disk, so the sidebar's many lookups don't each try the file again.
+    @ObservationIgnored private var notOnDisk: Set<String> = []
     /// The icon each host's pages last declared, so repeated reports don't refetch it.
     @ObservationIgnored private var rememberedIcons: [String: URL] = [:]
 
@@ -39,9 +41,12 @@ public final class FaviconStore {
     public func image(forPage url: URL?) -> NSImage? {
         guard let url, let host = Self.cacheKey(for: url) else { return nil }
         if let image = images[host] { return image }
-        if let image = NSImage(contentsOf: fileURL(for: host)) {
-            images[host] = image
-            return image
+        if !notOnDisk.contains(host) {
+            if let image = NSImage(contentsOf: fileURL(for: host)) {
+                images[host] = image
+                return image
+            }
+            notOnDisk.insert(host)
         }
         if !inFlight.contains(host), !failed.contains(host), let iconURL = Self.faviconICO(for: url) {
             load(iconURL, for: host)

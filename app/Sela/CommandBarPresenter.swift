@@ -93,27 +93,13 @@ final class CommandBarPresenter {
         backdrop = shade
         panel = controller
         controller.focus()
-        appear(shade, panelTop: panelTop)
+        // The bar drops a few points into place from the address at the top, growing as it comes.
+        shade.alphaValue = 0
+        shade.layoutSubtreeIfNeeded()
+        OverlayTransition.appear(shade, moving: panelView, offset: CGPoint(x: 0, y: Motion.settleDistance))
     }
 
     static let panelTop: CGFloat = 120
-
-    /// Fades the bar in while it settles down a few points into place. Fades only, with Reduce Motion on.
-    private func appear(_ shade: NSView, panelTop: NSLayoutConstraint) {
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        shade.alphaValue = 0
-        if !reduceMotion {
-            panelTop.constant = Self.panelTop - 8
-            shade.layoutSubtreeIfNeeded()
-        }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1)
-            context.allowsImplicitAnimation = true
-            shade.animator().alphaValue = 1
-            panelTop.animator().constant = Self.panelTop
-        }
-    }
 
     /// Closes the bar and gives keyboard focus back to what had it.
     func dismiss() {
@@ -124,18 +110,14 @@ final class CommandBarPresenter {
         }
     }
 
-    /// Takes the bar away with a short fade. The bar counts as gone straight away, so a new one can open at once.
+    /// Takes the bar away the way it came. The bar counts as gone straight away, so a new one can open at once.
     private func removePanel() {
         guard let shade = backdrop else { return }
         (shade as? Backdrop)?.onClick = nil
+        let panelView = panel?.view
         backdrop = nil
         panel = nil
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.12
-            shade.animator().alphaValue = 0
-        }, completionHandler: {
-            MainActor.assumeIsolated { shade.removeFromSuperview() }
-        })
+        OverlayTransition.disappear(shade, moving: panelView, offset: CGPoint(x: 0, y: Motion.settleDistance))
     }
 
     // MARK: Results

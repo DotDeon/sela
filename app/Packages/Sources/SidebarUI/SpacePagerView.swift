@@ -17,8 +17,12 @@ final class SpacePagerView: NSScrollView {
 
     // The swipe in progress.
     private var swipeStartPage = 0
+    /// Where the pages would be without the rubber band, so a pull past the end springs back.
+    private var swipeOffset: CGFloat = 0
     private var samples: [(time: TimeInterval, offset: CGFloat)] = []
     private var isSwiping = false
+    /// Settles the pages after a swipe or a click, carrying the swipe's speed into the spring.
+    private var settle: SpringAnimator!
 
     init(model: BrowserWindowModel, favicons: FaviconStore) {
         self.model = model
@@ -30,6 +34,8 @@ final class SpacePagerView: NSScrollView {
         horizontalScrollElasticity = .allowed
         verticalScrollElasticity = .none
         documentView = pageContainer
+        settle = SpringAnimator(value: 0, host: self)
+        settle.onChange = { [weak self] offset in self?.place(offset) }
         keepObserving { [weak self] in self?.update() }
     }
 
@@ -78,59 +84,75 @@ final class SpacePagerView: NSScrollView {
         for (index, page) in pages.enumerated() {
             page.frame = NSRect(x: CGFloat(index) * size.width, y: 0, width: size.width, height: size.height)
         }
-        if !isSwiping {
-            contentView.setBoundsOrigin(NSPoint(x: CGFloat(currentPage) * size.width, y: 0))
+        if !isSwiping, !settle.isAnimating {
+            settle.set(CGFloat(currentPage) * size.width)
         }
+    }
+
+    private func place(_ offset: CGFloat) {
+        contentView.setBoundsOrigin(NSPoint(x: offset, y: 0))
+        reflectScrolledClipView(contentView)
     }
 
     func scroll(toPage index: Int, animated: Bool) {
         guard pages.indices.contains(index) else { return }
         currentPage = index
-        let origin = NSPoint(x: CGFloat(index) * pageWidth, y: 0)
-        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.25
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                contentView.animator().setBoundsOrigin(origin)
-            }
+        let offset = CGFloat(index) * pageWidth
+        if animated {
+            settle.animate(to: offset)
         } else {
-            contentView.setBoundsOrigin(origin)
+            settle.set(offset)
         }
-        reflectScrolledClipView(contentView)
     }
 
     // MARK: Swiping
 
+    /// The pages follow the fingers one to one, pull less and less past the first and last page, and settle on
+    /// a spring that starts at the fingers' speed. A swipe that starts while they're still settling takes over.
     override func scrollWheel(with event: NSEvent) {
-        // Momentum after a snap would fight the animation.
+        // Momentum after the fingers lift is projected into the snap instead, so it never fights the spring.
         if event.momentumPhase != [] { return }
 
         switch event.phase {
         case .began:
+            settle.stop()
             isSwiping = true
             swipeStartPage = currentPage
-            samples = [(event.timestamp, contentView.bounds.origin.x)]
+            swipeOffset = contentView.bounds.origin.x
+            samples = [(event.timestamp, swipeOffset)]
         case .changed:
             guard isSwiping else { return }
             // Only sideways movement; the pages scroll vertically on their own.
-            var origin = contentView.bounds.origin
-            origin.x -= event.scrollingDeltaX
-            origin.x = min(max(origin.x, -pageWidth * 0.25), pageWidth * (CGFloat(pages.count) - 0.75))
-            contentView.setBoundsOrigin(origin)
-            reflectScrolledClipView(contentView)
-            samples.append((event.timestamp, origin.x))
+            swipeOffset -= event.scrollingDeltaX
+            let last = pageWidth * CGFloat(max(pages.count - 1, 0))
+            let shown: CGFloat
+            if swipeOffset < 0 {
+                shown = Motion.rubberBand(swipeOffset, limit: pageWidth * 0.3)
+            } else if swipeOffset > last {
+                shown = last + Motion.rubberBand(swipeOffset - last, limit: pageWidth * 0.3)
+            } else {
+                shown = swipeOffset
+            }
+            place(shown)
+            samples.append((event.timestamp, swipeOffset))
             samples = samples.filter { event.timestamp - $0.time < 0.1 }
         case .ended, .cancelled:
             guard isSwiping else { return }
             isSwiping = false
+            let speed = velocity()
             let target = targetPage(
                 startPage: swipeStartPage,
-                offset: contentView.bounds.origin.x,
+                offset: swipeOffset,
                 pageWidth: pageWidth,
-                velocity: velocity(),
+                velocity: speed,
                 pageCount: pages.count
             )
-            scroll(toPage: target, animated: true)
+            currentPage = target
+            settle.animate(
+                to: CGFloat(target) * pageWidth,
+                velocity: speed,
+                damping: abs(speed) >= Motion.flickVelocity ? Motion.flickDamping : Motion.damping
+            )
             if pages.indices.contains(target), pages[target].spaceID != model.selectedSpaceID {
                 model.selectSpace(pages[target].spaceID)
             }

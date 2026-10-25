@@ -92,13 +92,20 @@ public final class ContentBlocker {
         refreshTask = nil
     }
 
-    /// Converts the saved lists off the main actor, then installs them and rebuilds the page script lookup.
+    /// Reads and converts the saved lists and builds the page script lookup off the main actor, so the window
+    /// stays responsive, then installs the rules. Building the lookup alone takes seconds.
     private func rebuild() async {
-        let texts = lists.compactMap { list in store.text(for: list).map { (id: list.id, text: $0) } }
-        guard !texts.isEmpty else { return }
-        let compiled = await Task.detached(priority: .utility) { compileFilters(texts) }.value
-        try? await engine?.installContentRules(compiled.ruleSets)
-        lookup = try? PageScriptLookup(advancedRules: compiled.advancedRules, folder: workFolder.appending(path: "advanced"))
+        let files = lists.map { (id: $0.id, url: store.fileURL(for: $0)) }
+        let folder = workFolder.appending(path: "advanced")
+        let built = await Task.detached(priority: .utility) { () -> (ruleSets: [ContentRuleSet], lookup: PageScriptLookup?)? in
+            let texts = files.compactMap { file in (try? String(contentsOf: file.url, encoding: .utf8)).map { (id: file.id, text: $0) } }
+            guard !texts.isEmpty else { return nil }
+            let compiled = compileFilters(texts)
+            return (compiled.ruleSets, try? PageScriptLookup(advancedRules: compiled.advancedRules, folder: folder))
+        }.value
+        guard let built else { return }
+        try? await engine?.installContentRules(built.ruleSets)
+        lookup = built.lookup
     }
 
     private func pageScripts(page: URL, top: URL?) -> PageScripts? {

@@ -29,7 +29,7 @@ final class FindBarController: NSObject, NSSearchFieldDelegate {
     }
 
     func close() {
-        bar?.removeFromSuperview()
+        if let bar { OverlayTransition.disappear(bar, offset: CGPoint(x: 0, y: Motion.settleDistance)) }
         bar = nil
         model.selectedTab?.clearFind()
         if let page = model.selectedTab?.contentView { host?.window?.makeFirstResponder(page) }
@@ -96,6 +96,10 @@ final class FindBarController: NSObject, NSSearchFieldDelegate {
             pill.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -10),
         ])
         bar = pill
+        // Drops in from the page's top edge, where it lives.
+        pill.alphaValue = 0
+        host.layoutSubtreeIfNeeded()
+        OverlayTransition.appear(pill, offset: CGPoint(x: 0, y: Motion.settleDistance))
     }
 
     @objc private func fieldSubmitted() {

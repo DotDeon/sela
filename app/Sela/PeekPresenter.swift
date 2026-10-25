@@ -9,7 +9,6 @@ import SidebarUI
 final class PeekPresenter {
     static let horizontalInset: CGFloat = 48
     static let verticalInset: CGFloat = 32
-    static let settleDistance: CGFloat = 8
 
     private let model: BrowserWindowModel
     private weak var host: NSView?
@@ -55,10 +54,21 @@ final class PeekPresenter {
             view.translatesAutoresizingMaskIntoConstraints = false
             overlay.addSubview(view)
         }
-        let settle = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : Self.settleDistance
-        let top = card.topAnchor.constraint(equalTo: overlay.topAnchor, constant: Self.verticalInset - settle)
-        let bottom = card.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -Self.verticalInset - settle)
+        // The card, its shadow and its buttons grow in together, so they're one floating thing.
+        let floating = NSView()
+        floating.translatesAutoresizingMaskIntoConstraints = false
+        overlay.addSubview(floating)
+        for view in [shadow, card, buttons] {
+            view.removeFromSuperview()
+            floating.addSubview(view)
+        }
+        let top = card.topAnchor.constraint(equalTo: overlay.topAnchor, constant: Self.verticalInset)
+        let bottom = card.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: -Self.verticalInset)
         NSLayoutConstraint.activate([
+            floating.leadingAnchor.constraint(equalTo: overlay.leadingAnchor),
+            floating.trailingAnchor.constraint(equalTo: overlay.trailingAnchor),
+            floating.topAnchor.constraint(equalTo: overlay.topAnchor),
+            floating.bottomAnchor.constraint(equalTo: overlay.bottomAnchor),
             overlay.leadingAnchor.constraint(equalTo: host.leadingAnchor),
             overlay.trailingAnchor.constraint(equalTo: host.trailingAnchor),
             overlay.topAnchor.constraint(equalTo: host.topAnchor),
@@ -84,17 +94,13 @@ final class PeekPresenter {
 
         overlay.alphaValue = 0
         overlay.layoutSubtreeIfNeeded()
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1)
-            context.allowsImplicitAnimation = true
-            overlay.animator().alphaValue = 1
-            top.animator().constant = Self.verticalInset
-            bottom.animator().constant = -Self.verticalInset
-        }
+        floatingPart = floating
+        OverlayTransition.appear(overlay, moving: floating)
     }
 
-    /// Fades the overlay out. When the page became a tab, it has already moved to the main page area.
+    private weak var floatingPart: NSView?
+
+    /// Takes the overlay away the way it came. When the page became a tab, it has already moved to the main page area.
     private func hide() {
         shownTabID = nil
         splitButton = nil
@@ -102,12 +108,7 @@ final class PeekPresenter {
         keyMonitor = nil
         guard let overlay else { return }
         self.overlay = nil
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.12
-            overlay.animator().alphaValue = 0
-        }, completionHandler: {
-            MainActor.assumeIsolated { overlay.removeFromSuperview() }
-        })
+        OverlayTransition.disappear(overlay, moving: floatingPart)
     }
 
     // MARK: Controls

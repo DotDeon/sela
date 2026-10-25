@@ -89,6 +89,9 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
     private let favicons: FaviconStore
     private let titleField = NSTextField(labelWithString: "")
     private let scrollView = SidebarPageScrollView()
+    private var listBelowTitle: NSLayoutConstraint!
+    private var listAtTop: NSLayoutConstraint!
+    private var shownTitle: String?
     private var nodes: [OutlineRow: OutlineNode] = [:]
     private var snapshot: OutlineSnapshot = [:]
     private var isApplyingModel = false
@@ -151,11 +154,13 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
+        listBelowTitle = scrollView.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 4)
+        listAtTop = scrollView.topAnchor.constraint(equalTo: topAnchor)
         NSLayoutConstraint.activate([
             titleField.topAnchor.constraint(equalTo: topAnchor, constant: 6),
             titleField.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
             titleField.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
-            scrollView.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 4),
+            listBelowTitle,
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor),
@@ -167,7 +172,15 @@ final class SpacePageView: NSView, NSOutlineViewDataSource, NSOutlineViewDelegat
     /// Applies the sidebar's current state: animated row changes, folder expansion, titles, icons and selection.
     private func update() {
         guard let space = document.space(spaceID) else { return }
-        titleField.stringValue = space.title ?? ""
+        let title = space.title ?? ""
+        if title != shownTitle {
+            shownTitle = title
+            titleField.stringValue = title
+            // No empty line above the list for a space without a title.
+            titleField.isHidden = title.isEmpty
+            listBelowTitle.isActive = !title.isEmpty
+            listAtTop.isActive = title.isEmpty
+        }
 
         let newSnapshot = outlineSnapshot(for: space, in: document)
         let updates = outlineUpdates(from: snapshot, to: newSnapshot)

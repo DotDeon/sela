@@ -213,6 +213,12 @@ final class FavoriteTile: NSCollectionViewItem {
         isHovered = false
     }
 
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        // A ready-made shadow shape, so the tile's shadow isn't worked out from its pixels each time it draws.
+        view.layer?.shadowPath = CGPath(roundedRect: view.bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
+    }
+
     private func updateBackground() {
         let dark = view.effectiveAppearance.isDark
         let alpha: CGFloat = isSelected ? (dark ? 0.22 : 0.85) : isHovered ? (dark ? 0.13 : 0.55) : (dark ? 0.08 : 0.35)

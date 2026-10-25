@@ -195,13 +195,23 @@ public final class SidebarViewController: NSViewController {
         backButton.isEnabled = state?.canGoBack ?? false
         forwardButton.isEnabled = state?.canGoForward ?? false
         let isLoading = state?.isLoading ?? false
-        reloadButton.setSymbol(isLoading ? "xmark" : "arrow.clockwise", label: isLoading ? "Stop" : "Reload")
+        // A new symbol image only when loading starts or stops, not on every title or address change.
+        if isLoading != showsStop {
+            showsStop = isLoading
+            reloadButton.setSymbol(isLoading ? "xmark" : "arrow.clockwise", label: isLoading ? "Stop" : "Reload")
+        }
         updateReaderButton(state)
     }
+
+    private var showsStop = false
+
+    private var readerShown: (offered: Bool, showing: Bool)?
 
     private func updateReaderButton(_ state: TabState?) {
         let isShowing = state?.isShowingReader ?? false
         let isOffered = isShowing || (state?.isReaderAvailable ?? false)
+        guard readerShown?.offered != isOffered || readerShown?.showing != isShowing else { return }
+        readerShown = (isOffered, isShowing)
         readerButton.isHidden = !isOffered
         addressPill.trailingInset = isOffered ? 22 : 0
         let label = isShowing ? "Hide Reader" : "Show Reader"

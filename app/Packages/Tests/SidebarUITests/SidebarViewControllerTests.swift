@@ -266,3 +266,22 @@ private func fakeExtension(named name: String) async throws -> FakeExtension {
     try await eventually { tab.state.isShowingReader }
     try await eventually { h.controller.readerButton.accessibilityLabel() == "Hide Reader" }
 }
+
+@MainActor @Test func clearShowsOnlyWhileThereAreUnpinnedTabs() async throws {
+    let empty = SidebarDocument(version: SidebarDocument.currentVersion, spaces: [
+        Space(id: "S", title: nil, icon: nil, theme: nil, pinnedContainerID: "P", unpinnedContainerID: "U"),
+    ], favoritesContainerID: "F", items: [
+        fixtureItem("F", parent: nil, kind: .container(.favorites)),
+        fixtureItem("P", parent: nil, kind: .container(.pinned("S"))),
+        fixtureItem("U", parent: nil, kind: .container(.unpinned("S"))),
+    ])
+    let h = try Harness(document: empty)
+    func divider() -> DividerCellView? {
+        (0..<h.firstOutline.numberOfRows).lazy
+            .compactMap { h.firstOutline.view(atColumn: 0, row: $0, makeIfNecessary: true) as? DividerCellView }
+            .first
+    }
+    #expect(divider()?.isClearVisible == false)
+    h.model.newTab(url: URL(string: "https://new.example.com/"))
+    try await eventually { divider()?.isClearVisible == true }
+}
