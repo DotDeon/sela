@@ -24,6 +24,7 @@ let package = Package(
         .library(name: "Extensions", targets: ["Extensions"]),
         .library(name: "Passkeys", targets: ["Passkeys"]),
         .library(name: "RemoteSettings", targets: ["RemoteSettings"]),
+        .library(name: "WhatsNew", targets: ["WhatsNew"]),
         .executable(name: "sela-arc", targets: ["sela-arc"]),
     ],
     dependencies: [
@@ -93,6 +94,8 @@ let package = Package(
         .testTarget(name: "PasskeysTests", dependencies: ["Passkeys"]),
         .target(name: "RemoteSettings"),
         .testTarget(name: "RemoteSettingsTests", dependencies: ["RemoteSettings"]),
+        .target(name: "WhatsNew"),
+        .testTarget(name: "WhatsNewTests", dependencies: ["WhatsNew"]),
         .target(name: "Downloads", dependencies: ["BrowserEngine"]),
         .testTarget(name: "DownloadsTests", dependencies: ["Downloads", "BrowserEngine"]),
         .executableTarget(name: "sela-arc", dependencies: ["ArcImport", "ArcSnapshot", "SidebarModel"]),
