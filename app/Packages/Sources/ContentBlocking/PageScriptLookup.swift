@@ -3,8 +3,9 @@ import FilterEngine
 import Foundation
 
 /// Finds the advanced rules for a page with AdGuard's filtering engine, which it keeps in `folder`.
-@MainActor
-public final class PageScriptLookup {
+/// Building it parses every rule, which takes seconds, so it's made off the main actor and used from it.
+/// The engine only reads after it's built, so sharing it that way is safe.
+public final class PageScriptLookup: @unchecked Sendable {
     private let webExtension: WebExtension
 
     public init(advancedRules: String, folder: URL) throws {

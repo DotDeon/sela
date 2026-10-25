@@ -52,7 +52,8 @@ public final class FilterListStore {
         return lines.prefix(30).contains { $0.hasPrefix("! Title:") }
     }
 
-    private func fileURL(for list: FilterList) -> URL {
+    /// Where a list's text is kept, for reading it off the main actor.
+    public func fileURL(for list: FilterList) -> URL {
         folder.appending(path: "\(list.id).txt")
     }
 
