@@ -24,11 +24,18 @@ final class BrowserRootViewController: NSViewController {
 
     private var sidebarWidth: NSLayoutConstraint!
     private var sidebarLeading: NSLayoutConstraint!
-    private var cardDockedConstraints: [NSLayoutConstraint] = []
-    private var cardFullConstraints: [NSLayoutConstraint] = []
+    private var cardLeading: NSLayoutConstraint!
+    private var cardTop: NSLayoutConstraint!
+    private var cardTrailing: NSLayoutConstraint!
+    private var cardBottom: NSLayoutConstraint!
     private(set) var isSidebarHidden = false
     private var isRevealed = false
     private var hideTask: Task<Void, Never>?
+    /// 1 with the sidebar on screen, 0 with it off the left edge. Slides the sidebar.
+    private var sidebarShown: SpringAnimator!
+    /// 1 with the page beside the sidebar as a rounded card, 0 with it filling the window.
+    private var cardDocked: SpringAnimator!
+    static let cardInset: CGFloat = 8
 
     init(model: BrowserWindowModel, favicons: FaviconStore) {
         self.model = model
@@ -67,21 +74,14 @@ final class BrowserRootViewController: NSViewController {
         let width = saved > 0 ? min(max(saved, Self.widthRange.lowerBound), Self.widthRange.upperBound) : Self.defaultWidth
         sidebarWidth = sidebar.widthAnchor.constraint(equalToConstant: width)
         sidebarLeading = sidebar.leadingAnchor.constraint(equalTo: root.leadingAnchor)
-        let inset: CGFloat = 8
-        cardDockedConstraints = [
-            card.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor),
-            card.topAnchor.constraint(equalTo: root.topAnchor, constant: inset),
-            card.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -inset),
-            card.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -inset),
-        ]
-        cardFullConstraints = [
-            card.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            card.topAnchor.constraint(equalTo: root.topAnchor),
-            card.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            card.bottomAnchor.constraint(equalTo: root.bottomAnchor),
-        ]
+        // The card's edges are constants, so sliding the sidebar and docking the card are each one number.
+        cardLeading = card.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: width)
+        cardTop = card.topAnchor.constraint(equalTo: root.topAnchor, constant: Self.cardInset)
+        cardTrailing = card.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -Self.cardInset)
+        cardBottom = card.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -Self.cardInset)
 
-        NSLayoutConstraint.activate(cardDockedConstraints + [
+        NSLayoutConstraint.activate([
+            cardLeading, cardTop, cardTrailing, cardBottom,
             tint.topAnchor.constraint(equalTo: root.topAnchor),
             tint.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             tint.trailingAnchor.constraint(equalTo: root.trailingAnchor),
@@ -107,6 +107,11 @@ final class BrowserRootViewController: NSViewController {
             edgeZone.topAnchor.constraint(equalTo: root.topAnchor),
             edgeZone.bottomAnchor.constraint(equalTo: root.bottomAnchor),
         ])
+
+        sidebarShown = SpringAnimator(value: 1, host: root)
+        sidebarShown.onChange = { [weak self] shown in self?.placeSidebar(shown) }
+        cardDocked = SpringAnimator(value: 1, host: root)
+        cardDocked.onChange = { [weak self] docked in self?.placeCard(docked) }
 
         edgeZone.isHidden = true
         edgeZone.onEnter = { [weak self] in self?.reveal() }
@@ -142,22 +147,20 @@ final class BrowserRootViewController: NSViewController {
 
     // MARK: Hiding
 
+    /// Hides the sidebar, or docks it again. The page card and the sidebar move together on springs, and a
+    /// second press mid-way turns them round from where they are.
     func toggleSidebar() {
         isSidebarHidden.toggle()
         hideTask?.cancel()
         isRevealed = false
         let hidden = isSidebarHidden
-        animate {
-            NSLayoutConstraint.deactivate(hidden ? self.cardDockedConstraints : self.cardFullConstraints)
-            NSLayoutConstraint.activate(hidden ? self.cardFullConstraints : self.cardDockedConstraints)
-            self.sidebarLeading.animator().constant = hidden ? -self.sidebarWidth.constant : 0
-        }
-        content.cornerRadius = hidden ? 0 : PageCardView.cornerRadius
         edgeZone.isHidden = !hidden
         resizeHandle.isHidden = hidden
         sidebarController.view.layer?.shadowOpacity = 0
         setWindowButtonsHidden(hidden)
         sidebarController.showSidebarHidden(hidden)
+        sidebarShown.animate(to: hidden ? 0 : 1)
+        cardDocked.animate(to: hidden ? 0 : 1)
     }
 
     /// Shows the sidebar, sliding it out when it's hidden. Returns once it's on screen.
@@ -173,7 +176,7 @@ final class BrowserRootViewController: NSViewController {
         sidebarController.view.layer?.shadowOpacity = 0.25
         sidebarController.view.layer?.shadowRadius = 12
         setWindowButtonsHidden(false)
-        animate { self.sidebarLeading.animator().constant = 0 }
+        sidebarShown.animate(to: 1)
         // A keyboard reveal (Cmd+L, Cmd+T) never gets a pointer exit, so start watching now.
         scheduleHide()
     }
@@ -190,7 +193,7 @@ final class BrowserRootViewController: NSViewController {
                 self.isRevealed = false
                 self.edgeZone.isHidden = false
                 self.setWindowButtonsHidden(true)
-                self.animate { self.sidebarLeading.animator().constant = -self.sidebarWidth.constant }
+                self.sidebarShown.animate(to: 0)
                 return
             }
         }
@@ -207,19 +210,26 @@ final class BrowserRootViewController: NSViewController {
         return sidebar.bounds.contains(sidebar.convert(window.mouseLocationOutsideOfEventStream, from: nil))
     }
 
-    private func animate(_ changes: @escaping () -> Void) {
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            changes()
-            view.layoutSubtreeIfNeeded()
-            return
-        }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            context.allowsImplicitAnimation = true
-            changes()
-            view.layoutSubtreeIfNeeded()
-        }
+    /// Puts the sidebar `shown` of the way on screen, from 0 off the left edge to 1 in place.
+    private func placeSidebar(_ shown: CGFloat) {
+        sidebarLeading.constant = -sidebarWidth.constant * (1 - shown)
+    }
+
+    /// Puts the page `docked` of the way from filling the window to sitting beside the sidebar as a card.
+    private func placeCard(_ docked: CGFloat) {
+        let inset = Self.cardInset * docked
+        cardLeading.constant = sidebarWidth.constant * docked
+        cardTop.constant = inset
+        cardTrailing.constant = -inset
+        cardBottom.constant = -inset
+        content.cornerRadius = PageCardView.cornerRadius * docked
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        // A ready-made shadow shape, so the sidebar's shadow isn't worked out from its pixels every frame.
+        let sidebar = sidebarController.view
+        sidebar.layer?.shadowPath = CGPath(rect: sidebar.bounds, transform: nil)
     }
 
     private func setWindowButtonsHidden(_ hidden: Bool) {
@@ -230,6 +240,8 @@ final class BrowserRootViewController: NSViewController {
 
     private func resize(by delta: CGFloat) {
         sidebarWidth.constant = min(max(sidebarWidth.constant + delta, Self.widthRange.lowerBound), Self.widthRange.upperBound)
+        placeSidebar(sidebarShown.value)
+        placeCard(cardDocked.value)
     }
 }
 
