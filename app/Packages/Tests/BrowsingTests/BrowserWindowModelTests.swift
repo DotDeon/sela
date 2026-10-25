@@ -351,3 +351,15 @@ private struct Harness {
     #expect(h.model.isPinned(h.live("f1")!))
     #expect(!h.model.isPinned(h.live("u1")!))
 }
+
+@MainActor @Test func newTabOpensInTheSelectedSpace() throws {
+    let h = try Harness()
+    h.model.selectSpace("S2")
+    let id = h.model.newTab(url: url("new"))
+    #expect(h.store.document.spaceID(containing: id) == "S2")
+    #expect(h.model.selectedSpaceID == "S2")
+    let second = h.secondWindow()
+    second.selectSpace("S2")
+    let other = second.newTab(url: url("other"))
+    #expect(h.store.document.spaceID(containing: other) == "S2")
+}

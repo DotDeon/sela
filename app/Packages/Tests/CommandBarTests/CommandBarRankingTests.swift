@@ -133,3 +133,27 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
     let results = commandBarResults(query: "https://www.google.com/search?q=x", tabs: [], commands: [], archived: [], history: [], searchEngine: .bing)
     #expect(results.first == .open(URL(string: "https://www.google.com/search?q=x")!, search: nil))
 }
+
+@Test func tabsInOtherSpacesDontMakeATopHit() {
+    var elsewhere = tab("Inbox – Gmail", "mail")
+    elsewhere.isInAnotherSpace = true
+    let results = commandBarResults(query: "inbox", tabs: [elsewhere], commands: [], archived: [], history: [])
+    #expect(kinds(results) == ["search", "tab"])
+}
+
+@Test func recentTabsInThisSpaceComeFirst() {
+    var elsewhere = tab("Recent elsewhere", "elsewhere", minutesAgo: 1)
+    elsewhere.isInAnotherSpace = true
+    let here = tab("Older here", "here", minutesAgo: 5)
+    let results = commandBarResults(query: "", tabs: [elsewhere, here], commands: [], archived: [], history: [])
+    #expect(results == [.tab(here), .tab(elsewhere)])
+}
+
+@Test func locationsNameOtherSpaces() throws {
+    var document = fixtureDocument()
+    try document.setTitle("fold", "Work")
+    #expect(tabLocation(of: "q1", in: document, shownFrom: "S") == "Two")
+    #expect(tabLocation(of: "p2", in: document, shownFrom: "S2") == "One / Work")
+    #expect(tabLocation(of: "u1", in: document, shownFrom: "S") == nil)
+    #expect(tabLocation(of: "f1", in: document, shownFrom: "S") == "Favourites")
+}

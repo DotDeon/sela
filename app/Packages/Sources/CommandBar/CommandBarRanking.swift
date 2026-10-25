@@ -23,7 +23,7 @@ public func matchScore(_ query: String, _ text: String) -> Int? {
 
 /// Command bar rows for a query, in display order:
 /// a site search when the query starts with a site's shortcut, such as `yt cats`, then the typed address or
-/// search (after a tab that matches every word as a word start), then up to 5 tabs
+/// search (after a tab in this space that matches every word as a word start), then up to 5 tabs
 /// (favourites and tabs in folders too, found by title, address or folder name),
 /// 3 commands, 3 archived tabs and 5 history pages. An empty query shows the 6 most recently active tabs.
 public func commandBarResults(
@@ -37,7 +37,10 @@ public func commandBarResults(
 ) -> [CommandBarResult] {
     let words = queryWords(query)
     guard !words.isEmpty else {
-        return tabs.sorted(by: moreRecent).prefix(6).map(CommandBarResult.tab)
+        // This space's tabs first, so Enter doesn't leave the space.
+        let here = tabs.filter { !$0.isInAnotherSpace }.sorted(by: moreRecent)
+        let elsewhere = tabs.filter(\.isInAnotherSpace).sorted(by: moreRecent)
+        return (here + elsewhere).prefix(6).map(CommandBarResult.tab)
     }
     // The site search goes first, so Enter does what the shortcut promised.
     var results: [CommandBarResult] = []
@@ -53,8 +56,9 @@ public func commandBarResults(
 
     var tabRows = rankedTabs.prefix(5).map { CommandBarResult.tab($0.item) }
     // Only the title and host can make a top hit, so a word that happens to be in an address path
-    // ("docs", "com") still searches.
-    if let best = rankedTabs.first, matchScore(query, "\(best.item.title) \(best.item.url?.host() ?? "")") == 2 * words.count {
+    // ("docs", "com") still searches. A tab in another space never does: Enter opens in this space.
+    if let best = rankedTabs.first, !best.item.isInAnotherSpace,
+       matchScore(query, "\(best.item.title) \(best.item.url?.host() ?? "")") == 2 * words.count {
         results.append(tabRows.removeFirst())
     }
     // The site search has its own row above, so this one is the plain address or search.

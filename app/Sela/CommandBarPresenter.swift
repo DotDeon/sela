@@ -148,8 +148,10 @@ final class CommandBarPresenter {
             guard let item = document.item(id), case .tab(let info) = item.kind else { return nil }
             let page = model.pageForDisplay(for: id)
             let title = sidebarTitle(for: item, liveState: page)
+            let spaceID = document.spaceID(containing: id)
             return TabCandidate(id: id, title: title, url: page?.url ?? info.savedURL, lastActiveAt: info.lastActiveAt,
-                                location: tabLocation(of: id, in: document))
+                                location: tabLocation(of: id, in: document, shownFrom: model.selectedSpaceID),
+                                isInAnotherSpace: spaceID != nil && spaceID != model.selectedSpaceID)
         }
     }
 

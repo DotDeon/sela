@@ -11,22 +11,29 @@ public struct TabCandidate: Equatable, Sendable {
     /// Where the tab sits, such as "Favourites" or "Work / Projects", for tabs in a folder or among favourites.
     /// Nil for tabs at the top of a space. Its words find the tab too.
     public var location: String?
+    /// True for a tab in a space other than the one the window shows. Such a tab is never the top hit, so Enter
+    /// stays in the current space, and it comes after this space's tabs when there's no query.
+    public var isInAnotherSpace: Bool
 
-    public init(id: ItemID, title: String, url: URL?, lastActiveAt: Date?, location: String? = nil) {
+    public init(id: ItemID, title: String, url: URL?, lastActiveAt: Date?, location: String? = nil, isInAnotherSpace: Bool = false) {
         self.id = id
         self.title = title
         self.url = url
         self.lastActiveAt = lastActiveAt
         self.location = location
+        self.isInAnotherSpace = isInAnotherSpace
     }
 }
 
 /// The location a tab's command bar row shows: "Favourites" for favourites, the folders it sits in for a tab
-/// in a folder, outermost first, and nil for a tab at the top of its space.
-public func tabLocation(of id: ItemID, in document: SidebarDocument) -> String? {
+/// in a folder, outermost first, and nil for a tab at the top of its space. From `shownFrom`, another space's
+/// tabs start with that space's name.
+public func tabLocation(of id: ItemID, in document: SidebarDocument, shownFrom currentSpace: SpaceID? = nil) -> String? {
     var parts = document.folderPath(of: id)
     if document.containerRole(of: id) == .favorites {
         parts.insert("Favourites", at: 0)
+    } else if let currentSpace, let spaceID = document.spaceID(containing: id), spaceID != currentSpace {
+        parts.insert(document.space(spaceID)?.title ?? "Another Space", at: 0)
     }
     return parts.isEmpty ? nil : parts.joined(separator: " / ")
 }
