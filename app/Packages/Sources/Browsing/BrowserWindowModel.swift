@@ -53,7 +53,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     @ObservationIgnored private var lastVisitedURLs: [TabID: URL] = [:]
     @ObservationIgnored private var dialogAnswers: [UUID: CheckedContinuation<JavaScriptDialogResult, Never>] = [:]
 
-    /// Shows the first space, with its most recently active tab selected.
+    /// Shows the space used last, going by its most recently active tab, with that tab selected.
+    /// Shows the first space when no tab has been active.
     public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, downloads: DownloadList? = nil,
                 permissions: SitePermissions = SitePermissions(), zoomStore: PageZoomStore = PageZoomStore(),
                 translation: TranslationCoordinator = TranslationCoordinator(),
@@ -67,7 +68,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         self.translation = translation
         self.now = now
         selectedSpaceID = sidebar.document.spaces[0].id
-        if let recent = mostRecentTab(in: selectedSpaceID) {
+        if let recent = mostRecentTab() {
             setSelection(recent)
         }
     }
@@ -726,11 +727,11 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         for pane in panes where liveTabs[pane] == nil {
             register(makePage(for: pane), for: pane)
         }
-        let date = now()
         if let previous = selectedItemID, previous != id {
-            sidebar.markActive(previous, at: date)
+            sidebar.markActive(previous, at: now())
         }
-        sidebar.markActive(id, at: date)
+        // Read after the previous tab's time, so the tab shown now is the most recent one.
+        sidebar.markActive(id, at: now())
         selectedItemID = id
         lastSelection[selectedSpaceID] = id
     }
@@ -845,6 +846,14 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         return candidates
             .filter { $0 != excluded }
             .compactMap { id in tabInfo(id)?.lastActiveAt.map { (id, $0) } }
+            .max { $0.1 < $1.1 }?
+            .0
+    }
+
+    /// The pinned or unpinned tab, in any space, that was active most recently. Nil when none has been active.
+    private func mostRecentTab() -> ItemID? {
+        document.spaces
+            .compactMap { space in mostRecentTab(in: space.id).flatMap { id in tabInfo(id)?.lastActiveAt.map { (id, $0) } } }
             .max { $0.1 < $1.1 }?
             .0
     }
