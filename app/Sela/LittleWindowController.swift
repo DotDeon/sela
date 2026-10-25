@@ -265,6 +265,10 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
 
     @objc func findPreviousInPage(_ sender: Any?) { findBar?.findPrevious() }
 
+    @objc func printPage(_ sender: Any?) { PagePrinting.print(model.tab, in: window) }
+
+    @objc func exportPDF(_ sender: Any?) { PagePrinting.exportPDF(model.tab, in: window) }
+
     @objc func copyURL(_ sender: Any?) {
         guard let url = model.tab?.state.url else { return }
         NSPasteboard.general.clearContents()
@@ -287,7 +291,7 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
-        case #selector(openInSela(_:)), #selector(copyURL(_:)), #selector(reloadTab(_:)):
+        case #selector(openInSela(_:)), #selector(copyURL(_:)), #selector(reloadTab(_:)), #selector(printPage(_:)), #selector(exportPDF(_:)):
             return model.tab?.state.url != nil
         case #selector(goBackInTab(_:)):
             return model.tab?.state.canGoBack == true

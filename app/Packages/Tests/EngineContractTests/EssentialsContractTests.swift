@@ -26,6 +26,15 @@ struct EssentialsContractTests {
     }
 
     @Test(arguments: EngineUnderTest.allCases)
+    func pdfHoldsThePage(engine: EngineUnderTest) async throws {
+        let tab = try await loadedTab(engine.make(), try site.page("pdf.html", "<p>Printed words</p>"))
+        tab.contentView.frame = NSRect(x: 0, y: 0, width: 800, height: 600)
+        let data = try await tab.pdf()
+        #expect(data.starts(with: Data("%PDF".utf8)))
+        #expect(tab.printOperation(with: NSPrintInfo()) != nil)
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
     func downloadsArriveWhereTheDelegateSays(engine: EngineUnderTest) async throws {
         // A file WebKit can't show is downloaded, the same way a server's attachment is.
         try Data("hello download".utf8).write(to: site.folder.appending(path: "data.bin"))

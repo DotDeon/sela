@@ -29,6 +29,10 @@ public final class FakeTab: BrowserTab {
     public private(set) var isInPictureInPicture = false
     /// What `thumbnail(width:)` answers.
     @ObservationIgnored public var thumbnailForTesting: NSImage?
+    /// How many times a print was asked for. A fake has no page, so it answers with no operation.
+    @ObservationIgnored public private(set) var printRequests = 0
+    /// What `pdf()` answers.
+    @ObservationIgnored public var pdfForTesting = Data()
 
     /// Strong on purpose: tests often keep only the tab. The cycle with `FakeEngine.madeTabs` is fine for a test double.
     @ObservationIgnored private let engine: FakeEngine
@@ -87,6 +91,13 @@ public final class FakeTab: BrowserTab {
     }
 
     public func thumbnail(width: CGFloat) async -> NSImage? { thumbnailForTesting }
+
+    public func printOperation(with info: NSPrintInfo) -> NSPrintOperation? {
+        printRequests += 1
+        return nil
+    }
+
+    public func pdf() async throws -> Data { pdfForTesting }
 
     /// The page turns out to be an article, or not, as a page does once it has loaded.
     public func simulateArticle(_ isArticle: Bool) {

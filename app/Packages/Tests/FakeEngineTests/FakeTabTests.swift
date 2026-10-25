@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 import BrowserEngine
@@ -129,6 +130,14 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     delegate.followsLinks = true
     tab.simulateLinkClick(to: c)
     #expect(tab.loadedURLs == [a, c])
+}
+
+@MainActor @Test func fakePrintingIsRecorded() async throws {
+    let (_, tab) = makeTab(a)
+    #expect(tab.printOperation(with: NSPrintInfo()) == nil)
+    #expect(tab.printRequests == 1)
+    tab.pdfForTesting = Data("%PDF".utf8)
+    #expect(try await tab.pdf() == Data("%PDF".utf8))
 }
 
 @MainActor @Test func fakeRestoreLoadsTheSnapshotAddress() {

@@ -172,6 +172,20 @@ final class WebKitTab: NSObject, BrowserTab {
         return try? await view.takeSnapshot(configuration: configuration)
     }
 
+    // MARK: Printing
+
+    func printOperation(with info: NSPrintInfo) -> NSPrintOperation? {
+        guard !isClosed, webView.url != nil else { return nil }
+        let operation = (readerView ?? webView).printOperation(with: info)
+        // WebKit lays the page out to its print view's frame, which starts empty and would print nothing.
+        operation.view?.frame = NSRect(origin: .zero, size: info.paperSize)
+        return operation
+    }
+
+    func pdf() async throws -> Data {
+        try await (readerView ?? webView).pdf()
+    }
+
     /// A page from a submitted form would be sent again on waking, and edited fields or a focused editor would be lost.
     func hasUnsavedState() async -> Bool {
         if showingFormResult { return true }

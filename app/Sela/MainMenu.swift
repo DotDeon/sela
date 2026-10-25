@@ -51,6 +51,10 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Close Tab", #selector(BrowserWindowController.closeTab(_:)), "w"))
         menu.addItem(item("Close Window", #selector(NSWindow.performClose(_:)), "w", [.command, .shift]))
+        menu.addItem(.separator())
+        menu.addItem(item("Export as PDF…", #selector(BrowserWindowController.exportPDF(_:))))
+        menu.addItem(.separator())
+        menu.addItem(item("Print…", #selector(BrowserWindowController.printPage(_:)), "p"))
         return menu
     }
 

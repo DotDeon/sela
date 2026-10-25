@@ -153,6 +153,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         downloadsPopover?.show(relativeTo: root.sidebarController.downloadsButton)
     }
 
+    // MARK: Printing
+
+    @objc func printPage(_ sender: Any?) { PagePrinting.print(model.selectedTab, in: window) }
+
+    @objc func exportPDF(_ sender: Any?) { PagePrinting.exportPDF(model.selectedTab, in: window) }
+
     /// Ctrl+Shift+=: a new pane beside the current tab, with the command bar open to choose its page.
     @objc func addSplitView(_ sender: Any?) {
         guard model.addSplitPane() != nil else { return }
@@ -196,6 +202,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             }
             item.state = contentBlocker.isBlocking(on: url) ? .on : .off
             return true
+        case #selector(printPage(_:)), #selector(exportPDF(_:)):
+            return model.selectedTab?.state.url != nil
         default:
             return true
         }

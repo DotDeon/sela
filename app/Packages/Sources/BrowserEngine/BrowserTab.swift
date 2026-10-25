@@ -80,6 +80,11 @@ public protocol BrowserTab: AnyObject, Observable {
     func exitPictureInPicture()
     /// A picture of what the page shows, `width` points wide. Nil when there's nothing to draw.
     func thumbnail(width: CGFloat) async -> NSImage?
+    /// Prints what the page shows, the reader when it's on, through the standard print panel.
+    /// Nil when there's no page to print.
+    func printOperation(with info: NSPrintInfo) -> NSPrintOperation?
+    /// What the page shows as a PDF, one tall page at the page's width.
+    func pdf() async throws -> Data
     func goBack()
     func goForward()
     func reload()
