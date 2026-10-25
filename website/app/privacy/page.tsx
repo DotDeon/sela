@@ -15,7 +15,7 @@ export default function Privacy() {
     >
       <section className="doc__section">
         <h2>What Sela sends</h2>
-        <p>Apart from the pages you visit, Sela makes three kinds of request.</p>
+        <p>Apart from the pages you visit, Sela makes four kinds of request.</p>
         <ul>
           <li>
             <strong>Filter lists.</strong> Every 6 hours Sela downloads the AdGuard Base list from
@@ -27,6 +27,12 @@ export default function Privacy() {
             address goes as a search to the search engine you choose in Settings. That&rsquo;s Google
             unless you change it. The others are DuckDuckGo, Bing, Ecosia, Kagi, Brave Search and
             Startpage.
+          </li>
+          <li>
+            <strong>Remote settings.</strong> Once a day Sela downloads a small file from this
+            website, dotdeon.github.io, that can change search engine addresses, default settings
+            and switches, or show a notice. It holds no code, and Sela only uses it when its signature
+            checks out. GitHub, which hosts the site, sees your IP address and nothing else.
           </li>
           <li>
             <strong>Site icons.</strong> Sela loads each site&rsquo;s icon from the address the site

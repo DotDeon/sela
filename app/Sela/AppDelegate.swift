@@ -6,6 +6,7 @@ import ContentBlocking
 import Downloads
 import Favicons
 import History
+import RemoteSettings
 import Sidebar
 import SidebarModel
 import SidebarUI
@@ -33,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var contentBlocker: ContentBlocker!
     /// Nil on systems too old for Web Extensions.
     private var extensions: ExtensionsController?
+    /// Nil for measuring runs, and while the app has no real key for checking the remote settings.
+    private var remoteSettings: RemoteSettingsController?
     private var listRefreshTimer: Timer?
     private var missingListTimer: Timer?
     private var wakeObserver: NSObjectProtocol?
@@ -43,6 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         moveDataFromOldName()
+        // Before anything reads a setting, so remote defaults and search engines apply from the start.
+        loadRemoteSettings()
         NSApp.mainMenu = MainMenu.make()
         _ = updater
         engine.searchURL = { SearchEngineSettings().engine.searchURL(for: $0) }
@@ -78,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         NSApp.activate()
         reportLoadProblem()
+        remoteSettings?.start()
         if !pendingURLs.isEmpty {
             application(NSApp, open: pendingURLs)
             pendingURLs = []
@@ -333,6 +339,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.contentBlocker.refreshIfNeeded() }
         }
+    }
+
+    // MARK: Remote settings
+
+    /// Measuring runs with `-SelaDataFolder` never fetch, as with updates, so they stay offline and repeatable.
+    private func loadRemoteSettings() {
+        guard dataFolderOverride == nil,
+              let support = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        else { return }
+        let folder = support.appending(path: "Sela/RemoteSettings", directoryHint: .isDirectory)
+        remoteSettings = RemoteSettingsController(folder: folder) { [weak self] message in
+            self?.present(message) ?? false
+        }
+    }
+
+    /// An alert, or a banner in the frontmost window. A banner waits for the next launch when no window is open.
+    private func present(_ message: RemoteMessage) -> Bool {
+        switch message.style {
+        case .alert:
+            let alert = NSAlert()
+            alert.messageText = message.text
+            alert.addButton(withTitle: "OK")
+            if message.link != nil { alert.addButton(withTitle: "Learn More") }
+            if alert.runModal() == .alertSecondButtonReturn, let link = message.link {
+                application(NSApp, open: [link])
+            }
+        case .banner:
+            guard let controller = frontmostWindowController() else { return false }
+            MessageBanner.show(message, in: controller.pageArea) { [weak self] link in
+                self?.application(NSApp, open: [link])
+            }
+        }
+        return true
     }
 
     // MARK: Extensions

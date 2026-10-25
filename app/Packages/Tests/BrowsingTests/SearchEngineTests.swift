@@ -33,7 +33,7 @@ func queriesArePercentEncoded(query: String, encoded: String) {
 }
 
 @Test func everyEngineHasADistinctName() {
-    let names = SearchEngine.allCases.map(\.name)
+    let names = SearchEngine.builtIn.map(\.name)
     #expect(Set(names).count == names.count)
     #expect(SearchEngine.braveSearch.name == "Brave Search")
 }

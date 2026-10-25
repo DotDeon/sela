@@ -15,6 +15,8 @@ import SidebarUI
 final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMenuItemValidation {
     let model: BrowserWindowModel
     var onClose: (() -> Void)?
+    /// The area beside the sidebar where pages show.
+    var pageArea: NSView { root.pageArea }
 
     private let root: BrowserRootViewController
     private var dialogPresenter: DialogPresenter?

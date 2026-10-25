@@ -1,5 +1,6 @@
 import BrowserEngine
 import Foundation
+import RemoteSettings
 
 /// Decides when a window's videos float in picture in picture: a tab you leave while its video plays floats it,
 /// and the video comes back when you return. Leaving means selecting another tab or the window losing focus.
@@ -66,18 +67,25 @@ public struct AutoPictureInPicture: Equatable, Sendable {
     }
 }
 
-/// Whether videos float when you leave their tab, stored in `UserDefaults`. On unless turned off.
+/// Whether videos float when you leave their tab, stored in `UserDefaults`. Until you choose, the remote
+/// settings' default applies, and without one it's on.
 public struct PictureInPictureSettings {
     public static let key = "AutoPictureInPicture"
 
     private let defaults: UserDefaults
+    private let remote: RemoteSettings
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = .standard, remote: RemoteSettings = .current) {
         self.defaults = defaults
+        self.remote = remote
     }
 
+    /// Until you choose, picking the value already in use stores nothing, so a later change to the default still reaches you.
     public var isEnabled: Bool {
-        get { defaults.object(forKey: Self.key) as? Bool ?? true }
-        nonmutating set { defaults.set(newValue, forKey: Self.key) }
+        get { defaults.object(forKey: Self.key) as? Bool ?? remote.defaults.autoPictureInPicture ?? true }
+        nonmutating set {
+            if defaults.object(forKey: Self.key) as? Bool == nil, newValue == isEnabled { return }
+            defaults.set(newValue, forKey: Self.key)
+        }
     }
 }
