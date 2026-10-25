@@ -56,7 +56,8 @@ public struct RemoteSearchEngine: Equatable, Sendable {
         self.template = template
     }
 
-    static func isValidTemplate(_ template: String) -> Bool {
+    /// An https address of up to 500 characters with a host and `%s`. Site searches follow the same rule.
+    public static func isValidTemplate(_ template: String) -> Bool {
         guard template.count <= 500, template.contains("%s"),
               let url = URL(string: template.replacingOccurrences(of: "%s", with: "q")),
               url.scheme == "https", let host = url.host(), !host.isEmpty

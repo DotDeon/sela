@@ -43,10 +43,7 @@ public struct SearchEngine: Hashable, Sendable {
     }
 
     public func searchURL(for query: String) -> URL? {
-        var allowed = CharacterSet.urlQueryAllowed
-        allowed.remove(charactersIn: "+&=?#")
-        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
-        return URL(string: template.replacingOccurrences(of: "%s", with: encoded))
+        Browsing.searchURL(template: template, query: query)
     }
 
     /// Whether `url` is a search on this engine.
@@ -54,6 +51,14 @@ public struct SearchEngine: Hashable, Sendable {
         let prefix = template.prefix { $0 != "%" }
         return url.absoluteString.hasPrefix(prefix)
     }
+}
+
+/// `template` with `%s` replaced by `query`, escaped so the query's own `&`, `=`, `+` and `#` stay in it.
+public func searchURL(template: String, query: String) -> URL? {
+    var allowed = CharacterSet.urlQueryAllowed
+    allowed.remove(charactersIn: "+&=?#")
+    guard let encoded = query.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
+    return URL(string: template.replacingOccurrences(of: "%s", with: encoded))
 }
 
 /// The chosen search engine, stored in `UserDefaults`. Someone who hasn't chosen gets the remote settings'

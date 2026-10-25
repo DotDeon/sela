@@ -133,6 +133,7 @@ private struct GeneralSettings: View {
                 }
             Text("Adds Inspect Element to a page's menu and Show Web Inspector to the View menu.")
                 .font(.footnote).foregroundStyle(.secondary)
+            SiteSearchSection()
         }
         .formStyle(.grouped)
         // The window is reused, so read the choices again each time it shows: menus may have changed them.
@@ -163,6 +164,100 @@ private struct GeneralSettings: View {
             }
             isDefault = Self.brIsDefault()
         }
+    }
+}
+
+/// The sites the command bar searches from a shortcut, with adding, editing and removing them.
+private struct SiteSearchSection: View {
+    @State private var sites = SiteSearchSettings().all
+    @State private var selected: SiteSearch.ID?
+    @State private var editing: SiteSearch?
+
+    var body: some View {
+        Section("Site search") {
+            Table(sites, selection: $selected) {
+                TableColumn("Name", value: \.name)
+                TableColumn("Shortcut", value: \.shortcut).width(min: 60, ideal: 70)
+                TableColumn("Address", value: \.template)
+            }
+            .contextMenu(forSelectionType: SiteSearch.ID.self) { _ in } primaryAction: { ids in
+                editing = sites.first { ids.contains($0.id) }
+            }
+            .frame(height: 160)
+            HStack {
+                Button("Add…") { editing = SiteSearch(name: "", shortcut: "", template: "https://") }
+                Button("Edit…") { editing = sites.first { $0.id == selected } }.disabled(selected == nil)
+                Button("Remove") {
+                    guard let selected else { return }
+                    SiteSearchSettings().remove(selected)
+                    reload()
+                }
+                .disabled(selected == nil)
+                Spacer()
+                Button("Restore Defaults") {
+                    SiteSearchSettings().restoreDefaults()
+                    reload()
+                }
+                .disabled(sites == SiteSearch.defaults)
+            }
+            Text("In the command bar, type a shortcut, a space and what to look for, such as yt cats. Addresses start with https and have %s where the search goes.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        .onAppear(perform: reload)
+        .sheet(item: $editing) { site in
+            SiteSearchEditor(site: site, isNew: !sites.contains { $0.id == site.id }) { saved in
+                SiteSearchSettings().save(saved)
+                reload()
+                selected = saved.id
+            }
+        }
+    }
+
+    private func reload() {
+        sites = SiteSearchSettings().all
+        if !sites.contains(where: { $0.id == selected }) { selected = nil }
+    }
+}
+
+/// A sheet for one site search. Save stays off until the name, shortcut and address pass their checks.
+private struct SiteSearchEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @State var site: SiteSearch
+    let isNew: Bool
+    let onSave: (SiteSearch) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(isNew ? "Add Site Search" : "Edit Site Search").font(.headline)
+            Form {
+                TextField("Name", text: $site.name, prompt: Text("YouTube"))
+                TextField("Shortcut", text: $site.shortcut, prompt: Text("yt"))
+                TextField("Address", text: $site.template, prompt: Text("https://www.youtube.com/results?search_query=%s"))
+            }
+            Text("Put %s where the search goes. The address must start with https, and the shortcut is one word.")
+                .font(.footnote).foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save") {
+                    site.name = site.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    site.shortcut = site.shortcut.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    onSave(site)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!trimmed.isValid)
+            }
+        }
+        .padding(20)
+        .frame(width: 460)
+    }
+
+    private var trimmed: SiteSearch {
+        var copy = site
+        copy.name = copy.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.shortcut = copy.shortcut.trimmingCharacters(in: .whitespacesAndNewlines)
+        return copy
     }
 }
 
