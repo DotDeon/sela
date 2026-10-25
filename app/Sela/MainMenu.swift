@@ -100,8 +100,18 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Back", #selector(BrowserWindowController.goBackInTab(_:)), "["))
         menu.addItem(item("Forward", #selector(BrowserWindowController.goForwardInTab(_:)), "]"))
+        menu.addItem(.separator())
+        let developer = NSMenuItem(title: "Developer", action: nil, keyEquivalent: "")
+        let developerMenu = NSMenu(title: "Developer")
+        developerMenu.addItem(item("Show Web Inspector", #selector(BrowserWindowController.showWebInspector(_:)), "i", [.command, .option]))
+        developer.submenu = developerMenu
+        menu.addItem(developer)
+        // The submenu, and its shortcut, only exist while developer tools are on in Settings.
+        menu.delegate = viewMenuDelegate
         return menu
     }
+
+    private static let viewMenuDelegate = ViewMenuDelegate()
 
     private static func tabMenu() -> NSMenu {
         let menu = NSMenu(title: "Tab")
@@ -201,5 +211,17 @@ enum MainMenu {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.keyEquivalentModifierMask = modifiers
         return item
+    }
+}
+
+/// Hides the View menu's Developer submenu, and the separator above it, while developer tools are off.
+/// AppKit asks before showing the menu and before matching a shortcut, so a hidden shortcut doesn't fire.
+@MainActor
+private final class ViewMenuDelegate: NSObject, NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let hidden = !DeveloperToolsSettings().isEnabled
+        guard let developer = menu.items.last, developer.title == "Developer" else { return }
+        developer.isHidden = hidden
+        menu.items.dropLast().last?.isHidden = hidden
     }
 }

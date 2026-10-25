@@ -80,6 +80,7 @@ private struct GeneralSettings: View {
     @State private var isDefault = GeneralSettings.brIsDefault()
     @State private var linkDestination = ExternalLinkSettings().destination
     @State private var floatsVideos = PictureInPictureSettings().isEnabled
+    @State private var showsDeveloperTools = DeveloperToolsSettings().isEnabled
 
     var body: some View {
         Form {
@@ -125,6 +126,13 @@ private struct GeneralSettings: View {
                 ArchiveSweeper.hours = value
                 onSettingsChanged()
             }
+            Toggle("Show developer tools", isOn: $showsDeveloperTools)
+                .onChange(of: showsDeveloperTools) { _, value in
+                    DeveloperToolsSettings().isEnabled = value
+                    onSettingsChanged()
+                }
+            Text("Adds Inspect Element to a page's menu and Show Web Inspector to the View menu.")
+                .font(.footnote).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
         // The window is reused, so read the choices again each time it shows: menus may have changed them.
@@ -140,6 +148,7 @@ private struct GeneralSettings: View {
         isDefault = Self.brIsDefault()
         linkDestination = ExternalLinkSettings().destination
         floatsVideos = PictureInPictureSettings().isEnabled
+        showsDeveloperTools = DeveloperToolsSettings().isEnabled
     }
 
     private static func brIsDefault() -> Bool {

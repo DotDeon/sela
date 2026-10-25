@@ -94,6 +94,8 @@ public protocol BrowserTab: AnyObject, Observable {
     func setPageZoom(_ zoom: Double)
     /// Turns the tab's sound off, or back on. `state.isMuted` follows. Not kept between launches.
     func setMuted(_ muted: Bool)
+    /// Opens Web Inspector on the page. Does nothing while the engine isn't inspectable.
+    func showWebInspector()
     /// Prints what the page shows, the reader when it's on, through the standard print panel.
     /// Nil when there's no page to print.
     func printOperation(with info: NSPrintInfo) -> NSPrintOperation?

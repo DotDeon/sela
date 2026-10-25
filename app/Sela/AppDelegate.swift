@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.mainMenu = MainMenu.make()
         _ = updater
         engine.searchURL = { SearchEngineSettings().engine.searchURL(for: $0) }
+        engine.isInspectable = DeveloperToolsSettings().isEnabled
         if let dataFolderOverride {
             try? FileManager.default.createDirectory(at: dataFolderOverride, withIntermediateDirectories: true)
         }
@@ -231,8 +232,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 currentSpace: { [weak self] in self?.frontmostWindowController()?.model.selectedSpaceID },
                 onDeleteProfile: { [weak self] id in self?.deleteProfile(id) }
             ) { [weak self] in
-                self?.sweeper?.sweep()
-                Task { await self?.tabSleeper?.sleepUnusedTabs() }
+                guard let self else { return }
+                sweeper?.sweep()
+                engine.isInspectable = DeveloperToolsSettings().isEnabled
+                Task { await self.tabSleeper?.sleepUnusedTabs() }
             }
         }
         settingsWindow?.showWindow(nil)

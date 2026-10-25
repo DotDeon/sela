@@ -31,6 +31,8 @@ public final class FakeTab: BrowserTab {
     @ObservationIgnored public var thumbnailForTesting: NSImage?
     /// How many times a print was asked for. A fake has no page, so it answers with no operation.
     @ObservationIgnored public private(set) var printRequests = 0
+    /// How many times Web Inspector was asked for while the engine allowed it.
+    @ObservationIgnored public private(set) var inspectorRequests = 0
     /// What `pdf()` answers.
     @ObservationIgnored public var pdfForTesting = Data()
 
@@ -98,6 +100,11 @@ public final class FakeTab: BrowserTab {
 
     public func setMuted(_ muted: Bool) {
         state.isMuted = muted
+    }
+
+    public func showWebInspector() {
+        guard engine.isInspectable else { return }
+        inspectorRequests += 1
     }
 
     /// The page starts or stops making sound.

@@ -156,6 +156,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     /// Tab > Mute Tab: the selected tab's sound off, or back on.
     @objc func toggleMute(_ sender: Any?) { model.toggleMute() }
 
+    /// View > Developer > Show Web Inspector, while developer tools are on in Settings.
+    @objc func showWebInspector(_ sender: Any?) { model.selectedTab?.showWebInspector() }
+
     // MARK: Zoom
 
     @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
@@ -220,6 +223,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case #selector(toggleMute(_:)):
             item.state = model.selectedTab?.state.isMuted == true ? .on : .off
             return model.selectedTab != nil
+        case #selector(showWebInspector(_:)):
+            return DeveloperToolsSettings().isEnabled && model.selectedTab?.state.url != nil
         case #selector(resetZoom(_:)):
             guard let zoom = model.selectedTab?.state.pageZoom else { return false }
             return !PageZoom.isActualSize(zoom)

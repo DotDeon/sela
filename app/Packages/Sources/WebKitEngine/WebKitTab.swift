@@ -50,7 +50,7 @@ final class WebKitTab: NSObject, BrowserTab {
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
-        webView.isInspectable = true
+        webView.isInspectable = engine.isInspectable
         readerNavigation.tab = self
         observeWebView()
     }
@@ -220,6 +220,17 @@ final class WebKitTab: NSObject, BrowserTab {
     deinit {
         // The web view goes with the tab, and would complain about an observer it still had.
         if observesAudio { webView.removeObserver(self, forKeyPath: Self.playingAudioKey) }
+    }
+
+    // MARK: Web Inspector
+
+    /// WebKit opens its inspector only through a private object, the one Safari uses. Without it, nothing happens.
+    func showWebInspector() {
+        guard !isClosed, engine.isInspectable, webView.responds(to: NSSelectorFromString("_inspector")),
+              let inspector = webView.value(forKey: "_inspector") as? NSObject
+        else { return }
+        let show = NSSelectorFromString("show")
+        if inspector.responds(to: show) { inspector.perform(show) }
     }
 
     // MARK: Zoom
@@ -496,7 +507,8 @@ extension WebKitTab: WKUIDelegate {
         // A popup gets its own rules and page script, so blocking can differ between it and the page that opened it.
         let bridge = PageScriptBridge()
         configuration.userContentController = engine.makeContentController(bridge: bridge)
-        // WebKit hands over the opener's configuration, so the popup shares its data store and profile.
+        // WebKit hands over the opener's configuration, so the popup shares its data store and profile. Its
+        // preferences are a copy taken now, so a popup keeps the developer tools setting it opened with.
         let popup = WebKitTab(webView: WKWebView(frame: .zero, configuration: configuration), engine: engine, profile: profile)
         bridge.tab = popup
         engine.register(popup)

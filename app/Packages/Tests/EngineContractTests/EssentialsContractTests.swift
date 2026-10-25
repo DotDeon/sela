@@ -54,6 +54,7 @@ struct EssentialsContractTests {
         let tab = engine.make().makeTab(url: nil)
         // Pages only play once they're on screen, as a tab is.
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         window.contentView = tab.contentView
         window.orderFront(nil)
         defer { window.close() }

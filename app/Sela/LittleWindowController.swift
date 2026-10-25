@@ -267,6 +267,8 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
 
     @objc func toggleMute(_ sender: Any?) { model.toggleMute() }
 
+    @objc func showWebInspector(_ sender: Any?) { model.tab?.showWebInspector() }
+
     @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
 
     @objc func zoomOut(_ sender: Any?) { model.zoomOut() }
@@ -311,6 +313,8 @@ final class LittleWindowController: NSWindowController, NSWindowDelegate, NSMenu
         case #selector(toggleMute(_:)):
             item.state = model.tab?.state.isMuted == true ? .on : .off
             return model.tab != nil
+        case #selector(showWebInspector(_:)):
+            return DeveloperToolsSettings().isEnabled && model.tab?.state.url != nil
         case #selector(toggleSiteBlocking(_:)):
             guard let url = blockableURL, let contentBlocker else {
                 item.state = .off

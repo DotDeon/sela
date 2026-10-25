@@ -146,6 +146,15 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     #expect(!tab.state.isMuted)
 }
 
+@MainActor @Test func fakeInspectorOnlyOpensWhileTheEngineAllowsIt() {
+    let (engine, tab) = makeTab(a)
+    tab.showWebInspector()
+    #expect(tab.inspectorRequests == 0)
+    engine.isInspectable = true
+    tab.showWebInspector()
+    #expect(tab.inspectorRequests == 1)
+}
+
 @MainActor @Test func fakeZoomReachesTheState() {
     let (_, tab) = makeTab(a)
     #expect(tab.state.pageZoom == 1)

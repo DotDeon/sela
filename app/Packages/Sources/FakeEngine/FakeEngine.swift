@@ -5,6 +5,7 @@ import Foundation
 @MainActor
 public final class FakeEngine: ContentBlockingEngine {
     public private(set) var madeTabs: [FakeTab] = []
+    public var isInspectable = false
     /// What the last `installContentRules` call installed.
     public private(set) var installedRuleSets: [ContentRuleSet] = []
     public private(set) var installCount = 0
