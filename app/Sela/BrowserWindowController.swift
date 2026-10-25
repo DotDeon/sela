@@ -6,6 +6,7 @@ import Downloads
 import Browsing
 import Favicons
 import History
+import PageTranslation
 import Sidebar
 import SidebarModel
 import SidebarUI
@@ -29,6 +30,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     private let extensions: ExtensionsController?
     private var pictureInPicture: PictureInPictureController?
     private var tabOverview: TabOverviewPresenter?
+    private var translator: AppleTranslator?
+    private let translationPopover = TranslationPopover()
 
     init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore, history: HistoryStore?, favicons: FaviconStore,
          contentBlocker: ContentBlocker?, downloads: DownloadList, extensions: ExtensionsController?) {
@@ -81,6 +84,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         root.sidebarController.onAddressClicked = { [weak self] in self?.focusAddressBar(nil) }
         root.sidebarController.onNewTabClicked = { [weak self] in self?.newTab(nil) }
         root.sidebarController.onToggleSidebarClicked = { [weak self] in self?.toggleSidebar(nil) }
+        root.sidebarController.onTranslateClicked = { [weak self] anchor in self?.translateButtonClicked(anchor) }
+        let translator = AppleTranslator(host: root.view)
+        self.translator = translator
+        model.translation.translator = translator
         if SidebarSettings().isHidden { root.toggleSidebar() }
         keepObserving { [weak self] in self?.updateTitle() }
         if let extensions { connect(extensions) }
@@ -189,6 +196,11 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             let state = model.selectedTab?.state
             item.state = state?.isShowingReader == true ? .on : .off
             return state?.isReaderAvailable == true || state?.isShowingReader == true
+        case #selector(translatePage(_:)):
+            guard let translator = model.selectedTranslator else { return false }
+            return !translator.status.isActive
+        case #selector(showOriginalPage(_:)):
+            return model.selectedTranslator?.status.isActive == true
         case #selector(toggleSiteBlocking(_:)):
             guard let url = blockableURL, let contentBlocker else {
                 item.state = .off
@@ -222,6 +234,64 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
     @objc func toggleReader(_ sender: Any?) {
         Task {
             if await !model.toggleReader() { NSSound.beep() }
+        }
+    }
+
+    // MARK: Translation
+
+    /// View > Translate Page: the page's text in the language from Settings, translated on this Mac.
+    @objc func translatePage(_ sender: Any?) {
+        guard let translator = model.selectedTranslator, !translator.status.isActive else {
+            NSSound.beep()
+            return
+        }
+        Task {
+            await translator.translate()
+            showTranslationNote(for: translator)
+        }
+    }
+
+    /// View > Show Original: the page's own text back.
+    @objc func showOriginalPage(_ sender: Any?) {
+        model.showOriginalSelectedPage()
+    }
+
+    /// The Translate button: the offer while the page shows its own text, the original once it's translated.
+    private func translateButtonClicked(_ anchor: NSView) {
+        guard let translator = model.selectedTranslator else { return }
+        if translator.status.isActive {
+            translator.showOriginal()
+            return
+        }
+        translationPopover.showOffer(from: translator.sourceLanguage, to: translator.targetLanguage, relativeTo: anchor) { [weak self] in
+            self?.translatePage(nil)
+        } onDismiss: { [weak self] in
+            self?.dismissTranslationOffer()
+        }
+    }
+
+    private func dismissTranslationOffer() {
+        guard let tab = model.selectedTab, let translator = model.selectedTranslator else { return }
+        let language = translator.sourceLanguage.displayName
+        guard model.translation.dismissOffer(for: tab) else { return }
+        translationPopover.showNote("Sela won't offer to translate \(language) again",
+                                    "You can change this in Settings > General.", relativeTo: root.sidebarController.translationAnchor)
+    }
+
+    /// Says why a page didn't translate, when it didn't.
+    private func showTranslationNote(for translator: PageTranslator) {
+        guard model.selectedTranslator === translator else { return }
+        let pair = "\(translator.sourceLanguage.displayName) to \(translator.targetLanguage.displayName)"
+        let anchor = root.sidebarController.translationAnchor
+        switch translator.status {
+        case .unsupported:
+            translationPopover.showNote("This Mac can't translate \(pair)", "Apple's translation doesn't cover this pair of languages yet.", relativeTo: anchor)
+        case .downloadNeeded:
+            translationPopover.showNote("Translating \(pair) needs a download", "Choose Translate Page again to download the languages.", relativeTo: anchor)
+        case .failed:
+            translationPopover.showNote("Sela couldn't translate this page", "The page shows its own text. Try again in a moment.", relativeTo: anchor)
+        default:
+            break
         }
     }
 
@@ -283,6 +353,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case "rotate-split": rotateSplitView(nil)
         case "toggle-site-blocking": toggleSiteBlocking(nil)
         case "toggle-reader": toggleReader(nil)
+        case "translate-page": translatePage(nil)
+        case "show-original": showOriginalPage(nil)
         case "tab-overview": toggleTabOverview(nil)
         case "new-window": NSApp.sendAction(#selector(AppDelegate.newWindow(_:)), to: nil, from: nil)
         default: break

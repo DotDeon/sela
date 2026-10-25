@@ -35,6 +35,8 @@ final class CommandBarPresenter {
         CommandCandidate(id: "rotate-split", title: "Rotate Split View", keywords: ["vertical", "horizontal"]),
         CommandCandidate(id: "tab-overview", title: "Tab Overview", keywords: ["grid", "all", "thumbnails", "expose"]),
         CommandCandidate(id: "toggle-reader", title: "Show or Hide Reader", keywords: ["article", "read"]),
+        CommandCandidate(id: "translate-page", title: "Translate Page", keywords: ["language", "translation"]),
+        CommandCandidate(id: "show-original", title: "Show Original Page", keywords: ["untranslate", "translation"]),
         CommandCandidate(id: "toggle-site-blocking", title: "Turn Ad Blocking On or Off for This Site", keywords: ["adblock", "ads", "tracker", "shield"]),
     ]
 

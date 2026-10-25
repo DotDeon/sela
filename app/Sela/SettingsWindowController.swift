@@ -5,6 +5,7 @@ import CloudSync
 import ContentBlocking
 import Extensions
 import History
+import PageTranslation
 import Passkeys
 import Sidebar
 import SidebarModel
@@ -86,6 +87,11 @@ private struct GeneralSettings: View {
     @State private var isDefault = GeneralSettings.brIsDefault()
     @State private var linkDestination = ExternalLinkSettings().destination
     @State private var floatsVideos = PictureInPictureSettings().isEnabled
+    @State private var translateTo = TranslationSettings().targetLanguage.minimalIdentifier
+    /// The languages pages can be translated into, once the Translation framework has listed them.
+    @State private var translationLanguages: [Locale.Language] = []
+    @State private var offersTranslation = TranslationSettings().offersTranslation
+    @State private var neverTranslate = NeverTranslateMemory().languages
 
     var body: some View {
         Form {
@@ -112,6 +118,24 @@ private struct GeneralSettings: View {
             .onChange(of: linkDestination) { _, value in ExternalLinkSettings().destination = value }
             Toggle("Move playing videos to picture in picture when you switch away", isOn: $floatsVideos)
                 .onChange(of: floatsVideos) { _, value in PictureInPictureSettings().isEnabled = value }
+            Picker("Translate to", selection: $translateTo) {
+                ForEach(translationChoices, id: \.minimalIdentifier) { language in
+                    Text(language.displayName).tag(language.minimalIdentifier)
+                }
+            }
+            .onChange(of: translateTo) { _, value in TranslationSettings().targetLanguage = Locale.Language(identifier: value) }
+            Toggle("Offer to translate pages in other languages", isOn: $offersTranslation)
+                .onChange(of: offersTranslation) { _, value in TranslationSettings().offersTranslation = value }
+            if !neverTranslate.isEmpty {
+                HStack {
+                    Text("Never translate \(neverTranslate.map(\.displayName).formatted(.list(type: .and)))")
+                    Spacer()
+                    Button("Reset") {
+                        NeverTranslateMemory().reset()
+                        neverTranslate = []
+                    }
+                }
+            }
             Picker("Sleep unused tabs after", selection: $sleepMinutes) {
                 Text("5 minutes").tag(5)
                 Text("15 minutes").tag(15)
@@ -136,6 +160,27 @@ private struct GeneralSettings: View {
         // The window is reused, so read the choices again each time it shows: menus may have changed them.
         .onAppear(perform: reload)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in reload() }
+        .task {
+            translationLanguages = await AppleTranslator.supportedTargetLanguages()
+                .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+            translateTo = Self.translationChoice(for: TranslationSettings().targetLanguage, in: translationLanguages)
+        }
+    }
+
+    /// The languages to offer in Translate to: those the Mac can translate into, with the chosen one if it's not
+    /// among them, so the picker always shows a choice.
+    private var translationChoices: [Locale.Language] {
+        let chosen = Locale.Language(identifier: translateTo)
+        if translationLanguages.contains(where: { $0.minimalIdentifier == chosen.minimalIdentifier }) { return translationLanguages }
+        return translationLanguages + [chosen]
+    }
+
+    /// The picker's tag for `target`: the supported language that matches it exactly, or failing that the first
+    /// in the same language, so a Mac set to en-ZA picks the English the framework offers.
+    private static func translationChoice(for target: Locale.Language, in languages: [Locale.Language]) -> String {
+        if let exact = languages.first(where: { $0.minimalIdentifier == target.minimalIdentifier }) { return exact.minimalIdentifier }
+        if let same = languages.first(where: { $0.isSameLanguage(as: target) }) { return same.minimalIdentifier }
+        return target.minimalIdentifier
     }
 
     private func reload() {
@@ -146,6 +191,9 @@ private struct GeneralSettings: View {
         isDefault = Self.brIsDefault()
         linkDestination = ExternalLinkSettings().destination
         floatsVideos = PictureInPictureSettings().isEnabled
+        translateTo = Self.translationChoice(for: TranslationSettings().targetLanguage, in: translationLanguages)
+        offersTranslation = TranslationSettings().offersTranslation
+        neverTranslate = NeverTranslateMemory().languages
     }
 
     private static func brIsDefault() -> Bool {
