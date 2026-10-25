@@ -53,7 +53,8 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     @ObservationIgnored private var lastVisitedURLs: [TabID: URL] = [:]
     @ObservationIgnored private var dialogAnswers: [UUID: CheckedContinuation<JavaScriptDialogResult, Never>] = [:]
 
-    /// Shows the first space, with its most recently active tab selected.
+    /// Shows the space used last, going by its most recently active tab, with that tab selected.
+    /// Shows the first space when no tab has been active.
     public init(engine: any BrowserEngine, sidebar: SidebarStore, archive: ArchiveStore? = nil, downloads: DownloadList? = nil,
                 permissions: SitePermissions = SitePermissions(), zoomStore: PageZoomStore = PageZoomStore(),
                 translation: TranslationCoordinator = TranslationCoordinator(),
@@ -67,7 +68,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         self.translation = translation
         self.now = now
         selectedSpaceID = sidebar.document.spaces[0].id
-        if let recent = mostRecentTab(in: selectedSpaceID) {
+        if let recent = mostRecentTab() {
             setSelection(recent)
         }
     }
@@ -104,6 +105,11 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     public func selectSpace(_ id: SpaceID) {
         guard document.space(id) != nil, id != selectedSpaceID else { return }
+        show(id)
+    }
+
+    /// Switches to a space and selects its last selection, or its most recently active tab.
+    private func show(_ id: SpaceID) {
         closePeek()
         openerIDs.removeAll()
         selectedSpaceID = id
@@ -147,7 +153,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     /// Adds a tab at the top of the current space's unpinned section, and shows it unless `selecting` is false.
     @discardableResult
     public func newTab(url: URL?, selecting: Bool = true) -> ItemID {
-        let container = document.space(selectedSpaceID)!.unpinnedContainerID
+        let container = shownSpaceUnpinnedContainerID
         let id = sidebar.createTab(url: url, title: nil, in: container, at: 0)
         register(engine.makeTab(url: url, profile: profile(for: id)), for: id)
         if selecting { select(id) }
@@ -345,7 +351,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     /// the space: then it closes and its address opens again in the space's profile. Selects it unless `selecting` is false.
     @discardableResult
     public func adopt(_ tab: any BrowserTab, selecting: Bool = true) -> ItemID {
-        let id = adopt(tab, in: document.space(selectedSpaceID)!.unpinnedContainerID)
+        let id = adopt(tab, in: shownSpaceUnpinnedContainerID)
         if selecting { select(id) }
         return id
     }
@@ -558,8 +564,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
             forgetOpener(id)
         }
         if document.space(selectedSpaceID) == nil {
-            selectedSpaceID = document.spaces[0].id
-            if let recent = mostRecentTab(in: selectedSpaceID) { setSelection(recent) } else { leaveSelection() }
+            show(document.spaces[0].id)
         } else if let selected = selectedItemID, !isTab(selected) || !belongsToSelectedSpace(selected) {
             if let recent = mostRecentTab(in: selectedSpaceID) { setSelection(recent) } else { leaveSelection() }
         }
@@ -714,6 +719,12 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
 
     // MARK: Helpers
 
+    /// Where new tabs go. Another window can delete the shown space just before this one hears about it, so
+    /// this falls back to the first space rather than crash.
+    private var shownSpaceUnpinnedContainerID: ItemID {
+        (document.space(selectedSpaceID) ?? document.spaces[0]).unpinnedContainerID
+    }
+
     /// Selects without touching opener links. Creates the live page if needed and records activity.
     private func setSelection(_ id: ItemID) {
         closePeek()
@@ -726,11 +737,11 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         for pane in panes where liveTabs[pane] == nil {
             register(makePage(for: pane), for: pane)
         }
-        let date = now()
         if let previous = selectedItemID, previous != id {
-            sidebar.markActive(previous, at: date)
+            sidebar.markActive(previous, at: now())
         }
-        sidebar.markActive(id, at: date)
+        // Read after the previous tab's time, so the tab shown now is the most recent one.
+        sidebar.markActive(id, at: now())
         selectedItemID = id
         lastSelection[selectedSpaceID] = id
     }
@@ -845,6 +856,14 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         return candidates
             .filter { $0 != excluded }
             .compactMap { id in tabInfo(id)?.lastActiveAt.map { (id, $0) } }
+            .max { $0.1 < $1.1 }?
+            .0
+    }
+
+    /// The pinned or unpinned tab, in any space, that was active most recently. Nil when none has been active.
+    private func mostRecentTab() -> ItemID? {
+        document.spaces
+            .compactMap { space in mostRecentTab(in: space.id).flatMap { id in tabInfo(id)?.lastActiveAt.map { (id, $0) } } }
             .max { $0.1 < $1.1 }?
             .0
     }

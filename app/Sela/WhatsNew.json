@@ -1,6 +1,8 @@
 {
   "0.1.6": [
-    "A new tab stays in the space you're in. Tabs from other spaces no longer take the command bar's top row; they sit lower, named with their space."
+    "A new tab stays in the space you're in, even when another space has a tab with the same name.",
+    "Sela opens on the space you used last, in every new window too.",
+    "A short swipe on the sidebar settles back on the space you were in."
   ],
   "0.1.5": [
     "Print a page with Cmd+P, or save it as a PDF from the File menu.",

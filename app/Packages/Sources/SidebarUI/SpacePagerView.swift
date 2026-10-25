@@ -23,6 +23,8 @@ final class SpacePagerView: NSScrollView {
     private var isSwiping = false
     /// Settles the pages after a swipe or a click, carrying the swipe's speed into the spring.
     private var settle: SpringAnimator!
+    /// The width pages were last laid out at, to notice a resize mid-animation.
+    private var laidOutWidth: CGFloat = 0
 
     init(model: BrowserWindowModel, favicons: FaviconStore) {
         self.model = model
@@ -57,16 +59,29 @@ final class SpacePagerView: NSScrollView {
         }
     }
 
+    /// Pages that stay keep their place in the view tree, so a swipe that started over one isn't cut off.
     private func rebuildPages(for spaceIDs: [SpaceID]) {
+        let shown = pages[safe: currentPage]?.spaceID
         let existing = Dictionary(uniqueKeysWithValues: pages.map { ($0.spaceID, $0) })
-        pages.forEach { $0.removeFromSuperview() }
+        let kept = Set(spaceIDs)
+        pages.filter { !kept.contains($0.spaceID) }.forEach { $0.removeFromSuperview() }
         pages = spaceIDs.map { id in
-            let page = existing[id] ?? SpacePageView(spaceID: id, model: model, favicons: favicons)
+            if let page = existing[id] { return page }
+            let page = SpacePageView(spaceID: id, model: model, favicons: favicons)
             page.horizontalScrollTarget = self
             page.onNewTab = { [weak self] in self?.onNewTab?() }
+            pageContainer.addSubview(page)
             return page
         }
-        pages.forEach(pageContainer.addSubview)
+        // The pages moved under the fingers, so a swipe in progress can't land where it meant to. End it here
+        // rather than wait for an end event that may never come, and show the selected space.
+        if isSwiping {
+            isSwiping = false
+            samples = []
+            settle.stop()
+        }
+        // Stay on the page that was showing, wherever it moved, so update() can slide to the selected space.
+        currentPage = shown.flatMap(spaceIDs.firstIndex(of:)) ?? spaceIDs.firstIndex(of: model.selectedSpaceID) ?? 0
         needsLayout = true
         layoutPages()
     }
@@ -84,9 +99,16 @@ final class SpacePagerView: NSScrollView {
         for (index, page) in pages.enumerated() {
             page.frame = NSRect(x: CGFloat(index) * size.width, y: 0, width: size.width, height: size.height)
         }
-        if !isSwiping, !settle.isAnimating {
-            settle.set(CGFloat(currentPage) * size.width)
+        if !isSwiping {
+            let target = CGFloat(currentPage) * size.width
+            if !settle.isAnimating {
+                settle.set(target)
+            } else if size.width != laidOutWidth {
+                // The sidebar changed width while the pages were settling, so the old target is off by now.
+                settle.animate(to: target)
+            }
         }
+        laidOutWidth = size.width
     }
 
     private func place(_ offset: CGFloat) {
@@ -139,8 +161,12 @@ final class SpacePagerView: NSScrollView {
         case .ended, .cancelled:
             guard isSwiping else { return }
             isSwiping = false
+            // Fingers that rest before lifting send nothing, so the lift itself counts as standing still.
+            samples.append((event.timestamp, swipeOffset))
+            samples = samples.filter { event.timestamp - $0.time < 0.1 }
             let speed = velocity()
-            let target = targetPage(
+            // A swipe the system cancels goes back to where it started.
+            let target = event.phase == .cancelled ? swipeStartPage : targetPage(
                 startPage: swipeStartPage,
                 offset: swipeOffset,
                 pageWidth: pageWidth,
