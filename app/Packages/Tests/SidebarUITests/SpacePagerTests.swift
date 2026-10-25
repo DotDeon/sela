@@ -79,3 +79,18 @@ private func scrollEvent(phase: Int64, dx: Int32, at time: TimeInterval) -> NSEv
     let pager = h.controller.pager
     #expect(pager.contentView.bounds.origin.x == pager.contentView.bounds.width)
 }
+
+@MainActor @Test func aSwipeCutOffBySpacesChangingDoesntStickThePager() async throws {
+    let h = try Harness()
+    let list = try #require(h.controller.pager.pages[0].outlineView.enclosingScrollView)
+    // The fingers are down and moving when another window adds a space. No end event follows.
+    list.scrollWheel(with: scrollEvent(phase: 1, dx: -20, at: 1.0))
+    list.scrollWheel(with: scrollEvent(phase: 2, dx: -20, at: 1.02))
+    h.model.sidebar.addSpace(title: "Three")
+    for _ in 0..<200 where h.controller.pager.pages.count < 3 { try await Task.sleep(for: .milliseconds(10)) }
+    #expect(h.controller.pager.pages.count == 3)
+    // A click on the space bar still moves the pager.
+    h.model.selectSpace("S2")
+    for _ in 0..<200 where h.controller.pager.currentPage != 1 { try await Task.sleep(for: .milliseconds(10)) }
+    #expect(h.controller.pager.currentPage == 1)
+}

@@ -153,7 +153,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     /// Adds a tab at the top of the current space's unpinned section, and shows it unless `selecting` is false.
     @discardableResult
     public func newTab(url: URL?, selecting: Bool = true) -> ItemID {
-        let container = document.space(selectedSpaceID)!.unpinnedContainerID
+        let container = shownSpaceUnpinnedContainerID
         let id = sidebar.createTab(url: url, title: nil, in: container, at: 0)
         register(engine.makeTab(url: url, profile: profile(for: id)), for: id)
         if selecting { select(id) }
@@ -351,7 +351,7 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     /// the space: then it closes and its address opens again in the space's profile. Selects it unless `selecting` is false.
     @discardableResult
     public func adopt(_ tab: any BrowserTab, selecting: Bool = true) -> ItemID {
-        let id = adopt(tab, in: document.space(selectedSpaceID)!.unpinnedContainerID)
+        let id = adopt(tab, in: shownSpaceUnpinnedContainerID)
         if selecting { select(id) }
         return id
     }
@@ -718,6 +718,12 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
     }
 
     // MARK: Helpers
+
+    /// Where new tabs go. Another window can delete the shown space just before this one hears about it, so
+    /// this falls back to the first space rather than crash.
+    private var shownSpaceUnpinnedContainerID: ItemID {
+        (document.space(selectedSpaceID) ?? document.spaces[0]).unpinnedContainerID
+    }
 
     /// Selects without touching opener links. Creates the live page if needed and records activity.
     private func setSelection(_ id: ItemID) {
