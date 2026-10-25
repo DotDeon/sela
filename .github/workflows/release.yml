@@ -7,6 +7,10 @@
 #   NOTARY_KEY_P8, NOTARY_KEY_ID, NOTARY_ISSUER   an App Store Connect API key that can notarize
 #   SPARKLE_KEY                                   the update signing key, from generate_keys -x
 #   TEAM_ID                                       the Apple team that owns the certificate
+# To sign with the passkey or iCloud entitlements, add the Developer ID provisioning profile as
+# SELA_PROFILE_BASE64, decode it to $RUNNER_TEMP/Sela.provisionprofile in the signing step, and set
+# SELA_PASSKEYS or SELA_CLOUD to "1" and SELA_PROFILE in the build step's env. The steps are in
+# docs/plans/2026-10-24-passkeys.md and docs/plans/2026-10-25-icloud-sync.md.
 name: Release
 
 on:
