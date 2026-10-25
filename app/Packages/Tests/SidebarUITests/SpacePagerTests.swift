@@ -18,9 +18,10 @@ private struct Harness {
     let controller: SidebarViewController
     let window: NSWindow
 
-    init() throws {
+    init(prepare: (SidebarStore) -> Void = { _ in }) throws {
         let folder = try temporaryFolder()
         let store = SidebarStore(fileStore: SidebarDocumentStore(fileURL: folder.appending(path: "Sidebar.json")), saveDelay: .seconds(60), firstRunDocument: { fixtureDocument() })
+        prepare(store)
         model = BrowserWindowModel(engine: FakeEngine(), sidebar: store)
         let favicons = FaviconStore(cacheFolder: folder, fetch: { _ in throw Offline() })
         controller = SidebarViewController(model: model, favicons: favicons)
@@ -69,4 +70,12 @@ private func scrollEvent(phase: Int64, dx: Int32, at time: TimeInterval) -> NSEv
     try h.swipe([(-20, 1.0), (-60, 1.02), (-60, 1.04)], endingAt: 1.06, phase: 8)
     #expect(h.model.selectedSpaceID == "S")
     #expect(h.controller.pager.currentPage == 0)
+}
+
+@MainActor @Test func aWindowOpeningOnTheSecondSpaceShowsItsPage() throws {
+    let h = try Harness { store in store.markActive("q1", at: fixtureDate.addingTimeInterval(1000)) }
+    #expect(h.model.selectedSpaceID == "S2")
+    #expect(h.controller.pager.currentPage == 1)
+    let pager = h.controller.pager
+    #expect(pager.contentView.bounds.origin.x == pager.contentView.bounds.width)
 }
