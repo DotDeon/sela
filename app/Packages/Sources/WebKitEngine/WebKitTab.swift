@@ -33,6 +33,10 @@ final class WebKitTab: NSObject, BrowserTab {
     /// The reader's own web view, laid over the page while reader mode is on.
     @ObservationIgnored private var readerView: WKWebView?
     @ObservationIgnored private let readerNavigation = ReaderNavigation()
+    /// Whether the tab's sound is off. WebKit keeps it per page, so this is read back from there too.
+    @ObservationIgnored private var isMuted = false
+    /// True while this tab watches the web view's audio, which WebKit only reports through a private key.
+    @ObservationIgnored nonisolated(unsafe) private var observesAudio = false
 
     var contentView: NSView { webView }
 
@@ -173,6 +177,51 @@ final class WebKitTab: NSObject, BrowserTab {
         return try? await view.takeSnapshot(configuration: configuration)
     }
 
+    // MARK: Sound
+
+    /// WebKit has no public way to mute a page or hear that it plays sound. Safari uses these, and they've been
+    /// stable for years. Without them a tab shows no speaker and Mute Tab does nothing.
+    private nonisolated static let playingAudioKey = "_isPlayingAudio"
+    private static let setMutedSelector = NSSelectorFromString("_setPageMuted:")
+    /// The audio bit of WebKit's muted state. The other bits cover the camera and microphone, which stay as they are.
+    private static let audioMutedBit: UInt = 1
+
+    private var isPlayingAudio: Bool {
+        guard observesAudio else { return false }
+        return (webView.value(forKey: Self.playingAudioKey) as? Bool) ?? false
+    }
+
+    func setMuted(_ muted: Bool) {
+        guard !isClosed, muted != isMuted, webView.responds(to: Self.setMutedSelector),
+              let method = webView.method(for: Self.setMutedSelector)
+        else { return }
+        isMuted = muted
+        typealias Setter = @convention(c) (AnyObject, Selector, UInt) -> Void
+        unsafeBitCast(method, to: Setter.self)(webView, Self.setMutedSelector, muted ? Self.audioMutedBit : 0)
+        syncState()
+    }
+
+    private func observeAudio() {
+        guard webView.responds(to: NSSelectorFromString(Self.playingAudioKey)) else { return }
+        observesAudio = true
+        webView.addObserver(self, forKeyPath: Self.playingAudioKey, options: [], context: nil)
+    }
+
+    private func stopObservingAudio() {
+        guard observesAudio else { return }
+        observesAudio = false
+        webView.removeObserver(self, forKeyPath: Self.playingAudioKey)
+    }
+
+    override nonisolated func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        MainActor.assumeIsolated { syncState() }
+    }
+
+    deinit {
+        // The web view goes with the tab, and would complain about an observer it still had.
+        if observesAudio { webView.removeObserver(self, forKeyPath: Self.playingAudioKey) }
+    }
+
     // MARK: Zoom
 
     /// The reader follows the page, so an article reads at the same size either way.
@@ -270,6 +319,7 @@ final class WebKitTab: NSObject, BrowserTab {
         removeReader()
         observations.forEach { $0.invalidate() }
         observations = []
+        stopObservingAudio()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.stopLoading()
@@ -295,6 +345,7 @@ final class WebKitTab: NSObject, BrowserTab {
             webView.observe(\.cameraCaptureState) { webView, _ in update(webView) },
             webView.observe(\.microphoneCaptureState) { webView, _ in update(webView) },
         ]
+        observeAudio()
         syncState()
     }
 
@@ -320,7 +371,9 @@ final class WebKitTab: NSObject, BrowserTab {
             isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
             isReaderAvailable: isArticle,
             isShowingReader: readerView != nil,
-            pageZoom: webView.pageZoom
+            pageZoom: webView.pageZoom,
+            isPlayingAudio: isPlayingAudio,
+            isMuted: isMuted
         )
         guard next != state else { return }
         let previous = state

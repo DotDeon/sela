@@ -101,6 +101,9 @@ final class FavoritesGridView: NSView, NSCollectionViewDataSource, NSCollectionV
         let title = sidebarTitle(for: item, liveState: shown)
         tile.imageView?.image = favicons.image(forPage: page) ?? letterImage(for: page?.host() ?? title, size: 22)
         tile.view.toolTip = title
+        let state = model.liveTab(for: item.id)?.state
+        tile.showAudio(playing: state?.isPlayingAudio ?? false, muted: state?.isMuted ?? false)
+        tile.onToggleMute = { [weak self] in self?.model.toggleMute(item.id) }
     }
 
     private func deleteClickedFavorite() {
@@ -176,9 +179,25 @@ final class FavoritesCollectionView: NSCollectionView {
 final class FavoriteTile: NSCollectionViewItem {
     static let identifier = NSUserInterfaceItemIdentifier("favorite")
 
+    /// A small speaker in the tile's corner while the page makes sound. A click mutes the tab.
+    let audioButton = HoverButton(symbol: "speaker.wave.2.fill", label: "Mute Tab", pointSize: 8, weight: .bold, size: 16)
+    var onToggleMute: (() -> Void)?
+    private var shownAudio: (playing: Bool, muted: Bool)?
+
     private var isHovered = false {
         didSet { updateBackground() }
     }
+
+    func showAudio(playing: Bool, muted: Bool) {
+        guard shownAudio?.playing != playing || shownAudio?.muted != muted else { return }
+        shownAudio = (playing, muted)
+        audioButton.isHidden = !(playing || muted)
+        let label = muted ? "Unmute Tab" : "Mute Tab"
+        audioButton.setSymbol(muted ? "speaker.slash.fill" : "speaker.wave.2.fill", label: label, pointSize: 8, weight: .bold)
+        audioButton.toolTip = label
+    }
+
+    @objc private func audioTapped() { onToggleMute?() }
 
     override func loadView() {
         let tile = TileView()
@@ -190,11 +209,17 @@ final class FavoriteTile: NSCollectionViewItem {
         icon.imageScaling = .scaleProportionallyUpOrDown
         icon.translatesAutoresizingMaskIntoConstraints = false
         tile.addSubview(icon)
+        audioButton.target = self
+        audioButton.action = #selector(audioTapped)
+        audioButton.isHidden = true
+        tile.addSubview(audioButton)
         NSLayoutConstraint.activate([
             icon.centerXAnchor.constraint(equalTo: tile.centerXAnchor),
             icon.centerYAnchor.constraint(equalTo: tile.centerYAnchor),
             icon.widthAnchor.constraint(equalToConstant: 22),
             icon.heightAnchor.constraint(equalToConstant: 22),
+            audioButton.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -3),
+            audioButton.topAnchor.constraint(equalTo: tile.topAnchor, constant: 3),
         ])
         tile.layer?.shadowColor = NSColor.black.cgColor
         tile.layer?.shadowOffset = CGSize(width: 0, height: -1)

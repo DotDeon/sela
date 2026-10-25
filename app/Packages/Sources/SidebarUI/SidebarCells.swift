@@ -6,11 +6,16 @@ class ItemCellView: NSTableCellView, NSTextFieldDelegate {
 
     let iconView = NSImageView()
     let titleField = NSTextField(labelWithString: "")
+    /// Shows while the page makes sound. A click mutes the tab, and the symbol gets a slash until it's unmuted.
+    let audioButton = HoverButton(symbol: "speaker.wave.2.fill", label: "Mute Tab", pointSize: 11, weight: .semibold, size: 22)
     let resetButton = HoverButton(symbol: "arrow.uturn.backward", label: "Back to Saved Address", pointSize: 11, weight: .semibold, size: 22)
     let closeButton = HoverButton(symbol: "xmark", label: "Close", pointSize: 11, weight: .semibold, size: 22)
+    /// The buttons at the trailing end. Hidden ones take no room.
+    let buttons = NSStackView()
 
     var onClose: (() -> Void)?
     var onReset: (() -> Void)?
+    var onToggleMute: (() -> Void)?
     var onRename: ((String) -> Void)?
     var showsCloseOnHover = true
     var showsReset = false {
@@ -20,6 +25,18 @@ class ItemCellView: NSTableCellView, NSTextFieldDelegate {
     /// Set by the row, which the outline view keeps up to date.
     var isHovered = false {
         didSet { closeButton.isHidden = !(isHovered && showsCloseOnHover) }
+    }
+
+    private var shownAudio: (playing: Bool, muted: Bool)?
+
+    /// Shows the speaker while the page plays sound or is muted. A new symbol only when that changes.
+    func showAudio(playing: Bool, muted: Bool) {
+        guard shownAudio?.playing != playing || shownAudio?.muted != muted else { return }
+        shownAudio = (playing, muted)
+        audioButton.isHidden = !(playing || muted)
+        let label = muted ? "Unmute Tab" : "Mute Tab"
+        audioButton.setSymbol(muted ? "speaker.slash.fill" : "speaker.wave.2.fill", label: label, pointSize: 11, weight: .semibold)
+        audioButton.toolTip = label
     }
 
     override init(frame: NSRect) {
@@ -32,14 +49,22 @@ class ItemCellView: NSTableCellView, NSTextFieldDelegate {
         titleField.lineBreakMode = .byTruncatingTail
         titleField.font = .systemFont(ofSize: 13)
         titleField.delegate = self
+        audioButton.target = self
+        audioButton.action = #selector(audioTapped)
         resetButton.target = self
         resetButton.action = #selector(resetTapped)
         closeButton.target = self
         closeButton.action = #selector(closeTapped)
+        audioButton.isHidden = true
         resetButton.isHidden = true
         closeButton.isHidden = true
+        buttons.orientation = .horizontal
+        buttons.spacing = 2
+        for button in [audioButton, resetButton, closeButton] {
+            buttons.addArrangedSubview(button)
+        }
 
-        for view in [iconView, titleField, resetButton, closeButton] {
+        for view in [iconView, titleField, buttons] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -51,11 +76,9 @@ class ItemCellView: NSTableCellView, NSTextFieldDelegate {
             iconView.heightAnchor.constraint(equalToConstant: 16),
             titleField.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
             titleField.centerYAnchor.constraint(equalTo: centerYAnchor),
-            resetButton.leadingAnchor.constraint(greaterThanOrEqualTo: titleField.trailingAnchor, constant: 4),
-            resetButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            closeButton.leadingAnchor.constraint(equalTo: resetButton.trailingAnchor, constant: 2),
-            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
-            closeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
+            buttons.leadingAnchor.constraint(greaterThanOrEqualTo: titleField.trailingAnchor, constant: 4),
+            buttons.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            buttons.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
 
@@ -87,6 +110,8 @@ class ItemCellView: NSTableCellView, NSTextFieldDelegate {
     @objc private func closeTapped() { onClose?() }
 
     @objc private func resetTapped() { onReset?() }
+
+    @objc private func audioTapped() { onToggleMute?() }
 }
 
 /// A split view's row: one segment per pane, each with its icon and title, and a close button on hover.
@@ -112,7 +137,7 @@ final class SplitCellView: ItemCellView {
         addSubview(stack)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
-            stack.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -2),
+            stack.trailingAnchor.constraint(equalTo: buttons.leadingAnchor, constant: -2),
             stack.topAnchor.constraint(equalTo: topAnchor, constant: 4),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -4),
         ])

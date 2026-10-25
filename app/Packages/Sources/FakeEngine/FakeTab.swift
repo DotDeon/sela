@@ -96,6 +96,15 @@ public final class FakeTab: BrowserTab {
         state.pageZoom = zoom
     }
 
+    public func setMuted(_ muted: Bool) {
+        state.isMuted = muted
+    }
+
+    /// The page starts or stops making sound.
+    public func simulateAudio(_ playing: Bool) {
+        state.isPlayingAudio = playing
+    }
+
     public func printOperation(with info: NSPrintInfo) -> NSPrintOperation? {
         printRequests += 1
         return nil

@@ -267,6 +267,36 @@ private func fakeExtension(named name: String) async throws -> FakeExtension {
     try await eventually { h.controller.readerButton.accessibilityLabel() == "Hide Reader" }
 }
 
+@MainActor @Test func speakerShowsWhilePlayingAndMutesOnClick() async throws {
+    let h = try Harness()
+    h.model.select("u1")
+    let tab = try #require(h.model.liveTab(for: "u1") as? FakeTab)
+    let cell = try #require(h.firstOutline.view(atColumn: 0, row: 4, makeIfNecessary: true) as? ItemCellView)
+    #expect(cell.audioButton.isHidden)
+    tab.simulateAudio(true)
+    try await eventually { !cell.audioButton.isHidden }
+    cell.audioButton.performClick(nil)
+    #expect(tab.state.isMuted)
+    try await eventually { cell.audioButton.accessibilityLabel() == "Unmute Tab" }
+    // The slashed speaker stays while the tab is muted, even once the page goes quiet.
+    tab.simulateAudio(false)
+    try await eventually { !cell.audioButton.isHidden }
+    cell.audioButton.performClick(nil)
+    try await eventually { cell.audioButton.isHidden }
+}
+
+@MainActor @Test func favouriteTileShowsASpeakerToo() async throws {
+    let h = try Harness()
+    h.model.select("f1")
+    let tab = try #require(h.model.liveTab(for: "f1") as? FakeTab)
+    let tile = try #require(h.controller.favoritesGrid.collectionView.item(at: IndexPath(item: 0, section: 0)) as? FavoriteTile)
+    #expect(tile.audioButton.isHidden)
+    tab.simulateAudio(true)
+    try await eventually { !tile.audioButton.isHidden }
+    tile.audioButton.performClick(nil)
+    #expect(tab.state.isMuted)
+}
+
 @MainActor @Test func zoomLevelShowsInTheAddressUntilClicked() async throws {
     let h = try Harness(zoomStore: PageZoomStore(defaults: UserDefaults(suiteName: "sela-zoom-\(UUID().uuidString)")!))
     h.model.select("u1")

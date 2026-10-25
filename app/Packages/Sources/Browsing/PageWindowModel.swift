@@ -15,6 +15,16 @@ public protocol PageWindowModel: AnyObject, Observable {
     func resolveDialog(_ id: PendingDialog.ID, with result: JavaScriptDialogResult)
 }
 
+// MARK: Sound
+
+extension PageWindowModel {
+    /// Tab > Mute Tab: turns the page in front's sound off, or back on.
+    public func toggleMute() {
+        guard let tab = selectedTab else { return }
+        tab.setMuted(!tab.state.isMuted)
+    }
+}
+
 // MARK: Zoom
 
 extension PageWindowModel {

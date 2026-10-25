@@ -108,6 +108,7 @@ enum MainMenu {
         menu.addItem(item("Pin or Unpin Tab", #selector(BrowserWindowController.togglePin(_:)), "d"))
         menu.addItem(item("New Folder", #selector(BrowserWindowController.newFolder(_:)), "n", [.command, .option]))
         menu.addItem(item("Copy URL", #selector(BrowserWindowController.copyURL(_:)), "c", [.command, .shift]))
+        menu.addItem(item("Mute Tab", #selector(BrowserWindowController.toggleMute(_:)), "m", [.command, .shift]))
         menu.addItem(.separator())
         // With Shift held the keys report "+" and "_", so those are what the menu has to match.
         menu.addItem(item("Add Split View", #selector(BrowserWindowController.addSplitView(_:)), "+", [.control, .shift]))

@@ -29,9 +29,14 @@ public struct TabState: Equatable, Sendable {
     public var isShowingReader: Bool
     /// How much the page is scaled: 1 is actual size, 1.5 is 150 percent.
     public var pageZoom: Double
+    /// True while the page makes sound, or would if it weren't muted.
+    public var isPlayingAudio: Bool
+    /// True while the tab's sound is turned off with `setMuted`.
+    public var isMuted: Bool
 
     public init(url: URL?, title: String?, isLoading: Bool, estimatedProgress: Double, canGoBack: Bool, canGoForward: Bool, faviconURL: URL? = nil,
-                isUsingCameraOrMicrophone: Bool = false, isReaderAvailable: Bool = false, isShowingReader: Bool = false, pageZoom: Double = 1) {
+                isUsingCameraOrMicrophone: Bool = false, isReaderAvailable: Bool = false, isShowingReader: Bool = false, pageZoom: Double = 1,
+                isPlayingAudio: Bool = false, isMuted: Bool = false) {
         self.url = url
         self.title = title
         self.isLoading = isLoading
@@ -43,6 +48,8 @@ public struct TabState: Equatable, Sendable {
         self.isReaderAvailable = isReaderAvailable
         self.isShowingReader = isShowingReader
         self.pageZoom = pageZoom
+        self.isPlayingAudio = isPlayingAudio
+        self.isMuted = isMuted
     }
 
     public static let blank = TabState(url: nil, title: nil, isLoading: false, estimatedProgress: 0, canGoBack: false, canGoForward: false)
@@ -85,6 +92,8 @@ public protocol BrowserTab: AnyObject, Observable {
     func thumbnail(width: CGFloat) async -> NSImage?
     /// Scales the page, and everything in it, to `zoom` times its actual size. `state.pageZoom` follows.
     func setPageZoom(_ zoom: Double)
+    /// Turns the tab's sound off, or back on. `state.isMuted` follows. Not kept between launches.
+    func setMuted(_ muted: Bool)
     /// Prints what the page shows, the reader when it's on, through the standard print panel.
     /// Nil when there's no page to print.
     func printOperation(with info: NSPrintInfo) -> NSPrintOperation?

@@ -153,6 +153,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         downloadsPopover?.show(relativeTo: root.sidebarController.downloadsButton)
     }
 
+    /// Tab > Mute Tab: the selected tab's sound off, or back on.
+    @objc func toggleMute(_ sender: Any?) { model.toggleMute() }
+
     // MARK: Zoom
 
     @objc func zoomIn(_ sender: Any?) { model.zoomIn() }
@@ -213,6 +216,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
         case #selector(printPage(_:)), #selector(exportPDF(_:)):
             return model.selectedTab?.state.url != nil
         case #selector(zoomIn(_:)), #selector(zoomOut(_:)):
+            return model.selectedTab != nil
+        case #selector(toggleMute(_:)):
+            item.state = model.selectedTab?.state.isMuted == true ? .on : .off
             return model.selectedTab != nil
         case #selector(resetZoom(_:)):
             guard let zoom = model.selectedTab?.state.pageZoom else { return false }

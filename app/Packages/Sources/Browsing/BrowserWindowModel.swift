@@ -184,6 +184,12 @@ public final class BrowserWindowModel: BrowserTabDelegate, PageWindowModel {
         }
     }
 
+    /// Turns a tab's sound off, or back on, from its row in the sidebar. Only live pages make sound.
+    public func toggleMute(_ id: ItemID) {
+        guard let tab = liveTabs[id] else { return }
+        tab.setMuted(!tab.state.isMuted)
+    }
+
     /// Shows the selected tab's article in reader mode, or goes back to the page. False when the page has no
     /// article to show.
     @discardableResult

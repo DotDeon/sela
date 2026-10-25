@@ -132,6 +132,27 @@ private func makeTab(_ url: URL? = nil) -> (FakeEngine, FakeTab) {
     #expect(tab.loadedURLs == [a, c])
 }
 
+@MainActor @Test func fakeSoundAndMuteReachTheState() {
+    let (_, tab) = makeTab(a)
+    let delegate = RecordingDelegate()
+    tab.delegate = delegate
+    let changes = delegate.stateChanges
+    tab.simulateAudio(true)
+    #expect(tab.state.isPlayingAudio)
+    tab.setMuted(true)
+    #expect(tab.state.isMuted)
+    #expect(delegate.stateChanges == changes + 2)
+    tab.setMuted(false)
+    #expect(!tab.state.isMuted)
+}
+
+@MainActor @Test func fakeZoomReachesTheState() {
+    let (_, tab) = makeTab(a)
+    #expect(tab.state.pageZoom == 1)
+    tab.setPageZoom(1.5)
+    #expect(tab.state.pageZoom == 1.5)
+}
+
 @MainActor @Test func fakePrintingIsRecorded() async throws {
     let (_, tab) = makeTab(a)
     #expect(tab.printOperation(with: NSPrintInfo()) == nil)

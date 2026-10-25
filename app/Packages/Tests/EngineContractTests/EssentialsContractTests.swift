@@ -48,6 +48,25 @@ struct EssentialsContractTests {
     }
 
     @Test(arguments: EngineUnderTest.allCases)
+    func soundShowsInTheStateAndMutes(engine: EngineUnderTest) async throws {
+        try toneWAV(seconds: 30).write(to: site.folder.appending(path: "tone.wav"))
+        let page = try site.page("sound.html", "<audio id=\"a\" src=\"tone.wav\" loop></audio><script>document.getElementById('a').play()</script>")
+        let tab = engine.make().makeTab(url: nil)
+        // Pages only play once they're on screen, as a tab is.
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = tab.contentView
+        window.orderFront(nil)
+        defer { window.close() }
+        tab.load(page)
+        try await eventually { tab.state.isPlayingAudio }
+        #expect(!tab.state.isMuted)
+        tab.setMuted(true)
+        #expect(tab.state.isMuted)
+        tab.setMuted(false)
+        #expect(!tab.state.isMuted)
+    }
+
+    @Test(arguments: EngineUnderTest.allCases)
     func downloadsArriveWhereTheDelegateSays(engine: EngineUnderTest) async throws {
         // A file WebKit can't show is downloaded, the same way a server's attachment is.
         try Data("hello download".utf8).write(to: site.folder.appending(path: "data.bin"))
@@ -87,6 +106,32 @@ extension EssentialsContractTests {
         #expect(!FileManager.default.fileExists(atPath: target.path))
         _ = server
     }
+}
+
+/// A quiet 440 Hz tone as a 16-bit mono WAV file, for pages that need something to play.
+private func toneWAV(seconds: Int) -> Data {
+    let rate = 8000
+    let samples = rate * seconds
+    var data = Data()
+    func append<T: FixedWidthInteger>(_ value: T) {
+        withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+    }
+    data.append(contentsOf: "RIFF".utf8)
+    append(UInt32(36 + samples * 2))
+    data.append(contentsOf: "WAVEfmt ".utf8)
+    append(UInt32(16))
+    append(UInt16(1))
+    append(UInt16(1))
+    append(UInt32(rate))
+    append(UInt32(rate * 2))
+    append(UInt16(2))
+    append(UInt16(16))
+    data.append(contentsOf: "data".utf8)
+    append(UInt32(samples * 2))
+    for index in 0..<samples {
+        append(Int16(sin(Double(index) / Double(rate) * 440 * 2 * .pi) * 3000))
+    }
+    return data
 }
 
 @MainActor
