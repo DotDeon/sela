@@ -1,4 +1,9 @@
 {
+  "0.1.7": [
+    "Google Meet, Zoom, Teams and other video calls work. Ad blocking starts off on those sites.",
+    "Turn blocking back on for a call site from the Tab menu or Settings > Ad Blocking.",
+    "Blocking stays on for the rest of google.com and microsoft.com. Only the call host changes."
+  ],
   "0.1.6": [
     "A new tab stays in the space you're in, even when another space has a tab with the same name.",
     "Sela opens on the space you used last, in every new window too.",

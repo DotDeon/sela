@@ -333,6 +333,20 @@ private struct AdBlockingSettings: View {
                     }
                 }
             }
+            Section("Off on video call sites") {
+                ForEach(ContentBlocker.meetingHosts.sorted(), id: \.self) { host in
+                    HStack {
+                        Text(host)
+                        Spacer()
+                        if blocker.onMeetingHosts.contains(host) {
+                            Button("Turn Off") { blocker.setBlocking(false, forSiteOf: URL(string: "https://\(host)/")!) }
+                        } else {
+                            Button("Turn On") { blocker.setBlocking(true, forSiteOf: URL(string: "https://\(host)/")!) }
+                        }
+                    }
+                }
+                Text("Blocking breaks video calls on these sites, so it starts off there.").font(.footnote).foregroundStyle(.secondary)
+            }
             Text("Changes apply the next time a page on that site loads.").font(.footnote).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)

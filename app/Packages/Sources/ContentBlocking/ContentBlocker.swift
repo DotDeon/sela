@@ -9,10 +9,21 @@ import Observation
 public final class ContentBlocker {
     static let enabledKey = "BlockAdsAndTrackers"
     static let offSitesKey = "AdBlockingOffSites"
+    static let onMeetingHostsKey = "AdBlockingOnMeetingHosts"
+
+    /// Video call sites, where blocking starts off. The lists block parts of their call code, and Meet shows a
+    /// black page when that happens. They're hosts, not sites, so google.com keeps its blocking. The switch for
+    /// a site turns blocking on there, remembered in `onMeetingHosts`.
+    public static let meetingHosts: Set<String> = [
+        "meet.google.com", "zoom.us", "teams.microsoft.com", "teams.live.com", "webex.com", "whereby.com",
+        "gotomeeting.com", "app.slack.com", "discord.com",
+    ]
 
     public private(set) var isEnabled: Bool
     /// Sites, as `contentBlockingSite(for:)` names them, where blocking is off.
     public private(set) var offSites: Set<String>
+    /// Meeting hosts where you turned blocking on.
+    public private(set) var onMeetingHosts: Set<String>
 
     @ObservationIgnored private var engine: (any ContentBlockingEngine)?
     @ObservationIgnored private let store: FilterListStore
@@ -30,6 +41,7 @@ public final class ContentBlocker {
         self.defaults = defaults
         isEnabled = defaults.object(forKey: Self.enabledKey) as? Bool ?? true
         offSites = Set(defaults.stringArray(forKey: Self.offSitesKey) ?? [])
+        onMeetingHosts = Set(defaults.stringArray(forKey: Self.onMeetingHostsKey) ?? [])
     }
 
     // MARK: Settings
@@ -39,17 +51,31 @@ public final class ContentBlocker {
         defaults.set(enabled, forKey: Self.enabledKey)
     }
 
-    /// False when blocking is off everywhere or for the URL's site. True for addresses with no site.
+    /// False when blocking is off everywhere or for the URL's site, or on a meeting host you haven't turned it on
+    /// for. True for addresses with no site.
     public func isBlocking(on url: URL) -> Bool {
         guard isEnabled else { return false }
         guard let site = contentBlockingSite(for: url) else { return true }
-        return !offSites.contains(site)
+        guard !offSites.contains(site) else { return false }
+        if let host = Self.meetingHost(of: url) { return onMeetingHosts.contains(host) }
+        return true
     }
 
-    /// Turns blocking on or off for every page on the URL's site.
+    /// Turns blocking on or off for every page on the URL's site. On a meeting host it sets that host alone.
     public func setBlocking(_ on: Bool, forSiteOf url: URL) {
+        if let host = Self.meetingHost(of: url) {
+            if on { onMeetingHosts.insert(host) } else { onMeetingHosts.remove(host) }
+            defaults.set(onMeetingHosts.sorted(), forKey: Self.onMeetingHostsKey)
+            return
+        }
         guard let site = contentBlockingSite(for: url) else { return }
         setBlocking(on, forSite: site)
+    }
+
+    /// The meeting host a URL is on or under, such as zoom.us for us02web.zoom.us.
+    static func meetingHost(of url: URL) -> String? {
+        guard let host = url.host()?.lowercased() else { return nil }
+        return meetingHosts.first { host == $0 || host.hasSuffix("." + $0) }
     }
 
     /// Turns blocking on or off for a site by the name `contentBlockingSite(for:)` gives it, as Settings lists them.

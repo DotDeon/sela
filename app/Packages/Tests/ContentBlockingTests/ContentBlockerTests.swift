@@ -152,3 +152,21 @@ private func eventually(_ condition: @MainActor () -> Bool, sourceLocation: Sour
     blocker.setBlocking(true, forSite: "example.com")
     #expect(blocker.isBlocking(on: URL(string: "https://shop.example.com/")!))
 }
+
+@MainActor @Test func meetingSitesStartWithBlockingOff() {
+    let h = Harness()
+    let blocker = h.makeBlocker()
+    let meet = URL(string: "https://meet.google.com/abc-defg-hij")!
+    #expect(!blocker.isBlocking(on: meet))
+    #expect(!blocker.isBlocking(on: URL(string: "https://us02web.zoom.us/j/123")!))
+    // Only the meeting host, not the rest of its domain.
+    #expect(blocker.isBlocking(on: URL(string: "https://www.google.com/")!))
+    #expect(blocker.isBlocking(on: URL(string: "https://notmeet.google.com/")!))
+    // The site switch turns blocking on there, and it stays on.
+    blocker.setBlocking(true, forSiteOf: meet)
+    #expect(blocker.isBlocking(on: meet))
+    #expect(h.makeBlocker().isBlocking(on: meet))
+    blocker.setBlocking(false, forSiteOf: meet)
+    #expect(!blocker.isBlocking(on: meet))
+    #expect(blocker.offSites.isEmpty)
+}
