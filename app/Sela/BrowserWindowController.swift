@@ -190,6 +190,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
 
     @objc func rotateSplitView(_ sender: Any?) { model.rotateSelectedSplit() }
 
+    /// Tab > Fit Pages in Split View: whether split panes shrink their pages to keep the desktop layout, in every window.
+    @objc func toggleSplitFit(_ sender: Any?) {
+        let settings = SplitFitSettings()
+        settings.fitsPages.toggle()
+    }
+
     /// Tab > Block Ads on This Site. Reloads the page so the change shows at once.
     @objc func toggleSiteBlocking(_ sender: Any?) {
         guard let contentBlocker, let url = blockableURL else { return }
@@ -212,6 +218,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSMen
             return (model.selectedSplit?.paneIDs.count ?? 1) < SidebarDocument.maximumSplitPanes
         case #selector(separateSplitView(_:)), #selector(rotateSplitView(_:)):
             return model.selectedSplit != nil
+        case #selector(toggleSplitFit(_:)):
+            item.state = SplitFitSettings().fitsPages ? .on : .off
+            return true
         case #selector(toggleReader(_:)):
             let state = model.selectedTab?.state
             item.state = state?.isShowingReader == true ? .on : .off

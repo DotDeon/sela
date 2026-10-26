@@ -32,6 +32,9 @@ final class WebKitTab: NSObject, BrowserTab {
     @ObservationIgnored private var isArticle = false
     /// The reader's own web view, laid over the page while reader mode is on.
     @ObservationIgnored private var readerView: WKWebView?
+    /// The zoom the user chose, and the shrink split view adds on top. The web view shows their product.
+    @ObservationIgnored private var zoom = 1.0
+    @ObservationIgnored private var fitScale = 1.0
     @ObservationIgnored private let readerNavigation = ReaderNavigation()
     /// Whether the tab's sound is off. WebKit keeps it per page, so this is read back from there too.
     @ObservationIgnored private var isMuted = false
@@ -285,10 +288,21 @@ final class WebKitTab: NSObject, BrowserTab {
 
     /// The reader follows the page, so an article reads at the same size either way.
     func setPageZoom(_ zoom: Double) {
-        guard !isClosed, webView.pageZoom != zoom else { return }
-        webView.pageZoom = zoom
-        readerView?.pageZoom = zoom
+        guard !isClosed, self.zoom != zoom else { return }
+        self.zoom = zoom
+        applyZoom()
         syncState()
+    }
+
+    func setFitScale(_ scale: Double) {
+        guard !isClosed, fitScale != scale else { return }
+        fitScale = scale
+        applyZoom()
+    }
+
+    private func applyZoom() {
+        webView.pageZoom = zoom * fitScale
+        readerView?.pageZoom = zoom * fitScale
     }
 
     // MARK: Printing
@@ -432,7 +446,7 @@ final class WebKitTab: NSObject, BrowserTab {
             isUsingCameraOrMicrophone: webView.cameraCaptureState != .none || webView.microphoneCaptureState != .none,
             isReaderAvailable: isArticle,
             isShowingReader: readerView != nil,
-            pageZoom: webView.pageZoom,
+            pageZoom: zoom,
             isPlayingAudio: isPlayingAudio,
             isMuted: isMuted
         )

@@ -37,3 +37,27 @@ import Browsing
     let other = fractions(afterDragging: 0, to: 1000, in: bounds, orientation: .horizontal, fractions: [0.5, 0.5], gap: 8, minimum: 240)
     #expect(paneFrames(in: bounds, orientation: .horizontal, fractions: other, gap: 8)[1].width == 240)
 }
+
+@Test func aWidePaneKeepsItsPageAtActualSize() {
+    #expect(splitFitScale(forPaneWidth: 1024) == 1)
+    #expect(splitFitScale(forPaneWidth: 1600) == 1)
+}
+
+@Test func aNarrowPaneShrinksItsPageToADesktopLayout() {
+    #expect(splitFitScale(forPaneWidth: 768) == 0.75)
+    // 600 / 1024 is 0.5859..., rounded down to a whole percent.
+    #expect(splitFitScale(forPaneWidth: 600) == 0.58)
+}
+
+@Test func theScaleStopsAtTheMinimum() {
+    #expect(splitFitScale(forPaneWidth: 300) == 0.5)
+    #expect(splitFitScale(forPaneWidth: 0) == 1)
+}
+
+@Test func fittingPagesIsOnUntilTurnedOff() throws {
+    let defaults = try #require(UserDefaults(suiteName: "SplitFitSettingsTests-\(UUID())"))
+    let settings = SplitFitSettings(defaults: defaults)
+    #expect(settings.fitsPages)
+    settings.fitsPages = false
+    #expect(!SplitFitSettings(defaults: defaults).fitsPages)
+}
