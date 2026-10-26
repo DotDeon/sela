@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import SidebarModel
 
 /// Where each pane of a split goes inside `bounds`, in a flipped coordinate space (y grows downwards).
@@ -45,4 +46,35 @@ public func fractions(afterDragging divider: Int, to position: CGFloat, in bound
     result[divider] = first / available
     result[divider + 1] = pair - result[divider]
     return result
+}
+
+/// How far to shrink the page in a split pane `width` points wide, so it lays out as it would in a window
+/// `desktopWidth` points wide instead of switching to its narrow, tablet layout. 1 when the pane is already that wide.
+/// Steps of 0.01 keep a divider drag from relaying the page out on every point, and the page never goes below
+/// `minimum`, so four panes stay readable.
+public func splitFitScale(forPaneWidth width: CGFloat, desktopWidth: CGFloat = 1024, minimum: Double = 0.5) -> Double {
+    guard width > 0, desktopWidth > 0 else { return 1 }
+    let scale = (Double(width / desktopWidth) * 100).rounded(.down) / 100
+    return min(max(scale, minimum), 1)
+}
+
+/// Whether split view panes shrink their pages to fit, stored in `UserDefaults`. On unless you turn it off.
+public struct SplitFitSettings {
+    public static let key = "FitPagesInSplitView"
+    /// Posted when `fitsPages` changes, so every window lays its panes out again.
+    public static let didChange = Notification.Name("SplitFitSettingsDidChange")
+
+    private let defaults: UserDefaults
+
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    public var fitsPages: Bool {
+        get { defaults.object(forKey: Self.key) as? Bool ?? true }
+        nonmutating set {
+            defaults.set(newValue, forKey: Self.key)
+            NotificationCenter.default.post(name: Self.didChange, object: nil)
+        }
+    }
 }

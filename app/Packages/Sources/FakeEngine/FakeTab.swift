@@ -109,6 +109,12 @@ public final class FakeTab: BrowserTab {
         state.pageZoom = zoom
     }
 
+    public private(set) var fitScale = 1.0
+
+    public func setFitScale(_ scale: Double) {
+        fitScale = scale
+    }
+
     public func setMuted(_ muted: Bool) {
         state.isMuted = muted
     }

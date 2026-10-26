@@ -382,7 +382,7 @@ extension WebKitTab: WKWebExtensionTab {
 
     func size(for context: WKWebExtensionContext) -> CGSize { webView.bounds.size }
 
-    func zoomFactor(for context: WKWebExtensionContext) -> Double { webView.pageZoom }
+    func zoomFactor(for context: WKWebExtensionContext) -> Double { state.pageZoom }
 
     func loadURL(_ url: URL, for context: WKWebExtensionContext) async throws { load(url) }
 

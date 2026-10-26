@@ -101,6 +101,9 @@ public protocol BrowserTab: AnyObject, Observable {
     func thumbnail(width: CGFloat) async -> NSImage?
     /// Scales the page, and everything in it, to `zoom` times its actual size. `state.pageZoom` follows.
     func setPageZoom(_ zoom: Double)
+    /// Shrinks the page to `scale` on top of its zoom, so it lays out as if its view were `1 / scale` times as wide.
+    /// Split view uses it to show pages at their desktop layout. `state.pageZoom` stays the zoom alone.
+    func setFitScale(_ scale: Double)
     /// Turns the tab's sound off, or back on. `state.isMuted` follows. Not kept between launches.
     func setMuted(_ muted: Bool)
     /// Opens Web Inspector on the page. Does nothing while the engine isn't inspectable.
