@@ -150,10 +150,12 @@ final class SpaceBarView: NSView {
     }
 
     private func changeIcon(_ id: SpaceID) {
-        guard let space = document.space(id),
-              let text = prompt("Space Icon", message: "An emoji, or the name of an SF Symbol.", defaultText: space.icon ?? "")
-        else { return }
-        model.sidebar.updateSpace(id, title: space.title, icon: text.isEmpty ? nil : text, theme: space.theme)
+        guard let space = document.space(id), let window else { return }
+        SpaceIconPicker.present(on: window, spaceTitle: space.title ?? "this space", current: space.icon) { [weak self] icon in
+            // Read the space again: it may have been renamed or recoloured while the sheet was open.
+            guard let self, let space = self.document.space(id) else { return }
+            self.model.sidebar.updateSpace(id, title: space.title, icon: icon, theme: space.theme)
+        }
     }
 
     private func setColour(_ colour: RGBAColor, for id: SpaceID) {
