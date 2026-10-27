@@ -11,29 +11,29 @@ public struct TabCandidate: Equatable, Sendable {
     /// Where the tab sits, such as "Favourites" or "Work / Projects", for tabs in a folder or among favourites.
     /// Nil for tabs at the top of a space. Its words find the tab too.
     public var location: String?
-    /// True for a tab in a space other than the one the window shows. Such a tab is never the top hit, so Enter
-    /// stays in the current space, and it comes after this space's tabs when there's no query.
-    public var isInAnotherSpace: Bool
 
-    public init(id: ItemID, title: String, url: URL?, lastActiveAt: Date?, location: String? = nil, isInAnotherSpace: Bool = false) {
+    public init(id: ItemID, title: String, url: URL?, lastActiveAt: Date?, location: String? = nil) {
         self.id = id
         self.title = title
         self.url = url
         self.lastActiveAt = lastActiveAt
         self.location = location
-        self.isInAnotherSpace = isInAnotherSpace
     }
 }
 
+/// The tabs the command bar offers in `space`: favourites, which every space shares, then the space's pinned
+/// tabs, folders included, and its unpinned tabs. Other spaces' tabs stay out, as in Arc.
+public func commandBarTabIDs(in document: SidebarDocument, space: SpaceID?) -> [ItemID] {
+    let spaceContainers = document.spaces.first { $0.id == space }.map { [$0.pinnedContainerID, $0.unpinnedContainerID] } ?? []
+    return ([document.favoritesContainerID] + spaceContainers).flatMap { document.tabIDs(under: $0) }
+}
+
 /// The location a tab's command bar row shows: "Favourites" for favourites, the folders it sits in for a tab
-/// in a folder, outermost first, and nil for a tab at the top of its space. From `shownFrom`, another space's
-/// tabs start with that space's name.
-public func tabLocation(of id: ItemID, in document: SidebarDocument, shownFrom currentSpace: SpaceID? = nil) -> String? {
+/// in a folder, outermost first, and nil for a tab at the top of its space.
+public func tabLocation(of id: ItemID, in document: SidebarDocument) -> String? {
     var parts = document.folderPath(of: id)
     if document.containerRole(of: id) == .favorites {
         parts.insert("Favourites", at: 0)
-    } else if let currentSpace, let spaceID = document.spaceID(containing: id), spaceID != currentSpace {
-        parts.insert(document.space(spaceID)?.title ?? "Another Space", at: 0)
     }
     return parts.isEmpty ? nil : parts.joined(separator: " / ")
 }
@@ -69,10 +69,13 @@ public struct ArchivedCandidate: Equatable, Sendable {
 public struct HistoryCandidate: Equatable, Sendable {
     public var url: URL
     public var title: String
+    /// How many times the page was visited. The most visited page of a site is the one typing its name offers first.
+    public var visitCount: Int
 
-    public init(url: URL, title: String) {
+    public init(url: URL, title: String, visitCount: Int = 0) {
         self.url = url
         self.title = title
+        self.visitCount = visitCount
     }
 }
 
