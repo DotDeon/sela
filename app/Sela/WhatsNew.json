@@ -1,4 +1,10 @@
 {
+  "0.1.8": [
+    "Pages in split view keep their desktop layout and shrink to fit. Turn this off from the Tab menu.",
+    "Choose a space's icon from a sheet of symbols and emoji. Right-click a space and pick Change Icon.",
+    "The command bar shows tabs from the space you're in, and typing the start of a site you visit goes there first.",
+    "The downloads list has a title and keeps its rows inside its edges."
+  ],
   "0.1.7": [
     "Google Meet, Zoom, Teams and other video calls work. Ad blocking starts off on those sites.",
     "Turn blocking back on for a call site from the Tab menu or Settings > Ad Blocking.",
