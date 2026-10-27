@@ -10,6 +10,8 @@ final class DownloadsPopover: NSViewController {
     private let rows = NSStackView()
     private let popover = NSPopover()
     private var rowViews: [DownloadRow] = []
+    private let empty = NSTextField(labelWithString: "No downloads")
+    private lazy var clear = NSButton(title: "Clear", target: self, action: #selector(clearFinished))
 
     init(list: DownloadList) {
         self.list = list
@@ -22,16 +24,28 @@ final class DownloadsPopover: NSViewController {
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func loadView() {
+        let title = NSTextField(labelWithString: "Downloads")
+        title.font = .systemFont(ofSize: 13, weight: .semibold)
+        clear.bezelStyle = .inline
+        // The spacer pushes Clear to the trailing edge, across from the title.
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let header = NSStackView(views: [title, spacer, clear])
+        header.orientation = .horizontal
         rows.orientation = .vertical
         rows.alignment = .leading
-        rows.spacing = 6
-        let clear = NSButton(title: "Clear", target: self, action: #selector(clearFinished))
-        clear.bezelStyle = .inline
-        let stack = NSStackView(views: [rows, clear])
+        rows.spacing = 8
+        empty.textColor = .secondaryLabelColor
+        let stack = NSStackView(views: [header, rows])
         stack.orientation = .vertical
-        stack.alignment = .trailing
-        stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-        stack.widthAnchor.constraint(equalToConstant: 320).isActive = true
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 14, right: 14)
+        NSLayoutConstraint.activate([
+            stack.widthAnchor.constraint(equalToConstant: 300),
+            header.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
+            rows.widthAnchor.constraint(equalTo: header.widthAnchor),
+        ])
         view = stack
         keepObserving { [weak self] in self?.update() }
     }
@@ -49,9 +63,13 @@ final class DownloadsPopover: NSViewController {
         rows.arrangedSubviews.forEach { $0.removeFromSuperview() }
         rowViews = downloads.map { existing[$0.id] ?? DownloadRow(download: $0, list: list) }
         if rowViews.isEmpty {
-            rows.addArrangedSubview(NSTextField(labelWithString: "No downloads"))
+            rows.addArrangedSubview(empty)
         }
-        rowViews.forEach(rows.addArrangedSubview)
+        rowViews.forEach { row in
+            rows.addArrangedSubview(row)
+            row.widthAnchor.constraint(equalTo: rows.widthAnchor).isActive = true
+        }
+        clear.isHidden = rowViews.isEmpty
     }
 
     @objc private func clearFinished() { list.clearFinished() }
@@ -75,16 +93,22 @@ private final class DownloadRow: NSStackView {
         downloadID = download.id
         super.init(frame: .zero)
         name.lineBreakMode = .byTruncatingMiddle
-        name.widthAnchor.constraint(lessThanOrEqualToConstant: 220).isActive = true
+        name.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         status.textColor = .secondaryLabelColor
+        status.font = .systemFont(ofSize: 11)
         bar.style = .bar
-        bar.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        bar.controlSize = .small
         let text = NSStackView(views: [name, bar, status])
         text.orientation = .vertical
         text.alignment = .leading
         text.spacing = 2
+        // The text takes the row's spare width, so the button sits at the trailing edge.
+        text.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        bar.widthAnchor.constraint(equalTo: text.widthAnchor).isActive = true
         button.target = self
         button.action = #selector(buttonClicked)
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        distribution = .fill
         addArrangedSubview(text)
         addArrangedSubview(button)
         keepObserving { [weak self] in self?.refresh() }
