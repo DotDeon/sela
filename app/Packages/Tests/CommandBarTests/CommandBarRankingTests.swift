@@ -134,26 +134,38 @@ private func kinds(_ results: [CommandBarResult]) -> [String] {
     #expect(results.first == .open(URL(string: "https://www.google.com/search?q=x")!, search: nil))
 }
 
-@Test func tabsInOtherSpacesDontMakeATopHit() {
-    var elsewhere = tab("Inbox – Gmail", "mail")
-    elsewhere.isInAnotherSpace = true
-    let results = commandBarResults(query: "inbox", tabs: [elsewhere], commands: [], archived: [], history: [])
-    #expect(kinds(results) == ["search", "tab"])
+@Test func onlyThisSpacesTabsAndFavouritesAreOffered() {
+    let document = fixtureDocument()
+    #expect(commandBarTabIDs(in: document, space: "S") == ["f1", "p2", "p1", "u1", "u2"])
+    #expect(commandBarTabIDs(in: document, space: "S2") == ["f1", "q1"])
 }
 
-@Test func recentTabsInThisSpaceComeFirst() {
-    var elsewhere = tab("Recent elsewhere", "elsewhere", minutesAgo: 1)
-    elsewhere.isInAnotherSpace = true
-    let here = tab("Older here", "here", minutesAgo: 5)
-    let results = commandBarResults(query: "", tabs: [elsewhere, here], commands: [], archived: [], history: [])
-    #expect(results == [.tab(here), .tab(elsewhere)])
+/// Typing the start of a site you visit offers the site first, not a search for the letters.
+@Test func aVisitedSiteIsTheTopHit() {
+    let site = HistoryCandidate(url: URL(string: "https://www.youtube.com/")!, title: "YouTube", visitCount: 40)
+    let results = commandBarResults(query: "you", tabs: [], commands: [], archived: [], history: [site])
+    #expect(results.first == .history(site))
+    #expect(kinds(results) == ["history", "search"])
 }
 
-@Test func locationsNameOtherSpaces() throws {
-    var document = fixtureDocument()
-    try document.setTitle("fold", "Work")
-    #expect(tabLocation(of: "q1", in: document, shownFrom: "S") == "Two")
-    #expect(tabLocation(of: "p2", in: document, shownFrom: "S2") == "One / Work")
-    #expect(tabLocation(of: "u1", in: document, shownFrom: "S") == nil)
-    #expect(tabLocation(of: "f1", in: document, shownFrom: "S") == "Favourites")
+@Test func theMostVisitedSiteWinsAndItsFrontPageLeads() {
+    let video = HistoryCandidate(url: URL(string: "https://www.youtube.com/watch?v=1")!, title: "A video", visitCount: 3)
+    let front = HistoryCandidate(url: URL(string: "https://www.youtube.com/")!, title: "YouTube", visitCount: 30)
+    let other = HistoryCandidate(url: URL(string: "https://yourbank.example/")!, title: "Your bank", visitCount: 20)
+    let results = commandBarResults(query: "you", tabs: [], commands: [], archived: [], history: [video, other, front])
+    #expect(results.first == .history(front))
+}
+
+/// A word that only appears in a page's title or path isn't the site's name, so it still searches first.
+@Test func aSiteTopHitNeedsTheHostToStartWithTheWord() {
+    let page = HistoryCandidate(url: URL(string: "https://example.com/swift")!, title: "Swift notes", visitCount: 9)
+    #expect(kinds(commandBarResults(query: "swift", tabs: [], commands: [], archived: [], history: [page])) == ["search", "history"])
+    #expect(kinds(commandBarResults(query: "swift notes", tabs: [], commands: [], archived: [], history: [page])) == ["search", "history"])
+}
+
+@Test func aMatchingTabBeatsAVisitedSite() {
+    let open = tab("YouTube", "youtube")
+    let site = HistoryCandidate(url: URL(string: "https://www.youtube.com/")!, title: "YouTube", visitCount: 40)
+    let results = commandBarResults(query: "youtube", tabs: [open], commands: [], archived: [], history: [site])
+    #expect(results.first == .tab(open))
 }

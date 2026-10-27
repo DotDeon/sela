@@ -129,13 +129,14 @@ final class CommandBarPresenter {
             tabs: { [model] in Self.tabCandidates(model) },
             commands: Self.commands,
             archived: { [model] query in
-                (model.archive?.search(query) ?? []).map {
+                // Tabs archived from other spaces stay there, like their open tabs.
+                (model.archive?.search(query) ?? []).filter { $0.spaceID == nil || $0.spaceID == model.selectedSpaceID }.map {
                     ArchivedCandidate(id: $0.id, title: $0.title ?? $0.url?.host() ?? "Archived Tab", url: $0.url)
                 }
             },
             history: { [history] query in
                 (history?.search(query, limit: 20) ?? []).map {
-                    HistoryCandidate(url: $0.url, title: $0.title ?? $0.url.host() ?? $0.url.absoluteString)
+                    HistoryCandidate(url: $0.url, title: $0.title ?? $0.url.host() ?? $0.url.absoluteString, visitCount: $0.visitCount)
                 }
             }
         )
@@ -143,15 +144,12 @@ final class CommandBarPresenter {
 
     private static func tabCandidates(_ model: BrowserWindowModel) -> [TabCandidate] {
         let document = model.sidebar.document
-        let containers = [document.favoritesContainerID] + document.spaces.flatMap { [$0.pinnedContainerID, $0.unpinnedContainerID] }
-        return containers.flatMap { document.tabIDs(under: $0) }.compactMap { id in
+        return commandBarTabIDs(in: document, space: model.selectedSpaceID).compactMap { id in
             guard let item = document.item(id), case .tab(let info) = item.kind else { return nil }
             let page = model.pageForDisplay(for: id)
             let title = sidebarTitle(for: item, liveState: page)
-            let spaceID = document.spaceID(containing: id)
             return TabCandidate(id: id, title: title, url: page?.url ?? info.savedURL, lastActiveAt: info.lastActiveAt,
-                                location: tabLocation(of: id, in: document, shownFrom: model.selectedSpaceID),
-                                isInAnotherSpace: spaceID != nil && spaceID != model.selectedSpaceID)
+                                location: tabLocation(of: id, in: document))
         }
     }
 
